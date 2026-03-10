@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями{% endblock %}
+
+{% block content %}
+<style>
+    table, th, td {
+        border: none;
+    }
+    th {
+        background: #1a1a1a;
+        padding: 12px;
+        text-align: left;
+        color: #ffaa33;
+    }
+    td {
+        padding: 12px;
+    }
+    h2 {
+        border-bottom: none;
+        margin-bottom: 20px;
+    }
+    .profile-link {
+        background: transparent;
+        border: none;
+        color: #ff6600;
+        cursor: pointer;
+        font-size: 0.95rem;
+        padding: 5px 12px;
+        border-radius: 30px;
+        transition: 0.2s;
+        display: inline-block;
+        text-decoration: none;
+        border: 1px solid #ff6600;
+    }
+    .profile-link:hover {
+        background: #ff6600;
+        color: #121212;
+    }
+    .btn-secondary {
+        background: #2a2a2a;
+        border: 1px solid #ff6600;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 30px;
+        text-decoration: none;
+        display: inline-block;
+        transition: 0.2s;
+    }
+    .btn-secondary:hover {
+        background: #ff6600;
+        color: #121212;
+    }
+    .status-active {
+        color: #ff6600;
+        white-space: nowrap;
+    }
+    .status-active i {
+        font-size: 0.6rem;
+        margin-left: 5px;
+        color: #ff6600;
+    }
+    .status-banned {
+        color: #ff4444;
+    }
+    .status-muted {
+        color: #ffaa33;
+    }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <h2>Пользователи</h2>
+    <div>
+        <a href="{{ url_for('admin_panel') }}" class="btn-secondary" style="margin-right: 10px;">← Панель управления</a>
+        <a href="{{ url_for('index') }}" class="btn-secondary">На главную</a>
+    </div>
+</div>
+
+<table style="width:100%; border-collapse: collapse;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Статус</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>
+                <form action="{{ url_for('change_user_role', user_id=u.id) }}" method="POST" style="display:inline;">
+                    <select name="role" onchange="this.form.submit()" style="background: #1e1e1e; color: #fff; padding: 5px; border-radius: 20px;">
+                        <option value="0" {% if u.role == 0 %}selected{% endif %}>Обычный</option>
+                        <option value="1" {% if u.role == 1 %}selected{% endif %}>Модератор чата</option>
+                        <option value="2" {% if u.role == 2 %}selected{% endif %}>Редактор</option>
+                        <option value="3" {% if u.role == 3 %}selected{% endif %}>Старший модератор</option>
+                        <option value="4" {% if u.role == 4 %}selected{% endif %}>Главный админ</option>
+                    </select>
+                </form>
+            </td>
+            <td>
+                {% if u.is_banned() %}
+                    <span class="status-banned">Забанен до {{ u.banned_until.strftime('%d.%m.%Y %H:%M') }}</span>
+                {% elif u.id in muted_ids %}
+                    <span class="status-muted">В муте</span>
+                {% else %}
+                    <span class="status-active">Активен <i class="fas fa-circle"></i></span>
+                {% endif %}
+            </td>
+            <td style="white-space: normal;">
+                <a href="{{ url_for('admin_user_profile', user_id=u.id) }}" class="profile-link">Профиль</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<hr style="margin:30px 0; border: 1px solid #2a2a2a;">
+
+{% if current_user.can_ip_ban() %}
+<div style="background:#1a1a1a; padding:20px; border-radius:30px; border:1px solid #ff6600;">
+    <h3 style="color:#ff6600; margin-bottom:20px;">IP-блокировки</h3>
+    <form action="{{ url_for('ip_ban') }}" method="POST" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <input type="text" name="ip" placeholder="IP-адрес" required style="flex:1; min-width:200px; background:#1e1e1e; border:1px solid #2a2a2a; border-radius:30px; padding:10px; color:#fff;">
+        <select name="duration" required style="background:#1e1e1e; color:#fff; padding:10px; border-radius:30px;">
+            <option value="1h">1 час</option>
+            <option value="1d">1 день</option>
+            <option value="forever">Навсегда</option>
+        </select>
+        <input type="text" name="reason" placeholder="Причина" style="flex:1; min-width:200px; background:#1e1e1e; border:1px solid #2a2a2a; border-radius:30px; padding:10px; color:#fff;">
+        <button type="submit" class="btn" style="padding:10px 20px; background:#ff6600; border:none; border-radius:30px; cursor:pointer;">Заблокировать IP</button>
+    </form>
+    <a href="{{ url_for('ip_ban_list') }}" class="btn-secondary" style="margin-top:15px; display:inline-block;">Список IP-банов</a>
+</div>
+{% endif %}
+
+{% endblock %}

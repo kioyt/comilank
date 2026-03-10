@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comilank — Регистрация</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Те же стили, что в verify.html */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0c0c0c; color:#f0f0f0; font-family:'Inter',sans-serif; min-height:100vh; display:flex; justify-content:center; align-items:center; padding:20px; overflow:hidden; position:relative; }
+        .floating-icons { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+        .icon { position:absolute; font-size:32px; opacity:0.12; color:#aaa; animation:float 12s infinite alternate ease-in-out; }
+        @keyframes float { 0%{transform:translateY(0px) rotate(0deg);} 100%{transform:translateY(-40px) rotate(12deg);} }
+        .icon1 { top:5%; left:2%; animation-duration:11s; } .icon2 { top:12%; right:4%; animation-duration:13s; } .icon3 { bottom:8%; left:5%; animation-duration:9s; } .icon4 { bottom:18%; right:7%; animation-duration:14s; } .icon5 { top:25%; left:10%; animation-duration:10s; } .icon6 { top:35%; right:11%; animation-duration:12s; } .icon7 { bottom:25%; left:13%; animation-duration:8s; } .icon8 { bottom:35%; right:14%; animation-duration:15s; } .icon9 { top:45%; left:18%; animation-duration:9.5s; } .icon10 { top:55%; right:18%; animation-duration:11.5s; } .icon11 { bottom:45%; left:20%; animation-duration:10.5s; } .icon12 { bottom:55%; right:22%; animation-duration:13.5s; } .icon13 { top:8%; left:25%; animation-duration:12.5s; } .icon14 { top:18%; right:25%; animation-duration:8.5s; } .icon15 { bottom:12%; left:28%; animation-duration:14.5s; } .icon16 { bottom:22%; right:28%; animation-duration:9.2s; } .icon17 { top:65%; left:30%; animation-duration:11.2s; } .icon18 { top:75%; right:30%; animation-duration:10.2s; }
+        .auth-container { max-width:500px; width:100%; background:#121212; border-radius:48px; padding:48px; box-shadow:0 25px 50px -8px rgba(255,102,0,0.25); border:1px solid #2a2a2a; position:relative; z-index:10; backdrop-filter:blur(4px); }
+        h2 { color:#ff6600; margin-bottom:30px; font-size:2.5rem; text-align:center; }
+        .form-group { margin-bottom:25px; }
+        label { display:block; margin-bottom:8px; color:#aaa; font-size:1.1rem; }
+        input { width:100%; padding:15px; background:#1e1e1e; border:1px solid #2a2a2a; border-radius:30px; color:#fff; font-size:1.1rem; }
+        input:focus { outline:none; border-color:#ff6600; box-shadow:0 0 10px #ff6600; }
+        .btn { width:100%; background:#ff6600; color:#121212; border:none; padding:15px; border-radius:60px; cursor:pointer; font-weight:700; font-size:1.3rem; transition:0.2s; box-shadow:0 0 15px #ff6600; }
+        .btn:hover { background:#ff8533; transform:scale(1.02); box-shadow:0 0 30px #ff6600; }
+        .link { color:#ff6600; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:1.1rem; }
+        .link:hover { text-decoration:underline; }
+        .flash { margin-bottom:20px; padding:12px; border-radius:30px; background:rgba(255,102,0,0.2); border:1px solid #ff6600; color:#ffaa33; text-align:center; }
+    </style>
+</head>
+<body>
+    <div class="floating-icons">
+        <i class="icon icon1 fa-solid fa-gamepad"></i>
+        <i class="icon icon2 fa-solid fa-computer-mouse"></i>
+        <i class="icon icon3 fa-solid fa-keyboard"></i>
+        <i class="icon icon4 fa-solid fa-headphones"></i>
+        <i class="icon icon5 fa-solid fa-display"></i>
+        <i class="icon icon6 fa-solid fa-floppy-disk"></i>
+        <i class="icon icon7 fa-solid fa-compact-disc"></i>
+        <i class="icon icon8 fa-solid fa-camera"></i>
+        <i class="icon icon9 fa-solid fa-microchip"></i>
+        <i class="icon icon10 fa-solid fa-wifi"></i>
+        <i class="icon icon11 fa-solid fa-bolt"></i>
+        <i class="icon icon12 fa-solid fa-crown"></i>
+        <i class="icon icon13 fa-solid fa-cloud"></i>
+        <i class="icon icon14 fa-solid fa-tree"></i>
+        <i class="icon icon15 fa-solid fa-cat"></i>
+        <i class="icon icon16 fa-solid fa-moon"></i>
+        <i class="icon icon17 fa-solid fa-star"></i>
+        <i class="icon icon18 fa-solid fa-sun"></i>
+    </div>
+
+    <div class="auth-container">
+        <h2>Регистрация</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Получить код</button>
+        </form>
+        <a href="{{ url_for('login') }}" class="link">Уже есть аккаунт? Войдите</a>
+    </div>
+</body>
+</html>

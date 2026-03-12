@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактировать' if article else 'Новая статья' }} | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    .edit-wrap { max-width: 900px; margin: 0 auto; }
+
+    /* Шапка */
+    .edit-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 30px; flex-wrap: wrap; gap: 14px;
+    }
+    .edit-title {
+        font-size: 2rem; font-weight: 800; color: #ff6600;
+        text-shadow: 0 0 18px rgba(255,102,0,0.35); margin: 0;
+    }
+    .btn-back {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 9px 20px; border-radius: 40px; background: transparent;
+        border: 1.5px solid #333; color: #aaa; text-decoration: none;
+        font-size: 0.9rem; transition: 0.2s;
+    }
+    .btn-back:hover { border-color: #ff6600; color: #ff6600; }
+
+    /* Карточка формы */
+    .edit-card {
+        background: #161616; border-radius: 24px; padding: 34px 38px;
+        border: 1px solid #252525;
+    }
+    @media (max-width: 600px) { .edit-card { padding: 20px 16px; } }
+
+    /* Секции */
+    .form-section {
+        border-bottom: 1px solid #1e1e1e; padding-bottom: 26px; margin-bottom: 26px;
+    }
+    .form-section:last-child { border-bottom: none; margin-bottom: 0; }
+    .section-label {
+        color: #ff6600; font-size: 0.8rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px;
+        display: flex; align-items: center; gap: 7px;
+    }
+
+    /* Группа полей */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label {
+        color: #888; font-size: 0.85rem; font-weight: 600;
+    }
+    .field label span.req { color: #ff6600; }
+
+    /* Инпуты */
+    .field input, .field select, .field textarea {
+        background: #111; border: 1px solid #2a2a2a; border-radius: 12px;
+        color: #ddd; font-size: 0.97rem; padding: 12px 16px;
+        transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+        font-family: inherit; width: 100%; box-sizing: border-box;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+        border-color: #ff6600; box-shadow: 0 0 12px rgba(255,102,0,0.15);
+    }
+    .field select option { background: #161616; }
+    .field textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .field textarea.content-area { min-height: 300px; }
+
+    /* Выбор категории */
+    .category-toggle {
+        display: flex; gap: 10px;
+    }
+    .cat-radio { display: none; }
+    .cat-radio-label {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 22px; border-radius: 40px; border: 1.5px solid #2a2a2a;
+        color: #888; cursor: pointer; font-size: 0.93rem; font-weight: 600;
+        transition: 0.2s; user-select: none;
+    }
+    .cat-radio:checked + .cat-radio-label {
+        border-color: #ff6600; color: #ff6600; background: rgba(255,102,0,0.08);
+    }
+    .cat-radio-label:hover { border-color: #555; color: #ccc; }
+
+    /* Загрузка изображения */
+    .image-upload-area {
+        border: 2px dashed #2a2a2a; border-radius: 16px;
+        padding: 24px; text-align: center; transition: 0.25s;
+        cursor: pointer; position: relative; overflow: hidden;
+        background: #111;
+    }
+    .image-upload-area:hover, .image-upload-area.drag-over {
+        border-color: #ff6600; background: rgba(255,102,0,0.04);
+    }
+    .image-upload-area input[type="file"] {
+        position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 2.2rem; color: #2a2a2a; margin-bottom: 10px; transition: color 0.2s; }
+    .image-upload-area:hover .upload-icon { color: #ff6600; }
+    .upload-text { color: #666; font-size: 0.9rem; }
+    .upload-text strong { color: #ff6600; }
+    .upload-hint { color: #444; font-size: 0.78rem; margin-top: 4px; }
+
+    /* Превью изображения */
+    .image-preview-wrap { margin-top: 14px; }
+    .image-preview {
+        width: 100%; max-height: 220px; object-fit: cover;
+        border-radius: 12px; display: none; border: 1px solid #252525;
+    }
+    .image-preview.visible { display: block; }
+    .current-image-wrap { margin-bottom: 14px; }
+    .current-image-label {
+        color: #666; font-size: 0.8rem; margin-bottom: 6px;
+    }
+    .current-image {
+        width: 100%; max-height: 200px; object-fit: cover;
+        border-radius: 12px; border: 1px solid #252525;
+    }
+
+    /* Или URL */
+    .or-divider {
+        display: flex; align-items: center; gap: 12px;
+        color: #444; font-size: 0.82rem; margin: 14px 0;
+    }
+    .or-divider::before, .or-divider::after {
+        content: ''; flex: 1; height: 1px; background: #2a2a2a;
+    }
+
+    /* Кнопки формы */
+    .form-actions {
+        display: flex; justify-content: flex-end; gap: 12px;
+        margin-top: 30px; flex-wrap: wrap;
+    }
+    .btn-cancel {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 12px 28px; border-radius: 40px; background: transparent;
+        border: 1.5px solid #333; color: #888; text-decoration: none;
+        font-size: 0.97rem; font-weight: 600; transition: 0.2s; cursor: pointer;
+    }
+    .btn-cancel:hover { border-color: #555; color: #ccc; }
+    .btn-save {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 12px 32px; border-radius: 40px; border: none;
+        background: linear-gradient(135deg, #ff6600, #cc4400);
+        color: #121212; font-weight: 700; font-size: 1rem; cursor: pointer;
+        transition: 0.2s; box-shadow: 0 0 16px rgba(255,102,0,0.4);
+    }
+    .btn-save:hover { transform: scale(1.04); box-shadow: 0 0 28px rgba(255,102,0,0.7); }
+
+    /* Выбор игры — карточки */
+    .game-select-wrap { position: relative; }
+    .game-select-preview {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 10px; color: #888; font-size: 0.87rem;
+    }
+    .game-select-preview img {
+        width: 36px; height: 36px; border-radius: 8px;
+        object-fit: cover; border: 1px solid #333;
+    }
+
+    /* ===== РЕДАКТОР ===== */
+    .editor-wrap {
+        border: 1px solid #2a2a2a;
+        border-radius: 14px;
+        overflow: hidden;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .editor-wrap:focus-within {
+        border-color: #ff6600;
+        box-shadow: 0 0 12px rgba(255,102,0,0.15);
+    }
+    .editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-wrap: wrap;
+        background: #0d0d0d;
+        border-bottom: 1px solid #222;
+        padding: 8px 10px;
+    }
+    .tb-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #aaa;
+        border-radius: 7px;
+        padding: 5px 9px;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: 0.15s;
+        line-height: 1;
+        font-family: inherit;
+    }
+    .tb-btn:hover {
+        background: rgba(255,102,0,0.12);
+        border-color: #ff6600;
+        color: #ff6600;
+    }
+    .tb-btn-img {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255,102,0,0.08);
+        border-color: #3a2a1a;
+        color: #ff6600;
+        font-size: 0.82rem;
+    }
+    .tb-btn-img:hover {
+        background: rgba(255,102,0,0.2);
+    }
+    .tb-sep {
+        width: 1px;
+        height: 20px;
+        background: #252525;
+        margin: 0 4px;
+    }
+    .tb-hint {
+        color: #3a3a3a;
+        font-size: 0.75rem;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    .editor-wrap textarea {
+        border: none !important;
+        border-radius: 0 0 14px 14px !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    .editor-wrap textarea:focus {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .tb-uploading {
+        color: #ff6600;
+        font-size: 0.78rem;
+        padding: 4px 8px;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+</style>
+
+<div class="edit-wrap">
+    <div class="edit-header">
+        <h1 class="edit-title">
+            <i class="fas fa-{% if article %}edit{% else %}plus-circle{% endif %}" style="margin-right:10px; opacity:0.8;"></i>
+            {{ 'Редактировать статью' if article else 'Новая статья' }}
+        </h1>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ url_for('forum') }}" class="btn-back" title="На сайт">
+                <i class="fas fa-globe"></i> На сайт
+            </a>
+            <a href="{{ url_for('admin_articles') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="edit-card">
+        <form method="POST" enctype="multipart/form-data" id="articleForm">
+
+            <!-- ── 1. ОСНОВНОЕ ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-pen"></i> Основное</div>
+
+                <div class="field" style="margin-bottom:16px;">
+                    <label>Заголовок <span class="req">*</span></label>
+                    <input type="text" name="title" placeholder="Введите заголовок статьи"
+                           value="{{ article.title if article else '' }}" required>
+                </div>
+
+                <div class="form-grid">
+                    <!-- Выбор игры -->
+                    <div class="field">
+                        <label>Игра <span style="color:#555;">(необязательно)</span></label>
+                        <select name="game_id" id="gameSelect" onchange="updateGamePreview()">
+                            <option value="">— Не выбрано —</option>
+                            {% for game in games %}
+                            <option value="{{ game.id }}"
+                                    data-image="{{ game.image or '' }}"
+                                    {% if article and article.game_id == game.id %}selected{% endif %}>
+                                {{ game.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="game-select-preview" id="gamePreview" style="display:none;">
+                            <img id="gamePreviewImg" src="" alt="">
+                            <span id="gamePreviewName"></span>
+                        </div>
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="field">
+                        <label>Тип публикации</label>
+                        <div class="category-toggle">
+                            <input type="radio" name="category" value="article" id="cat_article" class="cat-radio"
+                                   {% if not article or article.category == 'article' %}checked{% endif %}>
+                            <label for="cat_article" class="cat-radio-label">
+                                <i class="fas fa-gamepad"></i> Статья
+                            </label>
+                            <input type="radio" name="category" value="news" id="cat_news" class="cat-radio"
+                                   {% if article and article.category == 'news' %}checked{% endif %}>
+                            <label for="cat_news" class="cat-radio-label">
+                                <i class="fas fa-newspaper"></i> Новость
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 2. ОБЛОЖКА ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-image"></i> Обложка</div>
+
+                <!-- Текущее изображение -->
+                {% if article and article.get_image_url() %}
+                <div class="current-image-wrap">
+                    <div class="current-image-label">Текущая обложка:</div>
+                    <img src="{{ article.get_image_url() }}" alt="" class="current-image">
+                </div>
+                {% endif %}
+
+                <!-- Загрузка файла -->
+                <div class="image-upload-area" id="uploadArea"
+                     ondragover="this.classList.add('drag-over')"
+                     ondragleave="this.classList.remove('drag-over')"
+                     ondrop="this.classList.remove('drag-over')">
+                    <input type="file" name="image_file" id="imageFile"
+                           accept="image/*" onchange="previewImage(this)">
+                    <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <div class="upload-text">
+                        <strong>Нажмите</strong> или перетащите изображение сюда
+                    </div>
+                    <div class="upload-hint">PNG, JPG, GIF, WEBP · до 32 MB</div>
+                </div>
+
+                <div class="image-preview-wrap">
+                    <img id="imagePreview" src="" alt="" class="image-preview">
+                    <div id="previewLabel" style="color:#888; font-size:0.82rem; margin-top:6px; display:none;">
+                        <i class="fas fa-check-circle" style="color:#ff6600;"></i> Изображение выбрано
+                    </div>
+                </div>
+
+                <div class="or-divider">или укажите URL</div>
+
+                <div class="field">
+                    <input type="text" name="image" placeholder="https://example.com/image.jpg"
+                           value="{{ article.image if article and article.image and not article.image_file else '' }}">
+                </div>
+            </div>
+
+            <!-- ── 3. МЕДИА ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fab fa-youtube"></i> YouTube видео</div>
+                <div class="field">
+                    <label>Ссылка на видео <span style="color:#555;">(необязательно)</span></label>
+                    <input type="text" name="video_url"
+                           placeholder="https://youtube.com/watch?v=..."
+                           value="{{ article.video_url if article else '' }}">
+                </div>
+            </div>
+
+            <!-- ── 4. ОПИСАНИЕ И ТЕКСТ ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-align-left"></i> Содержание</div>
+
+                <div class="field" style="margin-bottom:16px;">
+                    <label>Краткое описание <span style="color:#555;">(анонс для карточки)</span></label>
+                    <textarea name="preview" placeholder="Краткий анонс — будет показан на карточке в форуме"
+                              rows="3">{{ article.preview if article else '' }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label>Содержание статьи <span class="req">*</span></label>
+                    <div class="editor-wrap">
+                        <div class="editor-toolbar">
+                            <button type="button" class="tb-btn" onclick="edFmt('bold')" title="Жирный"><b>B</b></button>
+                            <button type="button" class="tb-btn" onclick="edFmt('italic')" title="Курсив"><i>I</i></button>
+                            <button type="button" class="tb-btn" onclick="edFmt('underline')" title="Подчёркнутый"><u>U</u></button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="edWrap('<h2>','</h2>')" title="Заголовок H2">H2</button>
+                            <button type="button" class="tb-btn" onclick="edWrap('<h3>','</h3>')" title="Заголовок H3">H3</button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="edWrap('<ul>\n  <li>','</li>\n</ul>')" title="Список">&#9776;</button>
+                            <button type="button" class="tb-btn" onclick="edWrap('<blockquote>','</blockquote>')" title="Цитата">&#10077;</button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="insertLink()" title="Ссылка">&#128279;</button>
+                            <button type="button" class="tb-btn tb-btn-img" onclick="document.getElementById('inlineImgFile').click()" title="Вставить фото">
+                                <i class="fas fa-image"></i> Фото
+                            </button>
+                            <input type="file" id="inlineImgFile" accept="image/*" style="display:none" onchange="uploadInlineImage(this)">
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="edWrap('<p>','</p>')" title="Параграф">&#182;</button>
+                            <span class="tb-hint">Фото вставляется в позицию курсора</span>
+                        </div>
+                        <textarea name="content" id="content-editor" class="content-area"
+                                  placeholder="Текст статьи. Поддерживается HTML." required>{{ article.content if article else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── КНОПКИ ── -->
+            <div class="form-actions">
+                <a href="{{ url_for('admin_articles') }}" class="btn-cancel">
+                    <i class="fas fa-times"></i> Отмена
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i>
+                    {{ 'Сохранить изменения' if article else 'Создать статью' }}
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+// Превью загружаемого изображения
+function previewImage(input) {
+    var preview = document.getElementById('imagePreview');
+    var label   = document.getElementById('previewLabel');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.add('visible');
+            label.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Превью выбранной игры
+function updateGamePreview() {
+    var sel     = document.getElementById('gameSelect');
+    var opt     = sel.options[sel.selectedIndex];
+    var preview = document.getElementById('gamePreview');
+    var img     = document.getElementById('gamePreviewImg');
+    var name    = document.getElementById('gamePreviewName');
+
+    if (sel.value && opt) {
+        var imgSrc = opt.getAttribute('data-image');
+        if (imgSrc) {
+            img.src            = imgSrc;
+            img.style.display  = 'block';
+        } else {
+            img.style.display  = 'none';
+        }
+        name.textContent  = opt.text;
+        preview.style.display = 'flex';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Запустить при загрузке если игра уже выбрана
+window.addEventListener('DOMContentLoaded', updateGamePreview);
+
+// Drag-and-drop визуал
+var area = document.getElementById('uploadArea');
+['dragenter','dragover'].forEach(function(ev) {
+    area.addEventListener(ev, function(e) { e.preventDefault(); area.classList.add('drag-over'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+    area.addEventListener(ev, function() { area.classList.remove('drag-over'); });
+});
+</script>
+<script>
+// ===== РЕДАКТОР =====
+var ed = document.getElementById('content-editor');
+
+// Запомнить позицию курсора
+function getPos() {
+    return { start: ed.selectionStart, end: ed.selectionEnd };
+}
+
+// Обернуть выделенный текст тегами
+function edWrap(open, close) {
+    ed.focus();
+    var s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.substring(s, e) || 'текст';
+    var replacement = open + sel + close;
+    ed.value = ed.value.substring(0, s) + replacement + ed.value.substring(e);
+    ed.selectionStart = s + open.length;
+    ed.selectionEnd = s + open.length + sel.length;
+}
+
+// Форматирование через теги
+function edFmt(tag) {
+    var tags = { bold: ['<strong>','</strong>'], italic: ['<em>','</em>'], underline: ['<u>','</u>'] };
+    edWrap(tags[tag][0], tags[tag][1]);
+}
+
+// Вставить ссылку
+function insertLink() {
+    var url = prompt('URL ссылки:', 'https://');
+    if (!url) return;
+    var s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.substring(s, e) || url;
+    var replacement = '<a href="' + url + '">' + sel + '</a>';
+    ed.value = ed.value.substring(0, s) + replacement + ed.value.substring(e);
+}
+
+// Загрузить фото и вставить в позицию курсора
+function uploadInlineImage(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    
+    // Показать индикатор загрузки
+    var toolbar = document.querySelector('.editor-toolbar');
+    var indicator = document.createElement('span');
+    indicator.className = 'tb-uploading';
+    indicator.textContent = '⏳ Загружаю...';
+    toolbar.appendChild(indicator);
+    
+    var cursorPos = ed.selectionStart;
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    fetch('/admin/upload-image', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        indicator.remove();
+        input.value = '';
+        if (data.url) {
+            var tag = '\n<img src="' + data.url + '" alt="' + file.name + '" style="max-width:100%; border-radius:10px; margin:12px 0;">\n';
+            ed.value = ed.value.substring(0, cursorPos) + tag + ed.value.substring(cursorPos);
+            ed.selectionStart = ed.selectionEnd = cursorPos + tag.length;
+            ed.focus();
+        }
+    })
+    .catch(function() {
+        indicator.remove();
+        input.value = '';
+        // Fallback: base64
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var tag = '\n<img src="' + e.target.result + '" alt="' + file.name + '" style="max-width:100%; border-radius:10px; margin:12px 0;">\n';
+            ed.value = ed.value.substring(0, cursorPos) + tag + ed.value.substring(cursorPos);
+            ed.focus();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+</script>
+{% endblock %}

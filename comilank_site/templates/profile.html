@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    .profile-wrap { max-width: 900px; margin: 0 auto; }
+
+    .profile-card {
+        background: #161616;
+        border-radius: 28px;
+        border: 1px solid #252525;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    /* Шапка профиля */
+    .profile-banner {
+        height: 120px;
+        background: linear-gradient(135deg, #1a0a00, #2a1000, #1a0a00);
+        position: relative;
+    }
+    .profile-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 20px,
+            rgba(255,102,0,0.03) 20px,
+            rgba(255,102,0,0.03) 40px
+        );
+    }
+
+    .profile-info-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+        padding: 0 30px 24px;
+        margin-top: -40px;
+        position: relative;
+        z-index: 2;
+        flex-wrap: wrap;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff6600, #cc4400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #121212;
+        border: 4px solid #161616;
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    .profile-name-block { flex: 1; padding-bottom: 4px; }
+    .profile-username {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #ff6600;
+        line-height: 1.2;
+    }
+    .profile-role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        margin-top: 5px;
+    }
+    .role-0 { background: rgba(255,255,255,0.06); color: #888; }
+    .role-1 { background: rgba(0,136,255,0.15); color: #0088ff; border: 1px solid #0088ff; }
+    .role-2 { background: rgba(34,170,68,0.15); color: #22aa44; border: 1px solid #22aa44; }
+    .role-3 { background: rgba(170,68,255,0.15); color: #aa44ff; border: 1px solid #aa44ff; }
+    .role-4 { background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid #ff6600; }
+
+    /* Статистика */
+    .profile-stats {
+        display: flex;
+        gap: 0;
+        border-top: 1px solid #1e1e1e;
+    }
+    .stat-box {
+        flex: 1;
+        text-align: center;
+        padding: 18px 10px;
+        border-right: 1px solid #1e1e1e;
+    }
+    .stat-box:last-child { border-right: none; }
+    .stat-num {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #ff6600;
+        display: block;
+    }
+    .stat-lbl {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 3px;
+    }
+
+    /* Детали */
+    .profile-details {
+        padding: 24px 30px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+    @media (max-width: 600px) { .profile-details { grid-template-columns: 1fr; } }
+
+    .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: #888;
+    }
+    .detail-row i { color: #ff6600; width: 16px; text-align: center; }
+    .detail-row strong { color: #ccc; }
+
+    /* Статьи пользователя */
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ff6600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .user-articles { display: flex; flex-direction: column; gap: 10px; }
+    .user-article-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #1a1a1a;
+        border-radius: 14px;
+        padding: 12px 16px;
+        border: 1px solid #252525;
+        text-decoration: none;
+        transition: border-color 0.2s;
+    }
+    .user-article-item:hover { border-color: #ff6600; }
+    .user-article-thumb {
+        width: 52px; height: 36px; object-fit: cover;
+        border-radius: 8px; flex-shrink: 0;
+    }
+    .user-article-thumb-ph {
+        width: 52px; height: 36px; background: #252525;
+        border-radius: 8px; display: flex; align-items: center;
+        justify-content: center; color: #444; flex-shrink: 0;
+    }
+    .user-article-title { color: #ffaa33; font-size: 0.93rem; font-weight: 600; }
+    .user-article-date { color: #555; font-size: 0.8rem; margin-top: 2px; }
+    .user-article-stats {
+        margin-left: auto; display: flex; gap: 10px;
+        color: #666; font-size: 0.82rem;
+    }
+    .user-article-stats span { display: flex; align-items: center; gap: 4px; }
+    .user-article-stats i { color: #ff6600; }
+
+    /* Настройки безопасности */
+    .settings-card {
+        background: #161616;
+        border-radius: 28px;
+        border: 1px solid #252525;
+        overflow: hidden;
+        margin-bottom: 24px;
+        padding: 24px 30px;
+    }
+    .settings-input {
+        width: 100%;
+        background: #111;
+        border: 1px solid #2a2a2a;
+        border-radius: 10px;
+        color: #ddd;
+        font-size: 0.95rem;
+        padding: 11px 14px;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+        font-family: inherit;
+    }
+    .settings-input:focus {
+        outline: none;
+        border-color: #ff6600;
+        box-shadow: 0 0 10px rgba(255,102,0,0.15);
+    }
+    .settings-label {
+        color: #888;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        display: block;
+    }
+    .settings-submit {
+        background: linear-gradient(135deg, #ff6600, #cc4400);
+        color: #121212;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 6px;
+    }
+    .settings-submit:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 16px rgba(255,102,0,0.4);
+    }
+    .security-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid #1e1e1e;
+        padding-bottom: 0;
+    }
+    .sec-tab {
+        padding: 9px 18px 11px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #555;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: 0.2s;
+        user-select: none;
+    }
+    .sec-tab.active { color: #ff6600; border-bottom-color: #ff6600; }
+    .sec-tab:hover:not(.active) { color: #aaa; }
+    .sec-panel { display: none; }
+    .sec-panel.active { display: block; }
+</style>
+
+<div class="profile-wrap">
+
+    <!-- Кнопка назад -->
+    <div style="margin-bottom: 18px;">
+        <a id="back-btn" href="{{ url_for('forum') }}"
+           style="display:inline-flex; align-items:center; gap:7px; color:#ff6600;
+                  text-decoration:none; font-size:0.9rem; opacity:0.8; transition:opacity 0.2s;"
+           onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+            <i class="fas fa-arrow-left"></i> Назад
+        </a>
+    </div>
+
+    <!-- Бан-предупреждение -->
+    {% if user.is_banned() %}
+    <div class="ban-alert">
+        <i class="fas fa-ban" style="font-size:1.2rem;"></i>
+        <div>
+            <strong>Пользователь заблокирован</strong>
+            {% if user.ban_reason %} — {{ user.ban_reason }}{% endif %}
+            {% if user.banned_until %}
+                <div style="font-size:0.82rem; margin-top:3px; opacity:0.7;">
+                    До: {{ user.banned_until.strftime('%d.%m.%Y %H:%M') }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Основная карточка -->
+    <div class="profile-card">
+        <!-- Баннер -->
+        <div class="profile-banner"></div>
+
+        <!-- Инфо-строка -->
+        <div class="profile-info-row">
+            <div class="profile-avatar">{{ user.username[0] }}</div>
+            <div class="profile-name-block">
+                <div class="profile-username">{{ user.username }}</div>
+                {% set role_names = {0: ('Участник', 'fas fa-user'), 1: ('Модератор', 'fas fa-shield-alt'), 2: ('Редактор', 'fas fa-pen'), 3: ('Ст. Модератор', 'fas fa-user-shield'), 4: ('Основатель', 'fas fa-crown')} %}
+                {% set rname, ricon = role_names.get(user.role, ('Участник', 'fas fa-user')) %}
+                <div class="profile-role-badge role-{{ user.role }}">
+                    <i class="{{ ricon }}"></i> {{ rname }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="profile-stats">
+            <div class="stat-box">
+                <span class="stat-num">{{ user.articles.count() }}</span>
+                <div class="stat-lbl"><i class="fas fa-newspaper" style="color:#ff6600;"></i> Статей</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">{{ user.comments.count() }}</span>
+                <div class="stat-lbl"><i class="fas fa-comment" style="color:#ff6600;"></i> Комментариев</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">
+                    {% set total_likes = namespace(v=0) %}
+                    {% for art in user.articles %}
+                        {% set total_likes.v = total_likes.v + art.likes %}
+                    {% endfor %}
+                    {{ total_likes.v }}
+                </span>
+                <div class="stat-lbl"><i class="fas fa-thumbs-up" style="color:#ff6600;"></i> Лайков</div>
+            </div>
+        </div>
+
+        <!-- Детали -->
+        <div class="profile-details">
+            <div class="detail-row">
+                <i class="fas fa-calendar-plus"></i>
+                Регистрация:&nbsp;
+                <strong>
+                    {% if user.created_at %}
+                        {{ user.created_at.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="detail-row">
+                <i class="fas fa-clock"></i>
+                Последний визит:&nbsp;
+                <strong>
+                    {% if user.last_seen %}
+                        {{ user.last_seen.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="detail-row">
+                <i class="fas fa-id-badge"></i>
+                ID:&nbsp;<strong>#{{ user.id }}</strong>
+            </div>
+            {% if current_user.is_authenticated and (current_user.id == user.id or current_user.role >= 3) %}
+            <div class="detail-row">
+                <i class="fas fa-envelope"></i>
+                Email:&nbsp;<strong>{{ user.email }}</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Статьи пользователя (только если редактор+) -->
+    {% if user.articles.count() > 0 %}
+    <div class="profile-card" style="padding: 24px 30px;">
+        <div class="section-title">
+            <i class="fas fa-newspaper"></i> Статьи автора
+        </div>
+        <div class="user-articles">
+            {% for art in user.articles.limit(10) %}
+            <a href="{{ url_for('article', article_id=art.id) }}" class="user-article-item">
+                {% if art.get_image_url() %}
+                    <img src="{{ art.get_image_url() }}" class="user-article-thumb" alt="">
+                {% else %}
+                    <div class="user-article-thumb-ph"><i class="fas fa-image"></i></div>
+                {% endif %}
+                <div>
+                    <div class="user-article-title">{{ art.title }}</div>
+                    <div class="user-article-date">{{ art.created_at.strftime('%d.%m.%Y') }}</div>
+                </div>
+                <div class="user-article-stats">
+                    <span><i class="fas fa-eye"></i> {{ art.views }}</span>
+                    <span><i class="fas fa-thumbs-up"></i> {{ art.likes }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Настройки безопасности (только свой профиль) -->
+    {% if current_user.is_authenticated and current_user.id == user.id %}
+    <div class="settings-card">
+        <div class="section-title">
+            <i class="fas fa-shield-alt"></i> Безопасность
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div style="padding:10px 14px; border-radius:10px; margin-bottom:14px; font-size:0.9rem;
+                    {% if cat=='error' %}background:rgba(200,0,0,0.1); border:1px solid #cc2222; color:#ff6666;
+                    {% else %}background:rgba(0,180,0,0.1); border:1px solid #22aa44; color:#44cc66;{% endif %}
+                    display:flex; align-items:center; gap:8px;">
+                    <i class="fas {% if cat=='error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <!-- Табы -->
+        <div class="security-tabs">
+            <div class="sec-tab active" onclick="switchTab('pw')">
+                <i class="fas fa-lock" style="margin-right:6px;"></i>Пароль
+            </div>
+            <div class="sec-tab" onclick="switchTab('key')">
+                <i class="fas fa-key" style="margin-right:6px;"></i>Ключ восстановления
+            </div>
+        </div>
+
+        <!-- Панель: смена пароля -->
+        <div class="sec-panel active" id="panel-pw">
+            <form method="POST" action="{{ url_for('change_password') }}">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
+                    <div>
+                        <label class="settings-label">Текущий пароль</label>
+                        <input type="password" name="current_password" class="settings-input" required placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="settings-label">Новый пароль</label>
+                        <input type="password" name="new_password" class="settings-input" required placeholder="Мин. 6 символов">
+                    </div>
+                    <div>
+                        <label class="settings-label">Подтвердить</label>
+                        <input type="password" name="confirm_password" class="settings-input" required placeholder="Повторите">
+                    </div>
+                </div>
+                <button type="submit" class="settings-submit">
+                    <i class="fas fa-lock"></i> Сменить пароль
+                </button>
+            </form>
+        </div>
+
+        <!-- Панель: ключ восстановления -->
+        <div class="sec-panel" id="panel-key">
+            <div style="padding:14px 16px; background:#1a1a1a; border-radius:14px; border:1px solid #2a2a2a; margin-bottom:18px; font-size:0.85rem; color:#777; line-height:1.6;">
+                <i class="fas fa-info-circle" style="color:#ff6600; margin-right:6px;"></i>
+                Ключ восстановления позволяет сбросить пароль без email.
+                <strong style="color:#ffaa33;">Храните его в надёжном месте</strong> — после сохранения он больше не показывается.
+                {% if user.recovery_key %}
+                    <span style="display:inline-flex; align-items:center; gap:5px; margin-left:8px; color:#44cc66; font-size:0.8rem;">
+                        <i class="fas fa-check-circle"></i> Ключ установлен
+                    </span>
+                {% else %}
+                    <span style="display:inline-flex; align-items:center; gap:5px; margin-left:8px; color:#ff6666; font-size:0.8rem;">
+                        <i class="fas fa-exclamation-circle"></i> Ключ не установлен
+                    </span>
+                {% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('update_recovery_key') }}">
+                <div style="margin-bottom:14px;">
+                    <label class="settings-label">Новый ключ восстановления</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" name="recovery_key" id="profile-rkey" class="settings-input"
+                               placeholder="Оставьте пустым для авто-генерации" autocomplete="off"
+                               style="font-family:monospace; letter-spacing:1px;">
+                        <button type="button" onclick="genProfileKey()"
+                                style="flex-shrink:0; padding:10px 16px; background:#1e1e1e; border:1px solid #333;
+                                       border-radius:10px; color:#ff6600; font-size:0.8rem; font-weight:600;
+                                       cursor:pointer; transition:0.2s; white-space:nowrap;"
+                                onmouseover="this.style.borderColor='#ff6600'"
+                                onmouseout="this.style.borderColor='#333'">
+                            ⚡ Генератор
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="settings-submit">
+                    <i class="fas fa-key"></i> Обновить ключ
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function switchTab(tab) {
+        document.querySelectorAll('.sec-tab').forEach(function(t){ t.classList.remove('active'); });
+        document.querySelectorAll('.sec-panel').forEach(function(p){ p.classList.remove('active'); });
+        document.getElementById('panel-' + tab).classList.add('active');
+        event.target.closest('.sec-tab').classList.add('active');
+    }
+    function genProfileKey() {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let key = '';
+        for (let i = 0; i < 16; i++) {
+            if (i > 0 && i % 4 === 0) key += '-';
+            key += chars[Math.floor(Math.random() * chars.length)];
+        }
+        document.getElementById('profile-rkey').value = key;
+    }
+    </script>
+    {% endif %}
+
+</div>
+<script>
+(function(){
+    var ref = document.referrer;
+    var btn = document.getElementById('back-btn');
+    if (btn && ref && ref.indexOf(window.location.hostname) !== -1 && ref !== window.location.href) {
+        btn.href = '#';
+        btn.addEventListener('click', function(e){ e.preventDefault(); history.back(); });
+    }
+})();
+</script>
+{% endblock %}

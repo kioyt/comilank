@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} — Профиль | Админ | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .admin-user-root { width:100%; padding:28px; box-sizing:border-box; }
+
+    .page-header {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:22px; flex-wrap:wrap; gap:12px;
+    }
+    .page-title { font-size:1.5rem; font-weight:800; color:#ff6600; margin:0; display:flex; align-items:center; gap:10px; }
+    .header-btns { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .btn {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:8px 18px; border-radius:30px; font-size:0.88rem;
+        font-weight:600; text-decoration:none; transition:0.2s;
+        border:none; cursor:pointer;
+    }
+    .btn-outline { border:1.5px solid #2a2a2a; color:#777; background:transparent; }
+    .btn-outline:hover { border-color:#ff6600; color:#ff6600; }
+    .btn-orange { background:linear-gradient(135deg,#ff6600,#cc4400); color:#121212; }
+    .btn-orange:hover { transform:scale(1.04); box-shadow:0 0 16px rgba(255,102,0,0.4); }
+    .btn-red { border:1.5px solid #882222; color:#cc3333; background:transparent; }
+    .btn-red:hover { background:#cc3333; color:#fff; border-color:#cc3333; }
+    .btn-green { border:1.5px solid #226622; color:#44aa44; background:transparent; }
+    .btn-green:hover { background:#44aa44; color:#fff; }
+
+    .ban-alert {
+        background:rgba(200,0,0,0.08); border:1px solid #882222;
+        border-radius:12px; padding:11px 16px; margin-bottom:14px;
+        color:#ff6666; display:flex; align-items:center; gap:10px; font-size:0.88rem;
+    }
+    .mute-alert {
+        background:rgba(200,150,0,0.08); border:1px solid #885500;
+        border-radius:12px; padding:11px 16px; margin-bottom:14px;
+        color:#ffaa44; display:flex; align-items:center; gap:10px; font-size:0.88rem;
+    }
+
+    .main-grid {
+        display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;
+    }
+    @media (max-width:860px) { .main-grid { grid-template-columns:1fr; } }
+
+    .card {
+        background:#161616; border-radius:18px;
+        border:1px solid #252525; padding:20px 22px; margin-bottom:14px;
+    }
+    .card:last-child { margin-bottom:0; }
+    .card-title {
+        color:#ff6600; font-size:0.9rem; font-weight:700;
+        margin-bottom:14px; display:flex; align-items:center; gap:7px;
+        padding-bottom:10px; border-bottom:1px solid #1e1e1e;
+    }
+
+    .user-top { display:flex; gap:14px; align-items:center; margin-bottom:16px; }
+    .user-avatar {
+        width:58px; height:58px; border-radius:50%;
+        background:linear-gradient(135deg,#ff6600,#cc4400);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.6rem; font-weight:800; color:#121212;
+        flex-shrink:0; text-transform:uppercase;
+    }
+    .user-name { font-size:1.2rem; font-weight:800; color:#ff6600; }
+    .user-email { color:#555; font-size:0.82rem; margin-top:2px; }
+
+    .role-badge {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:2px 9px; border-radius:20px;
+        font-size:0.72rem; font-weight:700; margin-top:4px;
+    }
+    .r0{background:rgba(255,255,255,0.06);color:#888;}
+    .r1{background:rgba(0,136,255,0.15);color:#0088ff;border:1px solid #0088ff;}
+    .r2{background:rgba(34,170,68,0.15);color:#22aa44;border:1px solid #22aa44;}
+    .r3{background:rgba(170,68,255,0.15);color:#aa44ff;border:1px solid #aa44ff;}
+    .r4{background:rgba(255,102,0,0.2);color:#ff6600;border:1px solid #ff6600;}
+
+    .stats-row {
+        display:flex; border-radius:12px; overflow:hidden;
+        border:1px solid #1e1e1e; margin-bottom:14px;
+    }
+    .stat-box { flex:1; text-align:center; padding:12px 6px; border-right:1px solid #1e1e1e; }
+    .stat-box:last-child { border-right:none; }
+    .stat-n { font-size:1.3rem; font-weight:800; color:#ff6600; display:block; }
+    .stat-l { font-size:0.72rem; color:#555; margin-top:2px; }
+
+    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .info-row {
+        display:flex; align-items:center; gap:7px;
+        font-size:0.82rem; color:#777; padding:8px 11px;
+        background:#111; border-radius:9px;
+    }
+    .info-row i { color:#ff6600; width:13px; text-align:center; flex-shrink:0; }
+    .info-row strong { color:#ccc; }
+
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    .field { display:flex; flex-direction:column; gap:4px; }
+    .field label { color:#555; font-size:0.73rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+    .field input, .field select {
+        background:#111; border:1px solid #2a2a2a; border-radius:9px;
+        color:#ddd; font-size:0.88rem; padding:9px 11px;
+        transition:border-color 0.2s; outline:none;
+        font-family:inherit; width:100%; box-sizing:border-box;
+    }
+    .field input:focus, .field select:focus { border-color:#ff6600; }
+    .field select option { background:#161616; }
+
+    .history-item { padding:9px 0; border-bottom:1px solid #1a1a1a; font-size:0.83rem; }
+    .history-item:last-child { border-bottom:none; }
+    .history-type {
+        display:inline-flex; align-items:center; gap:4px;
+        padding:2px 8px; border-radius:20px; font-size:0.7rem; font-weight:700; margin-right:5px;
+    }
+    .ht-ban{background:rgba(200,0,0,0.15);color:#cc3333;}
+    .ht-unban{background:rgba(0,200,0,0.1);color:#44aa44;}
+    .ht-mute{background:rgba(200,150,0,0.12);color:#ffaa44;}
+    .ht-unmute{background:rgba(0,150,200,0.1);color:#44aaff;}
+    .ht-role{background:rgba(150,0,200,0.12);color:#aa44ff;}
+    .history-date { color:#444; font-size:0.73rem; }
+    .history-reason { color:#555; font-style:italic; margin-top:2px; font-size:0.78rem; }
+
+    .danger-card {
+        background:#161616; border-radius:18px;
+        border:1px solid #3a1212; padding:20px 22px;
+    }
+    .danger-title {
+        color:#cc3333; font-size:0.9rem; font-weight:700;
+        margin-bottom:10px; display:flex; align-items:center; gap:7px;
+        padding-bottom:10px; border-bottom:1px solid #2a1515;
+    }
+</style>
+
+<div class="admin-user-root">
+
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-user-cog" style="opacity:0.7;"></i>
+            Профиль: {{ user.username }}
+        </h1>
+        <div class="header-btns">
+            <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-outline" target="_blank">
+                <i class="fas fa-eye"></i> На сайте
+            </a>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Пользователи
+            </a>
+        </div>
+    </div>
+
+    {% if user.is_banned() %}
+    <div class="ban-alert">
+        <i class="fas fa-ban"></i>
+        <strong>Заблокирован</strong>{% if user.ban_reason %} — {{ user.ban_reason }}{% endif %}
+        {% if user.banned_until %}<span style="margin-left:auto;color:#884444;font-size:0.78rem;">до {{ user.banned_until.strftime('%d.%m.%Y %H:%M') }}</span>{% endif %}
+    </div>
+    {% endif %}
+    {% if muted_ids and user.id in muted_ids %}
+    <div class="mute-alert">
+        <i class="fas fa-microphone-slash"></i>
+        <strong>Замьючен</strong> — комментарии запрещены
+    </div>
+    {% endif %}
+
+    <div class="main-grid">
+
+        <!-- ЛЕВАЯ: инфо + история -->
+        <div>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-id-card"></i> Информация</div>
+                <div class="user-top">
+                    <div class="user-avatar">{{ user.username[0] }}</div>
+                    <div>
+                        <div class="user-name">{{ user.username }}</div>
+                        <div class="user-email">{{ user.email }}</div>
+                        {% set rmap = {0:('Участник','r0','fas fa-user'),1:('Модератор','r1','fas fa-shield-alt'),2:('Редактор','r2','fas fa-pen'),3:('Ст. Модератор','r3','fas fa-user-shield'),4:('Основатель','r4','fas fa-crown')} %}
+                        {% set rname,rcls,ricon = rmap.get(user.role,('Участник','r0','fas fa-user')) %}
+                        <div class="role-badge {{ rcls }}"><i class="{{ ricon }}"></i> {{ rname }}</div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-box"><span class="stat-n">{{ user.articles.count() }}</span><div class="stat-l">Статей</div></div>
+                    <div class="stat-box"><span class="stat-n">{{ user.comments.count() }}</span><div class="stat-l">Комментариев</div></div>
+                    <div class="stat-box"><span class="stat-n">#{{ user.id }}</span><div class="stat-l">ID</div></div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-row"><i class="fas fa-calendar-plus"></i>Регистрация:&nbsp;<strong>{% if user.created_at %}{{ user.created_at.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</strong></div>
+                    <div class="info-row"><i class="fas fa-clock"></i>Последний вход:&nbsp;<strong>{% if user.last_seen %}{{ user.last_seen.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</strong></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-history"></i> История наказаний</div>
+                {% if history %}
+                    {% for entry in history %}
+                    <div class="history-item">
+                        <span class="history-type ht-{{ entry.action }}">
+                            {% if entry.action=='ban' %}<i class="fas fa-ban"></i> Бан
+                            {% elif entry.action=='unban' %}<i class="fas fa-unlock"></i> Разбан
+                            {% elif entry.action=='mute' %}<i class="fas fa-microphone-slash"></i> Мут
+                            {% elif entry.action=='unmute' %}<i class="fas fa-microphone"></i> Снят мут
+                            {% elif entry.action=='role' %}<i class="fas fa-user-tag"></i> Роль
+                            {% else %}{{ entry.action }}{% endif %}
+                        </span>
+                        <span class="history-date">{{ entry.created_at.strftime('%d.%m.%Y %H:%M') if entry.created_at else '—' }}</span>
+                        {% if entry.created_by %} — <span style="color:#ffaa33;font-size:0.78rem;">{{ entry.created_by.username }}</span>{% endif %}
+                        {% if entry.reason %}<div class="history-reason">{{ entry.reason }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="color:#444;font-size:0.85rem;text-align:center;padding:16px 0;">
+                        <i class="fas fa-check-circle" style="color:#226622;margin-right:6px;"></i>Нарушений не было
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ: бан + мут + роль + удаление -->
+        <div>
+            {% if current_user.can_ban(user) %}
+            <div class="card">
+                <div class="card-title"><i class="fas fa-ban"></i> Блокировка</div>
+                {% if user.is_banned() %}
+                <form method="POST" action="{{ url_for('unban_user', user_id=user.id) }}">
+                    <p style="color:#666;font-size:0.83rem;margin-bottom:10px;">
+                        Заблокирован до {% if user.banned_until %}{{ user.banned_until.strftime('%d.%m.%Y %H:%M') }}{% else %}—{% endif %}
+                    </p>
+                    <button type="submit" class="btn btn-green" style="width:100%;justify-content:center;">
+                        <i class="fas fa-unlock"></i> Разблокировать
+                    </button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('ban_user', user_id=user.id) }}">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Срок</label>
+                            <select name="duration">
+                                <option value="1h">1 час</option>
+                                <option value="6h">6 часов</option>
+                                <option value="24h">24 часа</option>
+                                <option value="3d">3 дня</option>
+                                <option value="7d">7 дней</option>
+                                <option value="30d">30 дней</option>
+                                <option value="perm">Навсегда</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Причина</label>
+                            <input type="text" name="reason" placeholder="Причина...">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-red" style="width:100%;justify-content:center;">
+                        <i class="fas fa-ban"></i> Заблокировать
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if current_user.can_mute(user) %}
+            <div class="card">
+                <div class="card-title"><i class="fas fa-microphone-slash"></i> Мут</div>
+                {% if muted_ids and user.id in muted_ids %}
+                <form method="POST" action="{{ url_for('unmute_user', user_id=user.id) }}">
+                    <p style="color:#666;font-size:0.83rem;margin-bottom:10px;">Комментарии запрещены.</p>
+                    <button type="submit" class="btn btn-green" style="width:100%;justify-content:center;">
+                        <i class="fas fa-microphone"></i> Снять мут
+                    </button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('mute_user', user_id=user.id) }}">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Срок</label>
+                            <select name="duration">
+                                <option value="1h">1 час</option>
+                                <option value="6h">6 часов</option>
+                                <option value="24h">24 часа</option>
+                                <option value="3d">3 дня</option>
+                                <option value="7d">7 дней</option>
+                                <option value="perm">Навсегда</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Причина</label>
+                            <input type="text" name="reason" placeholder="Причина...">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-red" style="width:100%;justify-content:center;">
+                        <i class="fas fa-microphone-slash"></i> Замьютить
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if current_user.role >= 4 and current_user.id != user.id %}
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-tag"></i> Изменить роль</div>
+                <form method="POST" action="{{ url_for('change_user_role', user_id=user.id) }}">
+                    <div class="field" style="margin-bottom:10px;">
+                        <select name="role">
+                            <option value="0" {% if user.role==0 %}selected{% endif %}>0 — Участник</option>
+                            <option value="1" {% if user.role==1 %}selected{% endif %}>1 — Модератор</option>
+                            <option value="2" {% if user.role==2 %}selected{% endif %}>2 — Редактор</option>
+                            <option value="3" {% if user.role==3 %}selected{% endif %}>3 — Ст. Модератор</option>
+                            <option value="4" {% if user.role==4 %}selected{% endif %}>4 — Основатель</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-orange" style="width:100%;justify-content:center;">
+                        <i class="fas fa-save"></i> Сохранить роль
+                    </button>
+                </form>
+            </div>
+
+            <div class="danger-card">
+                <div class="danger-title"><i class="fas fa-user-times"></i> Опасная зона</div>
+                <p style="color:#555;font-size:0.82rem;margin-bottom:10px;line-height:1.5;">
+                    Удаление необратимо — все данные будут удалены навсегда.
+                </p>
+                <button type="button" onclick="showDeleteModal()" class="btn btn-red" style="width:100%;justify-content:center;">
+                    <i class="fas fa-trash-alt"></i> Удалить навсегда
+                </button>
+                <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" id="deleteUserForm" style="display:none;"></form>
+            </div>
+
+            <!-- Custom modal -->
+            <div id="deleteModal" style="display:none; position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px);" onclick="if(event.target===this)hideDeleteModal()">
+                <div style="background:#141416; border-radius:22px; border:1px solid rgba(200,50,50,0.25); padding:32px 36px; max-width:380px; width:90%; box-shadow:0 0 0 1px rgba(200,50,50,0.08), 0 30px 60px rgba(0,0,0,0.8); text-align:center; position:relative;">
+                    <div style="width:52px;height:52px;border-radius:50%;background:rgba(200,50,50,0.1);border:1px solid rgba(200,50,50,0.25);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+                        <i class="fas fa-trash-alt" style="color:#cc4444;font-size:1.3rem;"></i>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:800;color:#e8e8e8;margin-bottom:8px;">Удалить пользователя?</div>
+                    <div style="font-size:0.85rem;color:#555;margin-bottom:24px;line-height:1.6;">
+                        Вы собираетесь удалить <strong style="color:#cc4444;">{{ user.username }}</strong>.<br>Это действие необратимо.
+                    </div>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button type="button" onclick="hideDeleteModal()" style="flex:1;padding:10px 0;border-radius:20px;background:rgba(255,255,255,0.04);color:#4e5460;border:1px solid rgba(255,255,255,0.08);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='#8a909e'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='#4e5460'">Отмена</button>
+                        <button type="button" onclick="document.getElementById('deleteUserForm').submit()" style="flex:1;padding:10px 0;border-radius:20px;background:rgba(200,50,50,0.12);color:#cc4444;border:1px solid rgba(200,50,50,0.3);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;" onmouseover="this.style.background='rgba(200,50,50,0.22)';this.style.color='#ff5555'" onmouseout="this.style.background='rgba(200,50,50,0.12)';this.style.color='#cc4444'"><i class="fas fa-trash-alt" style="margin-right:5px;"></i>Удалить</button>
+                    </div>
+                </div>
+            </div>
+            <script>
+            function showDeleteModal() { document.getElementById('deleteModal').style.display='flex'; }
+            function hideDeleteModal() { document.getElementById('deleteModal').style.display='none'; }
+            document.addEventListener('keydown', function(e) { if(e.key==='Escape') hideDeleteModal(); });
+            </script>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

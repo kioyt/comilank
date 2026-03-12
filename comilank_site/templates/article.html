@@ -1,0 +1,1206 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} | Comilank{% endblock %}
+
+{% block meta %}
+<meta name="description" content="{{ article.preview if article.preview else (article.content | striptags | truncate(160)) }}">
+<meta name="keywords" content="{% if article.game %}{{ article.game.name }}, {% endif %}{{ article.title }}, Comilank, игры, обзор">
+<meta property="og:title" content="{{ article.title }} | Comilank">
+<meta property="og:description" content="{{ article.preview if article.preview else (article.content | striptags | truncate(160)) }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ request.url }}">
+{% if article.get_image_url() %}<meta property="og:image" content="{{ article.get_image_url() }}">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{{ request.url }}">
+{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== СБРОС КОНТЕЙНЕРА ===== */
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    /* ===== OUTER WRAPPER ===== */
+    .article-page-outer {
+        min-height:100vh; background:#1a1a1a;
+        padding:0; box-sizing:border-box;
+    }
+    .article-page-card {
+        background:transparent;
+        padding:0; box-sizing:border-box;
+    }
+
+    /* ===== LAYOUT ===== */
+    .article-root {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px 32px 48px;
+        box-sizing: border-box;
+    }
+    .article-layout {
+        display: grid;
+        grid-template-columns: 1fr 270px;
+        gap: 24px;
+        align-items: start;
+    }
+    @media (max-width: 960px) {
+        .article-layout { grid-template-columns: 1fr; }
+        .article-sidebar { order: 2; }
+        .article-root { padding: 22px 16px; }
+    }
+
+    /* ===== ОСНОВНАЯ СТАТЬЯ ===== */
+    .article-main {
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        border: none;
+    }
+    @media (max-width: 600px) {
+        .article-main { padding: 0; }
+    }
+
+    /* Шапка статьи */
+    .article-header { margin-bottom: 28px; }
+    .article-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #c8580a;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 18px;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+    .article-back:hover { opacity: 1; }
+
+    .article-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #e8650a;
+        line-height: 1.3;
+        margin-bottom: 14px;
+        text-shadow: 0 0 30px rgba(232,101,10,0.2);
+    }
+    @media (max-width: 600px) { .article-title { font-size: 1.5rem; } }
+
+    .article-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-size: 0.9rem;
+        color: #777;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #252525;
+    }
+    .article-meta span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .article-meta i { color: #c8580a; }
+    .article-meta strong { color: #c8580a; }
+
+    /* Обложка — над текстом, по центру */
+    .article-cover {
+        width: 100%;
+        max-height: 380px;
+        object-fit: cover;
+        border-radius: 16px;
+        margin-bottom: 24px;
+        display: block;
+    }
+
+    /* Видео — по центру, на всю ширину */
+    .article-video {
+        width: 100%;
+        max-width: 680px;
+        aspect-ratio: 16/9;
+        border-radius: 16px;
+        overflow: hidden;
+        margin: 0 auto 24px;
+        background: #000;
+        display: block;
+    }
+    .article-video iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 16px;
+    }
+
+    /* Сброс float после медиа */
+    .article-content-body { overflow: visible; }
+
+    /* Игра-тег */
+    .game-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(232,101,10,0.08);
+        border: 1px solid rgba(232,101,10,0.2);
+        color: #c8580a;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 0.9rem;
+        margin-bottom: 22px;
+        text-decoration: none;
+        transition: 0.2s;
+    }
+    .game-tag:hover { border-color: rgba(232,101,10,0.45); color: #e8650a; }
+    .game-tag i { color: #c8580a; }
+
+    /* Текст статьи */
+    .article-content {
+        color: #d0d0d0;
+        font-size: 1.05rem;
+        line-height: 1.85;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .article-content p { margin-bottom: 16px; }
+    .article-content h2 { color: #e8650a; font-size: 1.4rem; margin: 26px 0 12px; }
+    .article-content h3 { color: #c8580a; font-size: 1.2rem; margin: 22px 0 10px; }
+    .article-content ul, .article-content ol { padding-left: 24px; margin-bottom: 16px; }
+    .article-content li { margin-bottom: 6px; }
+    .article-content blockquote {
+        border-left: 3px solid #e8650a;
+        padding-left: 18px;
+        color: #aaa;
+        font-style: italic;
+        margin: 18px 0;
+    }
+    .article-content img {
+        max-width: 100%;
+        border-radius: 12px;
+        margin: 12px auto;
+        display: block;
+    }
+    /* Поддержка выравнивания через style */
+    .article-content img[style*="margin-left: auto"],
+    .article-content img[style*="margin: auto"],
+    .article-content p[style*="text-align: center"] img,
+    .article-content p[style*="text-align:center"] img {
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+    }
+
+    /* ===== ГОЛОСОВАНИЕ ===== */
+    .vote-section {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 32px 0 24px;
+        padding: 20px 0;
+        border-top: 1px solid #252525;
+        border-bottom: 1px solid #252525;
+        flex-wrap: wrap;
+    }
+    .vote-label {
+        color: #888;
+        font-size: 0.95rem;
+        margin-right: 4px;
+    }
+    .vote-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        border-radius: 40px;
+        border: 1.5px solid;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: 0.2s;
+        text-decoration: none;
+        background: transparent;
+    }
+    .vote-btn.like {
+        border-color: #e8650a;
+        color: #e8650a;
+    }
+    .vote-btn.like.active,
+    .vote-btn.like:hover {
+        background: #e8650a;
+        color: rgba(255,255,255,0.9);
+        box-shadow: 0 0 16px rgba(232,101,10,0.4);
+    }
+    .vote-btn.dislike {
+        border-color: #555;
+        color: #888;
+    }
+    .vote-btn.dislike.active,
+    .vote-btn.dislike:hover {
+        background: #333;
+        color: #ccc;
+        border-color: #777;
+    }
+    .vote-total {
+        color: #666;
+        font-size: 0.9rem;
+        margin-left: 6px;
+    }
+
+    /* Статистика просмотров */
+    .view-count {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #555;
+        font-size: 0.9rem;
+        margin-left: auto;
+    }
+    .view-count i { color: #c8580a; }
+
+    /* ===== ДОП. СТРАНИЦЫ (выпадающие) ===== */
+    /* ── Кнопка разделов с выпадающим меню ── */
+    .sections-dropdown-wrap {
+        position: relative;
+        display: inline-block;
+        margin: 18px 0 24px;
+    }
+    .sections-toggle-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 9px 18px; background: rgba(232,101,10,0.08);
+        border: 1px solid rgba(232,101,10,0.22); color: #d0600c;
+        border-radius: 30px; font-size: 0.9rem; font-weight: 600;
+        cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .sections-toggle-btn:hover, .sections-toggle-btn.open {
+        background: rgba(232,101,10,0.14); border-color: rgba(232,101,10,0.45);
+        box-shadow: 0 0 14px rgba(232,101,10,0.12);
+    }
+    .sections-toggle-btn i.chevron { font-size: 0.72rem; transition: transform 0.2s; }
+    .sections-toggle-btn.open i.chevron { transform: rotate(180deg); }
+
+    .sections-dropdown-menu {
+        position: absolute; top: calc(100% + 8px); left: 0;
+        min-width: 240px; background: #0f0f12;
+        border: 1px solid rgba(232,101,10,0.18); border-radius: 14px;
+        overflow: hidden; z-index: 200;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(232,101,10,0.06);
+        opacity: 0; transform: translateY(-8px) scale(0.97);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        pointer-events: none;
+    }
+    .sections-dropdown-menu.open {
+        opacity: 1; transform: translateY(0) scale(1); pointer-events: all;
+    }
+    .sections-dropdown-menu a, .sections-dropdown-menu .sec-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 11px 16px; color: #bbb; text-decoration: none;
+        font-size: 0.88rem; transition: all 0.15s;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .sections-dropdown-menu a:last-child, .sections-dropdown-menu .sec-item:last-child { border-bottom: none; }
+    .sections-dropdown-menu a:hover { background: rgba(232,101,10,0.08); color: #e8650a; }
+    .sections-dropdown-menu a.active-section { color: #e8650a; background: rgba(232,101,10,0.06); }
+    .sections-dropdown-menu i { color: #c8580a; opacity: 0.7; width: 14px; font-size: 0.78rem; }
+    .sections-dropdown-menu .sec-item { color: #444; cursor: default; }
+    .sections-dropdown-menu .sec-item i { opacity: 0.3; }
+
+    /* ===== КОММЕНТАРИИ ===== */
+    .comments-section { margin-top: 36px; }
+    .comments-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #e8650a;
+        margin-bottom: 22px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .comments-count {
+        background: rgba(232,101,10,0.15);
+        color: #e8650a;
+        border: 1px solid rgba(232,101,10,0.3);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+
+    /* Форма комментария */
+    .comment-form {
+        background: #0f0f12;
+        border-radius: 18px;
+        padding: 20px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .comment-form textarea {
+        width: 100%;
+        background: #141416;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 12px;
+        color: #c9cdd6;
+        font-size: 0.95rem;
+        padding: 13px 16px;
+        resize: vertical;
+        min-height: 90px;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        font-family: inherit;
+    }
+    .comment-form textarea:focus {
+        outline: none;
+        border-color: rgba(232,101,10,0.4);
+        box-shadow: 0 0 0 3px rgba(232,101,10,0.06);
+    }
+    .comment-submit {
+        margin-top: 12px;
+        background: rgba(232,101,10,0.12);
+        color: #d0600c;
+        border: 1px solid rgba(232,101,10,0.28);
+        padding: 9px 24px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: inherit;
+        position: relative; overflow: hidden;
+    }
+    .comment-submit:hover {
+        background: rgba(232,101,10,0.2);
+        color: #e8650a;
+        border-color: rgba(232,101,10,0.5);
+    }
+    .comment-login-prompt {
+        color: #3d4350;
+        font-size: 0.9rem;
+        padding: 16px;
+        background: #0f0f12;
+        border-radius: 14px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255,255,255,0.05);
+        text-align: center;
+    }
+    .comment-login-prompt a { color: #c8580a; text-decoration: none; }
+    .comment-login-prompt a:hover { color: #e8650a; }
+
+    /* Отдельный комментарий */
+    .comment {
+        display: flex;
+        gap: 14px;
+        padding: 18px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .comment:last-child { border-bottom: none; }
+    .comment-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #c8580a, #7a3008);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.9);
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+    .comment-body { flex: 1; }
+    .comment-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+    }
+    .comment-username {
+        font-weight: 700;
+        color: #c8580a;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: color 0.15s;
+    }
+    .comment-username:hover { color: #e8650a; }
+    .comment-date {
+        color: #2e3340;
+        font-size: 0.82rem;
+    }
+    .comment-text {
+        color: #8a909e;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        word-break: break-word;
+    }
+
+    /* Реакции на комментарий */
+    .comment-reactions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    .reaction-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        border: 1px solid #2a2a2a;
+        background: transparent;
+        color: #888;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: 0.2s;
+        text-decoration: none;
+    }
+    .reaction-btn:hover { border-color: #555; color: #ccc; }
+    .reaction-btn.like-active {
+        border-color: #e8650a;
+        color: #e8650a;
+        background: rgba(232,101,10,0.1);
+    }
+    .reaction-btn.dislike-active {
+        border-color: #555;
+        color: #aaa;
+        background: rgba(255,255,255,0.05);
+    }
+    .reaction-count { font-weight: 600; }
+
+    /* Кнопка ответить */
+    .reply-toggle-btn {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 12px; border-radius: 20px;
+        border: 1px solid #333; background: transparent;
+        color: #777; font-size: 0.83rem; cursor: pointer; transition: 0.2s;
+    }
+    .reply-toggle-btn:hover { border-color: rgba(232,101,10,0.4); color: #e8650a; }
+
+    /* Бейджи ролей */
+    .role-badge {
+        padding: 2px 8px; border-radius: 12px;
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .role-badge.admin { background: rgba(232,101,10,0.15); color: #e8650a; border:1px solid rgba(232,101,10,0.3); }
+    .role-badge.mod   { background: #0088ff; color: #fff; }
+    .role-badge.editor { background: #22aa44; color: #fff; }
+
+    /* Ветка ответов */
+    .replies-thread { margin-top: 12px; margin-left: 10px; }
+    .replies-toggle {
+        display: inline-flex; align-items: center; gap: 7px;
+        color: #c8580a; font-size: 0.85rem; cursor: pointer;
+        padding: 4px 0; user-select: none; transition: opacity 0.2s;
+    }
+    .replies-toggle:hover { opacity: 0.75; }
+    .replies-toggle i { font-size: 0.75rem; transition: transform 0.2s; }
+    .replies-toggle.open i { transform: rotate(180deg); }
+    .replies-list {
+        display: none;
+        margin-top: 10px;
+        padding-left: 16px;
+        border-left: 2px solid rgba(232,101,10,0.25);
+    }
+    .replies-list.visible { display: block; }
+    .reply-item {
+        padding: 10px 0 !important;
+        border-bottom: 1px solid #1a1a1a !important;
+    }
+    .reply-item:last-child { border-bottom: none !important; }
+
+    /* ===== БОКОВАЯ ПАНЕЛЬ ===== */
+    .article-sidebar {}
+    .sidebar-card {
+        background: transparent;
+        border-radius: 0;
+        padding: 0 0 18px 0;
+        border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        margin-bottom: 18px;
+        position: relative;
+        overflow: visible;
+    }
+    .sidebar-card:last-child { border-bottom: none; }
+    .sidebar-card-title {
+        color: #e8650a;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 13px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        opacity: 0.8;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    /* Hover dropdown for sections */
+    .sb-sections-wrap { position: relative; }
+    .sb-sections-wrap .sidebar-card-title { cursor: default; }
+    .sb-sections-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px); left: 0; right: 0;
+        background: #0f0f12;
+        border: 1px solid rgba(232,101,10,0.18);
+        border-radius: 12px;
+        overflow: hidden;
+        z-index: 100;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,101,10,0.06);
+    }
+    .sb-sections-wrap:hover .sb-sections-dropdown { display: block; }
+    .sb-sections-dropdown a, .sb-sections-dropdown .sd-pending {
+        display: flex; align-items: center; gap: 8px;
+        padding: 9px 13px; color: #4e5460; text-decoration: none;
+        font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: all 0.15s;
+    }
+    .sb-sections-dropdown a:last-child, .sb-sections-dropdown .sd-pending:last-child { border-bottom: none; }
+    .sb-sections-dropdown a:hover { background: rgba(232,101,10,0.07); color: #e8650a; }
+    .sb-sections-dropdown a.active-section { color: #e8650a; background: rgba(232,101,10,0.05); }
+    .sb-sections-dropdown i { color: #c8580a; opacity: 0.5; width: 12px; font-size: 0.7rem; }
+    .sb-sections-dropdown .sd-pending { color: #2e3340; cursor: default; }
+
+    /* Навигация по разделам в сайдбаре */
+    .sidebar-nav a {
+        display: flex; align-items: center; gap: 9px;
+        color: #4e5460; text-decoration: none;
+        font-size: 0.82rem; padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: color 0.15s;
+    }
+    .sidebar-nav a:last-child { border-bottom: none; }
+    .sidebar-nav a:hover { color: #c8580a; }
+    .sidebar-nav a.active-section { color: #e8650a; font-weight: 600; }
+    .sidebar-nav a i { color: #c8580a; opacity: 0.5; width: 13px; font-size: 0.72rem; }
+    .sidebar-nav .sec-pending {
+        display: flex; align-items: center; gap: 9px;
+        color: #252830; font-size: 0.82rem; padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04); cursor: default;
+    }
+    .sidebar-nav .sec-pending i { opacity: 0.2; width: 13px; font-size: 0.72rem; }
+    /* Sidebar stat rows */
+    .sb-stat { display:flex; justify-content:space-between; align-items:center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .sb-stat:last-child { border-bottom: none; }
+    .sb-stat-label { color: #3d4350; font-size: 0.8rem; display:flex; align-items:center; gap:6px; }
+    .sb-stat-label i { color: #c8580a; opacity: 0.5; font-size: 0.72rem; width: 13px; }
+    .sb-stat-val { color: #8a909e; font-size: 0.82rem; font-weight: 600; }
+    .sb-stat-val a { color: #a05030; text-decoration: none; }
+    .sb-stat-val a:hover { color: #e8650a; }
+    /* Sidebar manage links */
+    .sb-manage a {
+        display:flex; align-items:center; gap:8px;
+        color: #3d4350; text-decoration:none; font-size:0.8rem;
+        padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: color 0.15s;
+    }
+    .sb-manage a:last-child { border-bottom: none; }
+    .sb-manage a:hover { color: #c8580a; }
+    .sb-manage a i { color: #c8580a; opacity: 0.45; width: 13px; font-size: 0.72rem; }
+
+    /* Управление статьёй для редакторов */
+    .article-actions-bar {
+        display: flex; gap: 8px; margin-top: 24px;
+        padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.05);
+        flex-wrap: wrap;
+    }
+    .action-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 15px; border-radius: 18px; font-size: 0.8rem;
+        font-weight: 600; text-decoration: none; border: none;
+        cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .action-btn::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .action-btn:hover::before { opacity:1; }
+    .action-btn.edit { background:rgba(232,101,10,0.08); border:1px solid rgba(232,101,10,0.22); color:#a04808; }
+    .action-btn.edit:hover { background:rgba(232,101,10,0.15); border-color:rgba(232,101,10,0.44); color:#e8650a; }
+    .action-btn.delete { background:rgba(180,30,30,0.07); border:1px solid rgba(180,30,30,0.2); color:#803030; }
+    .action-btn.delete:hover { background:rgba(180,30,30,0.15); border-color:rgba(180,30,30,0.4); color:#cc4444; }
+    .action-btn.manage-drops { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:#3d4350; }
+    .action-btn.manage-drops:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
+</style>
+
+<div class="article-page-outer">
+<div class="article-page-card">
+<div class="article-root">
+<div class="article-layout">
+
+    <!-- ===== ОСНОВНАЯ КОЛОНКА ===== -->
+    <main class="article-main">
+
+        <!-- Назад на форум -->
+        <a href="{{ url_for('forum') }}" class="article-back">
+            <i class="fas fa-arrow-left"></i> Назад на форум
+        </a>
+
+        <!-- Заголовок -->
+        <div class="article-header">
+            <h1 class="article-title">{{ article.title }}</h1>
+            <div class="article-meta">
+                <span><i class="fas fa-calendar-alt"></i> {{ article.created_at.strftime('%d.%m.%Y') }}</span>
+                {% if article.category == 'news' %}
+                    <span><i class="fas fa-newspaper"></i> Новость</span>
+                {% else %}
+                    <span><i class="fas fa-gamepad"></i> Статья об игре</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Тег игры -->
+        {% if article.game %}
+        <div style="margin-bottom: 18px;">
+            <span class="game-tag">
+                <i class="fas fa-gamepad"></i>
+                {{ article.game.name }}
+            </span>
+        </div>
+        {% endif %}
+
+        {% set active_drops = article.dropdown_items | selectattr('is_active') | list %}
+
+        <!-- Обложка + Видео + Текст -->
+        <div class="article-content-body">
+
+        <!-- Обложка статьи (над текстом) -->
+        {% if article.get_image_url() %}
+            <img src="{{ article.get_image_url() }}" alt="{{ article.title }}" class="article-cover">
+        {% endif %}
+
+        <!-- Видео (по центру) -->
+        {% if article.video_url %}
+        <div class="article-video">
+            {% set video_id = '' %}
+            {% if 'youtu.be/' in article.video_url %}
+                {% set video_id = article.video_url.split('youtu.be/')[1].split('?')[0] %}
+            {% elif 'v=' in article.video_url %}
+                {% set video_id = article.video_url.split('v=')[1].split('&')[0] %}
+            {% endif %}
+            {% if video_id %}
+                <iframe src="https://www.youtube.com/embed/{{ video_id }}"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Текст статьи -->
+        <div class="article-content">
+            {{ article.content | safe }}
+        </div>
+
+        </div>
+
+        <!-- ===== ГОЛОСОВАНИЕ ===== -->
+        <div class="vote-section">
+            <span class="vote-label">Оценить статью:</span>
+
+            {% if current_user.is_authenticated %}
+                <form method="POST" action="{{ url_for('vote_article', article_id=article.id) }}" style="display:contents;">
+                    <input type="hidden" name="value" value="1">
+                    <button type="submit"
+                            class="vote-btn like {% if user_vote == 1 %}active{% endif %}">
+                        <i class="fas fa-thumbs-up"></i> {{ article.likes }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('vote_article', article_id=article.id) }}" style="display:contents;">
+                    <input type="hidden" name="value" value="-1">
+                    <button type="submit"
+                            class="vote-btn dislike {% if user_vote == -1 %}active{% endif %}">
+                        <i class="fas fa-thumbs-down"></i> {{ article.dislikes }}
+                    </button>
+                </form>
+            {% else %}
+                <span class="vote-btn like" style="cursor:default; opacity:0.6;">
+                    <i class="fas fa-thumbs-up"></i> {{ article.likes }}
+                </span>
+                <span class="vote-btn dislike" style="cursor:default; opacity:0.6;">
+                    <i class="fas fa-thumbs-down"></i> {{ article.dislikes }}
+                </span>
+                <span style="color:#666; font-size:0.85rem;">
+                    <a href="{{ url_for('login') }}" style="color:#e8650a;">Войдите</a>, чтобы оценить
+                </span>
+            {% endif %}
+        </div>
+
+        <!-- Кнопки управления (для редакторов) -->
+        {% if current_user.is_authenticated and current_user.role >= 2 %}
+        <div class="article-actions-bar">
+            <a href="{{ url_for('admin_article_edit', article_id=article.id) }}" class="action-btn edit">
+                <i class="fas fa-edit"></i> Редактировать
+            </a>
+            <a href="{{ url_for('admin_dropdown_list', article_id=article.id) }}" class="action-btn manage-drops">
+                <i class="fas fa-list"></i> Разделы
+            </a>
+            <form method="POST" action="{{ url_for('admin_article_delete', article_id=article.id) }}"
+                  onsubmit="return confirm('Удалить статью?');" style="display:inline;">
+                <button type="submit" class="action-btn delete">
+                    <i class="fas fa-trash"></i> Удалить
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- ===== КОММЕНТАРИИ ===== -->
+        <div class="comments-section">
+            <div class="comments-title">
+                <i class="fas fa-comments"></i>
+                Комментарии
+                <span class="comments-count">{{ article.comments.count() }}</span>
+            </div>
+
+            <!-- Форма нового комментария -->
+            {% if current_user.is_authenticated %}
+            <div class="comment-form">
+                <form method="POST" action="{{ url_for('add_comment', article_id=article.id) }}">
+                    <textarea name="content" placeholder="Написать комментарий..." rows="3"></textarea>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
+                        <button type="submit" class="comment-submit">
+                            <i class="fas fa-paper-plane"></i> Отправить
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="comment-login-prompt">
+                <i class="fas fa-lock" style="color:#c8580a; margin-right:6px;"></i>
+                <a href="{{ url_for('login') }}">Войдите</a> или
+                <a href="{{ url_for('register') }}">зарегистрируйтесь</a>, чтобы оставить комментарий
+            </div>
+            {% endif %}
+
+            <!-- Список комментариев -->
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="comment" id="comment-{{ comment.id }}">
+                    <div class="comment-avatar">{{ comment.author.username[0] }}</div>
+                    <div class="comment-body">
+                        <div class="comment-head">
+                            <a href="{{ url_for('profile', username=comment.author.username) }}" class="comment-username">{{ comment.author.username }}</a>
+                            <span class="comment-date" data-utc="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                            {% if comment.author.role >= 4 %}<span class="role-badge admin">ADMIN</span>
+                            {% elif comment.author.role >= 3 %}<span class="role-badge mod">MOD</span>
+                            {% elif comment.author.role >= 2 %}<span class="role-badge editor">РЕД.</span>
+                            {% endif %}
+                        </div>
+                        <div class="comment-text">{{ comment.content }}</div>
+
+                        <!-- Реакции + ответить + удалить -->
+                        <div class="comment-reactions">
+                            {% if current_user.is_authenticated %}
+                                <form method="POST" action="{{ url_for('react_comment', comment_id=comment.id) }}"
+                                      class="react-form" style="display:contents;">
+                                    <input type="hidden" name="value" value="1">
+                                    <button type="submit" class="reaction-btn {% if user_comment_reactions.get(comment.id)==1 %}like-active{% endif %}">
+                                        <i class="fas fa-thumbs-up"></i><span class="reaction-count">{{ comment.likes }}</span>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('react_comment', comment_id=comment.id) }}"
+                                      class="react-form" style="display:contents;">
+                                    <input type="hidden" name="value" value="-1">
+                                    <button type="submit" class="reaction-btn {% if user_comment_reactions.get(comment.id)==-1 %}dislike-active{% endif %}">
+                                        <i class="fas fa-thumbs-down"></i><span class="reaction-count">{{ comment.dislikes }}</span>
+                                    </button>
+                                </form>
+                                <button class="reply-toggle-btn" onclick="toggleReplyForm('reply-form-{{ comment.id }}', this)">
+                                    <i class="fas fa-reply"></i> Ответить
+                                </button>
+                                {% if current_user.id == comment.author_id or current_user.role >= 2 %}
+                                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                                      style="display:contents;"
+                                      onsubmit="return confirm('Удалить комментарий?');">
+                                    <button type="submit" class="reply-toggle-btn" style="color:#cc3333; border-color:#551111;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% else %}
+                                <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> <span>{{ comment.likes }}</span></span>
+                                <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i> <span>{{ comment.dislikes }}</span></span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Форма ответа -->
+                        {% if current_user.is_authenticated %}
+                        <div id="reply-form-{{ comment.id }}" style="display:none; margin-top:12px;">
+                            <form method="POST" action="{{ url_for('add_comment', article_id=article.id) }}" class="reply-submit-form">
+                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                <div style="display:flex; gap:10px; align-items:flex-start;">
+                                    <div class="comment-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0;">
+                                        {{ current_user.username[0] }}
+                                    </div>
+                                    <div style="flex:1;">
+                                        <textarea name="content" rows="2"
+                                            placeholder="Ответить {{ comment.author.username }}..."
+                                            style="width:100%;background:#111;border:1px solid #333;border-radius:10px;
+                                                   color:#ddd;padding:10px 14px;font-size:0.92rem;resize:none;
+                                                   font-family:inherit;box-sizing:border-box;outline:none;"
+                                            onfocus="this.style.borderColor='rgba(232,101,10,0.5)'"
+                                            onblur="this.style.borderColor='#333'"></textarea>
+                                        <div style="display:flex;gap:8px;margin-top:7px;">
+                                            <button type="submit" class="comment-submit" style="padding:7px 16px;font-size:0.88rem;margin-top:0;">
+                                                <i class="fas fa-paper-plane"></i> Отправить
+                                            </button>
+                                            <button type="button" class="reply-toggle-btn"
+                                                    onclick="toggleReplyForm('reply-form-{{ comment.id }}', null)">
+                                                <i class="fas fa-times"></i> Отмена
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <!-- Ветка ответов -->
+                        {% set reply_count = comment.replies.count() %}
+                        {% if reply_count > 0 %}
+                        <div class="replies-thread">
+                            <div class="replies-toggle" onclick="toggleReplies('replies-{{ comment.id }}', this)">
+                                <i class="fas fa-chevron-down"></i>
+                                <span>{{ reply_count }} {{ 'ответ' if reply_count == 1 else ('ответа' if reply_count in [2,3,4] else 'ответов') }}</span>
+                            </div>
+                            <div class="replies-list" id="replies-{{ comment.id }}">
+                                {% for reply in comment.replies %}
+                                <div class="comment reply-item" id="comment-{{ reply.id }}">
+                                    <div class="comment-avatar" style="width:34px;height:34px;font-size:0.88rem;">{{ reply.author.username[0] }}</div>
+                                    <div class="comment-body">
+                                        <div class="comment-head">
+                                            <a href="{{ url_for('profile', username=reply.author.username) }}" class="comment-username">{{ reply.author.username }}</a>
+                                            <span class="comment-date" data-utc="{{ reply.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ reply.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                                            {% if reply.author.role >= 4 %}<span class="role-badge admin">ADMIN</span>
+                                            {% elif reply.author.role >= 3 %}<span class="role-badge mod">MOD</span>
+                                            {% elif reply.author.role >= 2 %}<span class="role-badge editor">РЕД.</span>{% endif %}
+                                        </div>
+                                        <div class="comment-text">{{ reply.content }}</div>
+                                        <div class="comment-reactions">
+                                            {% if current_user.is_authenticated %}
+                                                <form method="POST" action="{{ url_for('react_comment', comment_id=reply.id) }}" class="react-form" style="display:contents;">
+                                                    <input type="hidden" name="value" value="1">
+                                                    <button type="submit" class="reaction-btn {% if user_comment_reactions.get(reply.id)==1 %}like-active{% endif %}">
+                                                        <i class="fas fa-thumbs-up"></i><span class="reaction-count">{{ reply.likes }}</span>
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ url_for('react_comment', comment_id=reply.id) }}" class="react-form" style="display:contents;">
+                                                    <input type="hidden" name="value" value="-1">
+                                                    <button type="submit" class="reaction-btn {% if user_comment_reactions.get(reply.id)==-1 %}dislike-active{% endif %}">
+                                                        <i class="fas fa-thumbs-down"></i><span class="reaction-count">{{ reply.dislikes }}</span>
+                                                    </button>
+                                                </form>
+                                                <button class="reply-toggle-btn" onclick="toggleReplyForm('reply-form-sub-{{ reply.id }}', this)">
+                                                    <i class="fas fa-reply"></i> Ответить
+                                                </button>
+                                                {% if current_user.id == reply.author_id or current_user.role >= 2 %}
+                                                <form method="POST" action="{{ url_for('delete_comment', comment_id=reply.id) }}"
+                                                      style="display:contents;" onsubmit="return confirm('Удалить?');">
+                                                    <button type="submit" class="reply-toggle-btn" style="color:#cc3333;border-color:#551111;">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> {{ reply.likes }}</span>
+                                                <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i> {{ reply.dislikes }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <!-- Форма ответа на ответ (всё равно идёт в родительский комментарий как на YouTube) -->
+                                        {% if current_user.is_authenticated %}
+                                        <div id="reply-form-sub-{{ reply.id }}" style="display:none; margin-top:10px;">
+                                            <form method="POST" action="{{ url_for('add_comment', article_id=article.id) }}" class="reply-submit-form">
+                                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                                <div style="display:flex; gap:8px; align-items:flex-start;">
+                                                    <div class="comment-avatar" style="width:28px;height:28px;font-size:0.78rem;flex-shrink:0;">
+                                                        {{ current_user.username[0] }}
+                                                    </div>
+                                                    <div style="flex:1;">
+                                                        <textarea name="content" rows="2"
+                                                            placeholder="@{{ reply.author.username }} "
+                                                            style="width:100%;background:#111;border:1px solid #333;border-radius:10px;
+                                                                   color:#ddd;padding:9px 12px;font-size:0.9rem;resize:none;
+                                                                   font-family:inherit;box-sizing:border-box;outline:none;"
+                                                            onfocus="this.style.borderColor='rgba(232,101,10,0.5)'"
+                                                            onblur="this.style.borderColor='#333'"></textarea>
+                                                        <div style="display:flex;gap:7px;margin-top:6px;">
+                                                            <button type="submit" class="comment-submit" style="padding:6px 14px;font-size:0.85rem;margin-top:0;">
+                                                                <i class="fas fa-paper-plane"></i> Отправить
+                                                            </button>
+                                                            <button type="button" class="reply-toggle-btn"
+                                                                    onclick="toggleReplyForm('reply-form-sub-{{ reply.id }}', null)">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; padding:40px 0; color:#555;">
+                    <i class="fas fa-comment-slash" style="font-size:2.5rem; display:block; margin-bottom:10px; opacity:0.4;"></i>
+                    Комментариев пока нет — будь первым!
+                </div>
+            {% endif %}
+        </div>
+
+    </main>
+
+    <!-- ===== БОКОВАЯ ПАНЕЛЬ ===== -->
+    <aside class="article-sidebar">
+
+        <!-- Разделы статьи (если есть) -->
+        {% if active_drops %}
+        <div class="sidebar-card sb-sections-wrap">
+            <div class="sidebar-card-title"><i class="fas fa-list"></i> Разделы <i class="fas fa-chevron-down" style="margin-left:auto;font-size:0.6rem;opacity:0.5;"></i></div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('article', article_id=article.id) }}"
+                   class="{% if request.endpoint == 'article' %}active-section{% endif %}">
+                    <i class="fas fa-home"></i> Основная страница
+                </a>
+                {% for item in active_drops %}
+                    {% if item.extra_page %}
+                    <a href="{{ url_for('extra_page', page_id=item.extra_page.id) }}">
+                        <i class="fas fa-file-alt"></i> {{ item.title }}
+                    </a>
+                    {% else %}
+                    <div class="sec-pending">
+                        <i class="fas fa-clock"></i> {{ item.title }}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+            <!-- Dropdown при наведении -->
+            <div class="sb-sections-dropdown">
+                <a href="{{ url_for('article', article_id=article.id) }}"
+                   class="{% if request.endpoint == 'article' %}active-section{% endif %}">
+                    <i class="fas fa-home"></i> Основная страница
+                </a>
+                {% for item in active_drops %}
+                    {% if item.extra_page %}
+                    <a href="{{ url_for('extra_page', page_id=item.extra_page.id) }}">
+                        <i class="fas fa-file-alt"></i> {{ item.title }}
+                    </a>
+                    {% else %}
+                    <div class="sd-pending">
+                        <i class="fas fa-clock"></i> {{ item.title }}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Информация об игре -->
+        {% if article.game %}
+        <div class="sidebar-card">
+            <div class="sidebar-card-title"><i class="fas fa-gamepad"></i> Игра</div>
+            {% if article.game.image %}
+                <img src="{{ article.game.image }}" alt="{{ article.game.name }}"
+                     style="width:100%; border-radius:10px; margin-bottom:10px; object-fit:cover; max-height:110px; filter:brightness(0.85) saturate(0.8);">
+            {% endif %}
+            <div style="color:#a05030; font-weight:700; font-size:0.92rem; margin-bottom:8px;">{{ article.game.name }}</div>
+            <a href="{{ url_for('forum') }}?game={{ article.game.id }}"
+               style="color:#4e5460; font-size:0.76rem; text-decoration:none; display:flex; align-items:center; gap:5px; transition:color 0.15s;"
+               onmouseover="this.style.color='#c8580a'" onmouseout="this.style.color='#4e5460'">
+                <i class="fas fa-search" style="font-size:0.7rem;"></i> Все статьи об этой игре
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Статистика -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-title"><i class="fas fa-chart-bar"></i> Статистика</div>
+            <div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-user"></i> Автор</span>
+                    <span class="sb-stat-val"><a href="{{ url_for('profile', username=article.author.username) }}">{{ article.author.username }}</a></span>
+                </div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-eye"></i> Просмотры</span>
+                    <span class="sb-stat-val">{{ article.views }}</span>
+                </div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-thumbs-up"></i> Лайки</span>
+                    <span class="sb-stat-val">{{ article.likes }}</span>
+                </div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-thumbs-down"></i> Дизлайки</span>
+                    <span class="sb-stat-val">{{ article.dislikes }}</span>
+                </div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-comment"></i> Комментарии</span>
+                    <span class="sb-stat-val">{{ article.comments.count() }}</span>
+                </div>
+                <div class="sb-stat">
+                    <span class="sb-stat-label"><i class="fas fa-calendar"></i> Опубликовано</span>
+                    <span class="sb-stat-val">{{ article.created_at.strftime('%d.%m.%Y') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Управление (для редакторов) -->
+        {% if current_user.is_authenticated and current_user.role >= 2 %}
+        <div class="sidebar-card">
+            <div class="sidebar-card-title"><i class="fas fa-tools"></i> Управление</div>
+            <nav class="sb-manage">
+                <a href="{{ url_for('admin_article_edit', article_id=article.id) }}">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+                <a href="{{ url_for('admin_dropdown_list', article_id=article.id) }}">
+                    <i class="fas fa-list"></i> Разделы / DLC
+                </a>
+                <a href="{{ url_for('admin_extra_create') }}">
+                    <i class="fas fa-plus"></i> Доп. страница
+                </a>
+            </nav>
+        </div>
+        {% endif %}
+
+    </aside>
+
+</div>
+</div>
+</div>
+</div>
+
+<script>
+function toggleSections() {
+    var btn  = document.getElementById('sectionsBtn');
+    var menu = document.getElementById('sectionsMenu');
+    if (!btn || !menu) return;
+    var isOpen = menu.classList.contains('open');
+    menu.classList.toggle('open', !isOpen);
+    btn.classList.toggle('open', !isOpen);
+}
+document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.sections-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('sectionsMenu')?.classList.remove('open');
+        document.getElementById('sectionsBtn')?.classList.remove('open');
+    }
+});
+
+// Показать/скрыть форму ответа
+function toggleReplyForm(id, btn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var visible = el.style.display !== 'none';
+    el.style.display = visible ? 'none' : 'block';
+    if (!visible) {
+        var ta = el.querySelector('textarea');
+        if (ta) ta.focus();
+    }
+}
+
+// Показать/скрыть ветку ответов
+function toggleReplies(id, toggleEl) {
+    var list = document.getElementById(id);
+    if (!list) return;
+    var visible = list.classList.contains('visible');
+    list.classList.toggle('visible', !visible);
+    if (toggleEl) toggleEl.classList.toggle('open', !visible);
+}
+
+// YouTube-стиль времени комментариев
+function timeAgo(dateStr) {
+    var date = new Date(dateStr + 'Z'); // UTC
+    var now = new Date();
+    var diff = Math.floor((now - date) / 1000); // секунды
+    if (diff < 60) return 'только что';
+    if (diff < 3600) {
+        var m = Math.floor(diff / 60);
+        return m + ' ' + (m === 1 ? 'минуту' : m < 5 ? 'минуты' : 'минут') + ' назад';
+    }
+    if (diff < 86400) {
+        var h = Math.floor(diff / 3600);
+        return h + ' ' + (h === 1 ? 'час' : h < 5 ? 'часа' : 'часов') + ' назад';
+    }
+    if (diff < 2592000) {
+        var d = Math.floor(diff / 86400);
+        return d + ' ' + (d === 1 ? 'день' : d < 5 ? 'дня' : 'дней') + ' назад';
+    }
+    if (diff < 31536000) {
+        var mo = Math.floor(diff / 2592000);
+        return mo + ' ' + (mo === 1 ? 'месяц' : mo < 5 ? 'месяца' : 'месяцев') + ' назад';
+    }
+    var y = Math.floor(diff / 31536000);
+    return y + ' ' + (y === 1 ? 'год' : y < 5 ? 'года' : 'лет') + ' назад';
+}
+document.querySelectorAll('.comment-date[data-utc]').forEach(function(el) {
+    el.textContent = timeAgo(el.getAttribute('data-utc'));
+    el.title = el.getAttribute('data-utc').replace('T', ' ') + ' UTC';
+});
+
+document.querySelectorAll('.react-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var commentBlock = form.closest('.comment');
+            if (!commentBlock) return;
+            var reactions = commentBlock.querySelector('.comment-reactions');
+            if (reactions) {
+                var btns = reactions.querySelectorAll('.reaction-btn');
+                btns.forEach(function(btn) {
+                    var cnt = btn.querySelector('.reaction-count');
+                    if (!cnt) return;
+                    var inp = btn.closest('form') ? btn.closest('form').querySelector('input[name="value"]') : null;
+                    if (inp && inp.value == '1') cnt.textContent = data.likes;
+                    if (inp && inp.value == '-1') cnt.textContent = data.dislikes;
+                });
+            }
+        })
+        .catch(function() { form.submit(); });
+    });
+});
+
+// AJAX отправка ответов на комментарии (без прыжка на верх)
+document.querySelectorAll('.reply-submit-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var textarea = form.querySelector('textarea[name="content"]');
+        var content = textarea ? textarea.value.trim() : '';
+        if (!content) return;
+        var formData = new FormData(form);
+        var submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        // Сохраняем позицию скролла
+        var scrollPos = window.scrollY;
+        sessionStorage.setItem('restoreScroll', scrollPos);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            redirect: 'follow'
+        })
+        .then(function() { location.reload(); })
+        .catch(function() { location.reload(); });
+    });
+});
+// Восстанавливаем скролл после перезагрузки
+(function() {
+    var pos = sessionStorage.getItem('restoreScroll');
+    if (pos !== null) {
+        sessionStorage.removeItem('restoreScroll');
+        window.scrollTo(0, parseInt(pos));
+    }
+})();
+</script>
+{% endblock %}

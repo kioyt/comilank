@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Панель управления | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .admin-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; justify-content:center; align-items:flex-start;
+        padding:44px 20px 72px; box-sizing:border-box;
+    }
+    .admin-card {
+        width:100%; max-width:860px;
+        background:#141416; border-radius:26px;
+        border:1px solid rgba(255,255,255,0.055);
+        padding:30px 32px 36px; box-sizing:border-box;
+        position:relative;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.04), 0 40px 80px rgba(0,0,0,0.55);
+    }
+    .admin-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse, rgba(232,101,10,0.28) 0%, transparent 70%);
+        filter:blur(14px); pointer-events:none; border-radius:50%;
+    }
+
+    .admin-header {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:28px; flex-wrap:wrap; gap:12px;
+    }
+    .admin-title {
+        font-size:1.6rem; font-weight:700; color:#e8650a;
+        letter-spacing:-0.3px; margin:0;
+        display:flex; align-items:center; gap:9px;
+    }
+    .admin-title i { opacity:0.7; font-size:1.25rem; }
+
+    .btn {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:7px 16px; border-radius:20px; font-size:0.83rem;
+        font-weight:600; text-decoration:none; transition:all 0.2s;
+        cursor:pointer; border:none; position:relative; overflow:hidden;
+        font-family:inherit;
+    }
+    .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.22s; pointer-events:none; }
+    .btn-secondary { background:rgba(255,255,255,0.03); color:#4e5460; border:1px solid rgba(255,255,255,0.07); }
+    .btn-secondary::before { background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); }
+    .btn-secondary:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
+    .btn-secondary:hover::before { opacity:1; }
+
+    .dash-grid {
+        display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+        gap:16px; margin-bottom:24px;
+    }
+    .dash-tile {
+        background:#0f0f12; border-radius:18px;
+        border:1px solid rgba(232,101,10,0.18);
+        padding:32px 20px; text-align:center;
+        text-decoration:none; color:#c9cdd6;
+        transition:all 0.22s; position:relative; overflow:hidden;
+    }
+    .dash-tile::before {
+        content:''; position:absolute; inset:0; border-radius:18px;
+        background:radial-gradient(circle at 50% 0%, rgba(232,101,10,0.12) 0%, transparent 65%);
+        opacity:0; transition:opacity 0.25s; pointer-events:none;
+    }
+    .dash-tile:hover { transform:translateY(-3px); border-color:rgba(232,101,10,0.4); box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+    .dash-tile:hover::before { opacity:1; }
+    .dash-tile i { display:block; font-size:2.6rem; color:#e8650a; opacity:0.75; margin-bottom:14px; }
+    .dash-tile-label { font-size:1rem; font-weight:700; color:#c9cdd6; line-height:1.3; }
+
+    .welcome-box {
+        background:#0f0f12; border-radius:16px;
+        border:1px solid rgba(232,101,10,0.15);
+        padding:16px 20px;
+        color:#a05030; font-size:0.88rem;
+    }
+    .welcome-box strong { color:#e8650a; }
+</style>
+
+<div class="admin-outer">
+<div class="admin-card">
+
+    <div class="admin-header">
+        <h2 class="admin-title"><i class="fas fa-shield-alt"></i> Панель управления</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary"><i class="fas fa-home"></i> На главную</a>
+    </div>
+
+    <div class="dash-grid">
+        <a href="{{ url_for('admin_users') }}" class="dash-tile">
+            <i class="fas fa-users"></i>
+            <div class="dash-tile-label">Управление пользователями</div>
+        </a>
+        <a href="{{ url_for('admin_articles') }}" class="dash-tile">
+            <i class="fas fa-newspaper"></i>
+            <div class="dash-tile-label">Статьи и страницы</div>
+        </a>
+        {% if current_user.role >= 4 %}
+        <a href="{{ url_for('admin_stats') }}" class="dash-tile">
+            <i class="fas fa-chart-bar"></i>
+            <div class="dash-tile-label">Статистика</div>
+        </a>
+        {% endif %}
+        {% if current_user.can_ip_ban() %}
+        <a href="{{ url_for('ip_ban_list') }}" class="dash-tile">
+            <i class="fas fa-ban"></i>
+            <div class="dash-tile-label">IP-баны</div>
+        </a>
+        {% endif %}
+        {% if current_user.role >= 4 %}
+        <div class="dash-tile" style="cursor:default;">
+            <i class="fas fa-bomb" style="
+                color:{% if chaos_button_enabled %}#e84040{% else %}#e8650a{% endif %};
+                filter:{% if chaos_button_enabled %}drop-shadow(0 0 14px rgba(232,64,64,0.7)){% else %}none{% endif %};
+                transition:all 0.3s;
+            "></i>
+            <div class="dash-tile-label">Кнопка «Не нажимай»</div>
+            <div style="margin-top:9px; font-size:0.8rem; font-weight:700; letter-spacing:0.3px;
+                display:inline-flex; align-items:center; gap:6px;
+                color:{% if chaos_button_enabled %}#e84040{% else %}#3d4350{% endif %};">
+                <span style="
+                    width:8px; height:8px; border-radius:50%; display:inline-block;
+                    {% if chaos_button_enabled %}
+                        background:#e84040;
+                        box-shadow:0 0 0 3px rgba(232,64,64,0.2), 0 0 10px rgba(232,64,64,0.6);
+                        animation:chaosIndicator 1s ease-in-out infinite;
+                    {% else %}
+                        background:#252529; border:1px solid #333;
+                    {% endif %}
+                "></span>
+                {% if chaos_button_enabled %}Включена{% else %}Выключена{% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('toggle_chaos_button') }}" style="margin-top:14px;">
+                <button type="submit" style="
+                    padding:9px 24px; border-radius:20px; font-size:0.84rem; font-weight:700;
+                    cursor:pointer; font-family:inherit; transition:all 0.22s; letter-spacing:0.2px;
+                    {% if chaos_button_enabled %}
+                        background:linear-gradient(135deg,rgba(180,20,20,0.2),rgba(232,64,64,0.1));
+                        border:1px solid rgba(200,30,30,0.45); color:#e84040;
+                        box-shadow:0 0 16px rgba(200,20,20,0.2);
+                    {% else %}
+                        background:linear-gradient(135deg,rgba(232,101,10,0.15),rgba(232,101,10,0.06));
+                        border:1px solid rgba(232,101,10,0.38); color:#e8650a;
+                        box-shadow:0 0 16px rgba(232,101,10,0.1);
+                    {% endif %}
+                ">
+                    {% if chaos_button_enabled %}⬛ Выключить{% else %}▶ Включить{% endif %}
+                </button>
+            </form>
+        </div>
+        <style>
+        @keyframes chaosIndicator {
+            0%,100% { box-shadow:0 0 0 3px rgba(232,64,64,0.2), 0 0 10px rgba(232,64,64,0.6); }
+            50%      { box-shadow:0 0 0 6px rgba(232,64,64,0.08), 0 0 20px rgba(232,64,64,0.9); }
+        }
+        </style>
+        {% endif %}
+    </div>
+
+    <div class="welcome-box">
+        Добро пожаловать, <strong>{{ current_user.username }}</strong>. Ваша роль:
+        <strong>
+        {% if current_user.role == 4 %}Главный администратор
+        {% elif current_user.role == 3 %}Старший модератор
+        {% elif current_user.role == 2 %}Редактор
+        {% elif current_user.role == 1 %}Модератор чата
+        {% else %}Обычный пользователь{% endif %}
+        </strong>
+    </div>
+
+</div>
+</div>
+{% endblock %}

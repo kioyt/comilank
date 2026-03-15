@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактировать пункт' if item else 'Новый пункт' }} | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .edit-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding:48px 24px 80px; box-sizing:border-box;
+    }
+    .edit-wrap { width:100%; max-width:600px; }
+
+    .edit-header {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:28px; flex-wrap:wrap; gap:14px;
+    }
+    .edit-title {
+        font-size:1.6rem; font-weight:800; color:#e8650a;
+        text-shadow:0 0 20px rgba(232,101,10,0.25); margin:0;
+        display:flex; align-items:center; gap:10px;
+    }
+    .btn-back {
+        display:inline-flex; align-items:center; gap:7px; padding:8px 18px;
+        border-radius:22px; background:rgba(255,255,255,0.03);
+        border:1px solid rgba(255,255,255,0.09); color:#4e5460;
+        text-decoration:none; font-size:0.85rem; font-weight:600; transition:0.2s;
+        position:relative; overflow:hidden;
+    }
+    .btn-back::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .btn-back:hover { border-color:rgba(255,255,255,0.16); color:#8a909e; }
+    .btn-back:hover::before { opacity:1; }
+
+    .edit-card {
+        background:#141416; border-radius:28px; padding:32px 36px;
+        border:1px solid rgba(255,255,255,0.06);
+        box-shadow:0 0 0 1px rgba(232,101,10,0.06), 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(232,101,10,0.07) inset;
+        position:relative;
+    }
+    .edit-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse,rgba(232,101,10,0.35) 0%,transparent 70%);
+        filter:blur(12px); pointer-events:none; border-radius:50%;
+    }
+
+    .field { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+    .field label { color:#3d4350; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+    .field label span.req { color:#e8650a; }
+    .field input, .field select {
+        background:#0f0f12; border:1px solid rgba(255,255,255,0.07); border-radius:12px;
+        color:#c9cdd6; font-size:0.95rem; padding:12px 16px;
+        transition:border-color 0.2s, box-shadow 0.2s; outline:none;
+        width:100%; box-sizing:border-box;
+    }
+    .field input:focus, .field select:focus {
+        border-color:rgba(232,101,10,0.4); box-shadow:0 0 0 3px rgba(232,101,10,0.07);
+    }
+    .field select option { background:#141416; }
+
+    .toggle-row {
+        display:flex; align-items:center; justify-content:space-between;
+        background:#0f0f12; border:1px solid rgba(255,255,255,0.07); border-radius:12px;
+        padding:12px 16px;
+    }
+    .toggle-label { color:#8a909e; font-size:0.92rem; }
+    .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .slider {
+        position:absolute; cursor:pointer; inset:0;
+        background:#252830; border-radius:24px; transition:0.3s;
+        border:1px solid rgba(255,255,255,0.06);
+    }
+    .slider:before {
+        content:''; position:absolute; height:18px; width:18px;
+        left:3px; bottom:2px; background:#3d4350; border-radius:50%; transition:0.3s;
+    }
+    input:checked + .slider { background:rgba(232,101,10,0.7); border-color:rgba(232,101,10,0.4); }
+    input:checked + .slider:before { transform:translateX(20px); background:#fff; }
+
+    .info-box {
+        background:rgba(232,101,10,0.06); border:1px solid rgba(232,101,10,0.18);
+        border-radius:14px; padding:13px 16px; margin-bottom:24px;
+        color:#8a909e; font-size:0.87rem; line-height:1.6;
+    }
+    .info-box i { color:#e8650a; margin-right:6px; }
+
+    .form-actions {
+        display:flex; justify-content:flex-end; gap:10px; margin-top:10px;
+    }
+    .btn-cancel {
+        display:inline-flex; align-items:center; gap:7px; padding:10px 22px;
+        border-radius:22px; background:rgba(255,255,255,0.03);
+        border:1px solid rgba(255,255,255,0.09); color:#4e5460;
+        font-size:0.9rem; font-weight:600; transition:0.2s; cursor:pointer; text-decoration:none;
+        position:relative; overflow:hidden;
+    }
+    .btn-cancel::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.07) 0%, transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .btn-cancel:hover { border-color:rgba(255,255,255,0.16); color:#8a909e; }
+    .btn-cancel:hover::before { opacity:1; }
+    .btn-save {
+        display:inline-flex; align-items:center; gap:8px; padding:10px 26px;
+        border-radius:22px; border:none;
+        background:rgba(232,101,10,0.15); color:#d0600c;
+        border:1px solid rgba(232,101,10,0.35);
+        font-weight:700; font-size:0.95rem; cursor:pointer; transition:0.2s;
+        position:relative; overflow:hidden;
+        box-shadow:0 0 16px rgba(232,101,10,0.15);
+    }
+    .btn-save::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(232,101,10,0.25) 0%, transparent 70%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .btn-save:hover { background:rgba(232,101,10,0.25); color:#e8650a; border-color:rgba(232,101,10,0.55); box-shadow:0 0 28px rgba(232,101,10,0.3); }
+    .btn-save:hover::before { opacity:1; }
+</style>
+
+<div class="edit-outer">
+<div class="edit-wrap">
+    <div class="edit-header">
+        <h1 class="edit-title">
+            <i class="fas fa-list" style="margin-right:10px; opacity:0.8;"></i>
+            {{ 'Редактировать пункт' if item else 'Новый пункт меню' }}
+        </h1>
+        <a href="{{ url_for('admin_dropdown_list', article_id=article.id) }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Назад
+        </a>
+    </div>
+
+    <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        Пункт меню отображается в выпадающем окне карточки статьи
+        <strong style="color:#ff6600;">«{{ article.title }}»</strong>.
+        Привяжи к нему дополнительную страницу — и при клике пользователь попадёт туда.
+    </div>
+
+    <div class="edit-card">
+        <form method="POST">
+
+            <div class="field">
+                <label>Название пункта <span class="req">*</span></label>
+                <input type="text" name="title"
+                       placeholder="Например: DLC, Места, Оружие, Пасхалки..."
+                       value="{{ item.title if item else '' }}" required>
+            </div>
+
+            <div class="field">
+                <label>Привязанная страница
+                    <span style="color:#555;">(необязательно)</span>
+                </label>
+                <select name="page_id">
+                    <option value="">— Нет (пункт неактивен) —</option>
+                    {% for page in extra_pages %}
+                    <option value="{{ page.id }}"
+                            {% if item and item.page_id == page.id %}selected{% endif %}>
+                        {{ page.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if not extra_pages %}
+                <div style="color:#555; font-size:0.82rem; margin-top:6px;">
+                    <i class="fas fa-exclamation-circle" style="color:#ff6600;"></i>
+                    Нет доп. страниц для этой статьи.
+                    <a href="{{ url_for('admin_extra_create') }}"
+                       style="color:#ff6600; text-decoration:none;">Создать →</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label>Активность</label>
+                <div class="toggle-row">
+                    <span class="toggle-label">Показывать в меню</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="is_active"
+                               {% if not item or item.is_active %}checked{% endif %}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('admin_dropdown_list', article_id=article.id) }}" class="btn-cancel">
+                    <i class="fas fa-times"></i> Отмена
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i>
+                    {{ 'Сохранить' if item else 'Добавить пункт' }}
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+</div>
+{% endblock %}

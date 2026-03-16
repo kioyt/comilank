@@ -1,0 +1,699 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактировать' if article else 'Новая статья' }} | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .edit-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding:48px 24px 80px; box-sizing:border-box;
+    }
+    .edit-wrap { width:100%; max-width:900px; }
+
+    /* Шапка */
+    .edit-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 30px; flex-wrap: wrap; gap: 14px;
+    }
+    .edit-title {
+        font-size: 1.8rem; font-weight: 800; color: #e8650a;
+        text-shadow: 0 0 20px rgba(232,101,10,0.25); margin: 0;
+    }
+    .btn-back {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 8px 18px; border-radius: 22px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.09); color: #4e5460;
+        text-decoration: none; font-size: 0.85rem; font-weight:600; transition: 0.2s;
+        position:relative; overflow:hidden;
+    }
+    .btn-back::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.07) 0%, transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .btn-back:hover { border-color: rgba(255,255,255,0.16); color: #8a909e; }
+    .btn-back:hover::before { opacity:1; }
+
+    /* Карточка формы */
+    .edit-card {
+        background: #141416; border-radius: 28px; padding: 34px 38px;
+        border: 1px solid rgba(255,255,255,0.06);
+        box-shadow: 0 0 0 1px rgba(232,101,10,0.06), 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(232,101,10,0.07) inset;
+        position: relative;
+    }
+    .edit-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse,rgba(232,101,10,0.35) 0%,transparent 70%);
+        filter:blur(12px); pointer-events:none; border-radius:50%;
+    }
+    @media (max-width: 600px) { .edit-card { padding: 20px 16px; } }
+
+    /* Секции */
+    .form-section {
+        border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 26px; margin-bottom: 26px;
+    }
+    .form-section:last-child { border-bottom: none; margin-bottom: 0; }
+    .section-label {
+        color: #e8650a; font-size: 0.78rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px;
+        display: flex; align-items: center; gap: 7px; opacity: 0.85;
+    }
+
+    /* Группа полей */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label { color: #3d4350; font-size: 0.8rem; font-weight: 700; text-transform:uppercase; letter-spacing:0.4px; }
+    .field label span.req { color: #e8650a; }
+
+    /* Инпуты */
+    .field input, .field select, .field textarea {
+        background: #0f0f12; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px;
+        color: #c9cdd6; font-size: 0.95rem; padding: 12px 16px;
+        transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+        font-family: inherit; width: 100%; box-sizing: border-box;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+        border-color: rgba(232,101,10,0.4); box-shadow: 0 0 0 3px rgba(232,101,10,0.07);
+    }
+    .field select option { background: #141416; }
+    .field textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    .field textarea.content-area { min-height: 300px; }
+
+    /* Выбор категории */
+    .category-toggle { display: flex; gap: 10px; }
+    .cat-radio { display: none; }
+    .cat-radio-label {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 9px 20px; border-radius: 22px;
+        border: 1px solid rgba(255,255,255,0.09);
+        color: #4e5460; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+        transition: 0.2s; user-select: none; background:rgba(255,255,255,0.03);
+    }
+    .cat-radio:checked + .cat-radio-label {
+        border-color: rgba(232,101,10,0.45); color: #e8650a;
+        background: rgba(232,101,10,0.1);
+        box-shadow: 0 0 14px rgba(232,101,10,0.12);
+    }
+    .cat-radio-label:hover { border-color: rgba(255,255,255,0.15); color: #8a909e; }
+
+    /* Загрузка изображения */
+    .image-upload-area {
+        border: 2px dashed rgba(255,255,255,0.08); border-radius: 16px;
+        padding: 24px; text-align: center; transition: 0.25s;
+        cursor: pointer; position: relative; overflow: hidden;
+        background: #0f0f12;
+    }
+    .image-upload-area:hover, .image-upload-area.drag-over {
+        border-color: rgba(232,101,10,0.4); background: rgba(232,101,10,0.04);
+    }
+    .image-upload-area input[type="file"] {
+        position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-icon { font-size: 2.2rem; color: #252830; margin-bottom: 10px; transition: color 0.2s; }
+    .image-upload-area:hover .upload-icon { color: #e8650a; }
+    .upload-text { color: #3d4350; font-size: 0.9rem; }
+    .upload-text strong { color: #e8650a; }
+    .upload-hint { color: #252830; font-size: 0.78rem; margin-top: 4px; }
+
+    /* Превью изображения */
+    .image-preview-wrap { margin-top: 14px; }
+    .image-preview {
+        width: 100%; height: 220px; object-fit: cover;
+        border-radius: 12px; display: none; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .image-preview.visible { display: block; }
+    .current-image-wrap { margin-bottom: 14px; }
+    .current-image-label { color: #3d4350; font-size: 0.8rem; margin-bottom: 6px; }
+    .current-image {
+        width: 100%; height: 220px; object-fit: cover;
+        border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+    }
+    /* Видео-превью — тот же размер что и фото */
+    .current-image video,
+    video.current-image {
+        width: 100%; height: 220px; object-fit: cover;
+        border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display:block;
+    }
+    /* Убираем чёрную черту при наведении на изображения */
+    .ql-editor img:hover, .current-image:hover, .image-preview:hover { outline: none !important; box-shadow: none !important; border: none !important; }
+
+    /* Или URL */
+    .or-divider {
+        display: flex; align-items: center; gap: 12px;
+        color: #252830; font-size: 0.82rem; margin: 14px 0;
+    }
+    .or-divider::before, .or-divider::after {
+        content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.05);
+    }
+
+    /* Кнопки формы */
+    .form-actions {
+        display: flex; justify-content: flex-end; gap: 10px;
+        margin-top: 30px; flex-wrap: wrap;
+    }
+    .btn-cancel {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 11px 24px; border-radius: 22px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.09); color: #4e5460;
+        text-decoration: none; font-size: 0.92rem; font-weight: 600;
+        transition: 0.2s; cursor: pointer; position:relative; overflow:hidden;
+    }
+    .btn-cancel::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.07) 0%, transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .btn-cancel:hover { border-color:rgba(255,255,255,0.16); color:#8a909e; }
+    .btn-cancel:hover::before { opacity:1; }
+    .btn-save {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 11px 28px; border-radius: 22px;
+        background: rgba(232,101,10,0.15); color: #d0600c;
+        border: 1px solid rgba(232,101,10,0.35);
+        font-weight: 700; font-size: 0.97rem; cursor: pointer;
+        transition: 0.2s; box-shadow: 0 0 18px rgba(232,101,10,0.18);
+        position:relative; overflow:hidden;
+    }
+    .btn-save::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%, rgba(232,101,10,0.25) 0%, transparent 70%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .btn-save:hover { background:rgba(232,101,10,0.25); color:#e8650a; border-color:rgba(232,101,10,0.55); box-shadow:0 0 32px rgba(232,101,10,0.32); }
+    .btn-save:hover::before { opacity:1; }
+
+    /* Выбор игры */
+    .game-select-wrap { position: relative; }
+    .game-select-preview {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 10px; color: #4e5460; font-size: 0.87rem;
+    }
+    .game-select-preview img {
+        width: 36px; height: 36px; border-radius: 8px;
+        object-fit: cover; border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* ===== QUILL РЕДАКТОР ===== */
+    /* Редактор — точно как в extra_edit */
+    .editor-wrap {
+        border:1px solid rgba(232,101,10,0.12); border-radius:14px;
+        overflow:hidden; background:#0f0f12; transition:border-color 0.2s;
+    }
+    .editor-wrap:focus-within { border-color:rgba(232,101,10,0.35); }
+    .editor-label {
+        color:#7a6050; font-size:0.75rem; font-weight:700;
+        text-transform:uppercase; letter-spacing:0.5px;
+        margin-bottom:7px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+    }
+    .ql-toolbar.ql-snow {
+        background:#131316 !important;
+        border:none !important;
+        border-bottom:1px solid rgba(255,255,255,0.05) !important;
+        padding:8px 12px !important;
+        display:flex; flex-wrap:wrap; gap:2px;
+    }
+    .ql-toolbar .ql-stroke { stroke:#4e5460 !important; }
+    .ql-toolbar .ql-fill  { fill:#4e5460 !important; }
+    .ql-toolbar .ql-picker-label { color:#4e5460 !important; }
+    .ql-toolbar button:hover .ql-stroke,
+    .ql-toolbar button.ql-active .ql-stroke { stroke:#e8650a !important; }
+    .ql-toolbar button:hover .ql-fill,
+    .ql-toolbar button.ql-active .ql-fill  { fill:#e8650a !important; }
+    .ql-toolbar button:hover, .ql-toolbar button.ql-active { color:#e8650a !important; }
+    .ql-toolbar .ql-picker-options {
+        background:#1a1a1e !important;
+        border-color:rgba(232,101,10,0.25) !important;
+        border-radius:10px !important;
+        z-index:9999 !important;
+    }
+    .ql-toolbar .ql-picker-item:hover { color:#e8650a !important; }
+    .ql-container.ql-snow { border:none !important; }
+    #quill-editor {
+        min-height:320px;
+        color:#c9cdd6;
+        font-size:0.95rem;
+        line-height:1.65;
+        padding:16px 18px;
+        background:#0f0f12;
+        box-sizing:border-box;
+    }
+    .ql-editor > *:first-child { margin-top:0 !important; }
+    .ql-editor.ql-blank::before {
+        color:rgba(232,101,10,0.25) !important; font-style:normal !important;
+        top:16px; left:18px; right:18px; pointer-events:none; position:absolute;
+    }
+    .ql-editor { position:relative !important; }
+    .ql-editor img { max-width:100%; height:220px; object-fit:cover; border-radius:10px; margin:12px auto; display:block;
+        border:none !important; outline:none !important; }
+    .ql-editor img.ql-selected, .ql-editor img:hover { outline:none !important; box-shadow:none !important; }
+    .ql-editor video { max-width:100%; height:220px; object-fit:cover; border-radius:10px; margin:12px auto; display:block;
+        border:none !important; outline:none !important; }
+    .ql-editor p { margin-bottom:0.6em; }
+    .ql-editor h1 { color:#e0e4ec; font-size:1.5rem; font-weight:700; margin:1em 0 0.4em; }
+    .ql-editor h2 { color:#e0e4ec; font-size:1.25rem; font-weight:700; margin:1em 0 0.4em; }
+    .ql-editor h3 { color:#e0e4ec; font-size:1.05rem; font-weight:700; margin:0.8em 0 0.4em; }
+    .upload-photo-btn {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:4px 11px; border-radius:10px; font-size:0.74rem;
+        font-weight:600; cursor:pointer; border:1px solid rgba(232,101,10,0.18);
+        color:#a04808; background:rgba(232,101,10,0.06); transition:all 0.18s;
+        position:relative;
+    }
+    .upload-photo-btn:hover { background:rgba(232,101,10,0.14); border-color:rgba(232,101,10,0.38); color:#e8650a; }
+    .quick-colors {
+        display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+        margin-top:8px; margin-bottom:10px;
+        padding:8px 12px;
+        background:rgba(255,255,255,0.02);
+        border-radius:12px;
+        border:1px solid rgba(255,255,255,0.05);
+    }
+    .quick-colors-label { color:#3d4350; font-size:0.72rem; font-weight:600; white-space:nowrap; }
+    .color-dot {
+        width:17px; height:17px; border-radius:50%;
+        cursor:pointer; border:2px solid transparent;
+        transition:all 0.18s; flex-shrink:0;
+        position:relative;
+    }
+    .color-dot:hover { transform:scale(1.3); border-color:rgba(255,255,255,0.35); z-index:1; }
+    .heading-btn {
+        padding:2px 9px; border-radius:8px;
+        background:rgba(232,101,10,0.07); border:1px solid rgba(232,101,10,0.18);
+        color:#c8580a; font-size:0.74rem; font-weight:800; cursor:pointer;
+        transition:all 0.2s; font-family:inherit; position:relative;
+    }
+    .heading-btn:hover { background:rgba(232,101,10,0.16); color:#e8650a; border-color:rgba(232,101,10,0.38); }
+    .reset-btn {
+        padding:2px 9px; border-radius:8px;
+        background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+        color:#3d4350; font-size:0.71rem; cursor:pointer;
+        transition:all 0.2s; font-family:inherit; position:relative;
+    }
+    .reset-btn:hover { color:#8a909e; border-color:rgba(255,255,255,0.15); }
+    [data-tip] { position:relative; }
+    [data-tip]::after {
+        content: attr(data-tip);
+        position:absolute; bottom:calc(100% + 7px); left:50%;
+        transform:translateX(-50%);
+        background:#1e1e22; border:1px solid rgba(232,101,10,0.22);
+        color:#c9cdd6; font-size:0.72rem; font-weight:500;
+        white-space:nowrap; padding:4px 9px; border-radius:8px;
+        pointer-events:none; opacity:0; transition:opacity 0.18s;
+        z-index:9999;
+        box-shadow:0 4px 16px rgba(0,0,0,0.5);
+    }
+    [data-tip]:hover::after { opacity:1; }
+    .divider-v {
+        width:1px; height:16px;
+        background:rgba(255,255,255,0.07);
+        margin:0 4px; flex-shrink:0;
+    }
+</style>
+
+<div class="edit-outer">
+<div class="edit-wrap">
+    <div class="edit-header">
+        <h1 class="edit-title">
+            <i class="fas fa-{% if article %}edit{% else %}plus-circle{% endif %}" style="margin-right:10px; opacity:0.8;"></i>
+            {{ 'Редактировать статью' if article else 'Новая статья' }}
+        </h1>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ url_for('forum') }}" class="btn-back" title="На сайт">
+                <i class="fas fa-globe"></i> На сайт
+            </a>
+            <a href="{{ url_for('admin_articles') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="edit-card">
+        <form method="POST" action="{{ url_for('admin_article_edit', article_id=article.id) if article else url_for('admin_article_create') }}" enctype="multipart/form-data" id="articleForm">
+
+            <!-- ── 1. ОСНОВНОЕ ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-pen"></i> Основное</div>
+
+                <div class="field" style="margin-bottom:16px;">
+                    <label>Заголовок <span class="req">*</span></label>
+                    <input type="text" name="title" placeholder="Введите заголовок статьи"
+                           value="{{ article.title if article else '' }}" required>
+                </div>
+
+                <div class="form-grid">
+                    <!-- Выбор игры -->
+                    <div class="field">
+                        <label>Игра <span style="color:#555;">(необязательно)</span></label>
+                        <select name="game_id" id="gameSelect" onchange="updateGamePreview()">
+                            <option value="">— Не выбрано —</option>
+                            {% for game in games %}
+                            <option value="{{ game.id }}"
+                                    data-image="{{ game.image or '' }}"
+                                    {% if article and article.game_id == game.id %}selected{% endif %}>
+                                {{ game.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="game-select-preview" id="gamePreview" style="display:none;">
+                            <img id="gamePreviewImg" src="" alt="">
+                            <span id="gamePreviewName"></span>
+                        </div>
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="field">
+                        <label>Тип публикации</label>
+                        <div class="category-toggle">
+                            <input type="radio" name="category" value="article" id="cat_article" class="cat-radio"
+                                   {% if not article or article.category == 'article' %}checked{% endif %}>
+                            <label for="cat_article" class="cat-radio-label">
+                                <i class="fas fa-gamepad"></i> Статья
+                            </label>
+                            <input type="radio" name="category" value="news" id="cat_news" class="cat-radio"
+                                   {% if article and article.category == 'news' %}checked{% endif %}>
+                            <label for="cat_news" class="cat-radio-label">
+                                <i class="fas fa-newspaper"></i> Новость
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 2. ОБЛОЖКА ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-image"></i> Обложка</div>
+
+                <!-- Текущее изображение -->
+                {% if article and article.get_image_url() %}
+                <div class="current-image-wrap">
+                    <div class="current-image-label">Текущая обложка:</div>
+                    <img src="{{ article.get_image_url() }}" alt="" class="current-image">
+                </div>
+                {% endif %}
+
+                <!-- Загрузка файла -->
+                <div class="image-upload-area" id="uploadArea"
+                     ondragover="this.classList.add('drag-over')"
+                     ondragleave="this.classList.remove('drag-over')"
+                     ondrop="this.classList.remove('drag-over')">
+                    <input type="file" name="image_file" id="imageFile"
+                           accept="image/*" onchange="previewImage(this)">
+                    <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <div class="upload-text">
+                        <strong>Нажмите</strong> или перетащите изображение сюда
+                    </div>
+                    <div class="upload-hint">PNG, JPG, GIF, WEBP · до 32 MB</div>
+                </div>
+
+                <div class="image-preview-wrap">
+                    <img id="imagePreview" src="" alt="" class="image-preview">
+                    <div id="previewLabel" style="color:#888; font-size:0.82rem; margin-top:6px; display:none;">
+                        <i class="fas fa-check-circle" style="color:#ff6600;"></i> Изображение выбрано
+                    </div>
+                </div>
+
+                <div class="or-divider">или укажите URL</div>
+
+                <div class="field">
+                    <input type="text" name="image" placeholder="https://example.com/image.jpg"
+                           value="{{ article.image if article and article.image and not article.image_file else '' }}">
+                </div>
+            </div>
+
+            <!-- ── 3. МЕДИА ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fab fa-youtube"></i> Видео</div>
+                <div class="field">
+                    <label>YouTube ссылка <span style="color:#555;">(необязательно)</span></label>
+                    <input type="text" name="video_url"
+                           placeholder="https://youtube.com/watch?v=..."
+                           value="{{ article.video_url if article else '' }}">
+                </div>
+                <div class="field" style="margin-top:14px;">
+                    <label>Или загрузить видео-файл <span style="color:#555;">(mp4, webm — необязательно)</span></label>
+                    {% if article and article.video_file %}
+                    <div style="margin-bottom:8px; padding:8px 14px; background:rgba(232,101,10,0.06);
+                         border:1px solid rgba(232,101,10,0.2); border-radius:10px;
+                         color:#c8780a; font-size:0.82rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-film"></i>
+                        Текущее видео: <strong>{{ article.video_file }}</strong>
+                        <a href="/static/uploads/{{ article.video_file }}" target="_blank"
+                           style="color:#e8650a; margin-left:6px;">Просмотр</a>
+                    </div>
+                    {% endif %}
+                    <label style="display:block;cursor:pointer;position:relative;">
+                        <input type="file" name="video_file_upload" accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg,.mov"
+                               style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2;">
+                        <div style="background:#0f0f12;border:2px dashed rgba(232,101,10,0.22);border-radius:12px;
+                                    padding:14px 18px;color:#6a4020;display:flex;align-items:center;gap:10px;
+                                    font-size:0.88rem;font-weight:600;transition:all 0.2s;cursor:pointer;"
+                             onmouseover="this.style.borderColor='rgba(232,101,10,0.5)';this.style.background='rgba(232,101,10,0.04)';this.style.color='#e8650a'"
+                             onmouseout="this.style.borderColor='rgba(232,101,10,0.22)';this.style.background='#0f0f12';this.style.color='#6a4020'">
+                            <i class="fas fa-film" style="color:#e8650a;opacity:0.7;font-size:1rem;"></i>
+                            <span id="videoFileLabel">Выберите видео файл...</span>
+                        </div>
+                    </label>
+                    <script>
+                    (function(){
+                        var inputs=document.querySelectorAll('input[name="video_file_upload"]');
+                        var last=inputs[inputs.length-1];
+                        if(last) last.addEventListener('change',function(){
+                            var lbl=document.getElementById('videoFileLabel');
+                            if(lbl) lbl.textContent=this.files[0]?this.files[0].name:'Выберите видео файл...';
+                        });
+                    })();
+                    </script>
+                </div>
+            </div>
+
+            <!-- ── 4. ОПИСАНИЕ И ТЕКСТ ── -->
+            <div class="form-section">
+                <div class="section-label"><i class="fas fa-align-left"></i> Содержание</div>
+
+                <div class="field" style="margin-bottom:16px;">
+                    <label>Краткое описание <span style="color:#555;">(анонс для карточки)</span></label>
+                    <textarea name="preview" placeholder="Краткий анонс - будет показан на карточке в форуме"
+                              rows="3">{{ article.preview if article else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <!-- Метка + кнопки вставки -->
+                    <div class="editor-label">
+                        <span>Содержание статьи</span>
+                        <input type="file" id="photoUploadInput" accept="image/*" style="display:none">
+                        <button type="button" class="upload-photo-btn" data-tip="Загрузить изображение в текст"
+                                onclick="document.getElementById('photoUploadInput').click()">
+                            <i class="fas fa-image"></i> Вставить фото
+                        </button>
+                        <button type="button" class="upload-photo-btn" data-tip="Вставить YouTube-видео по ссылке"
+                                onclick="insertYoutube()">
+                            <i class="fab fa-youtube"></i> YouTube
+                        </button>
+                    </div>
+
+                    <!-- Панель цветов и заголовков -->
+                    <div class="quick-colors">
+                        <span class="quick-colors-label">Цвет текста:</span>
+                        <span class="color-dot" style="background:#e8650a;" data-tip="Оранжевый" onclick="applyColor('#e8650a')"></span>
+                        <span class="color-dot" style="background:#e84040;" data-tip="Красный"   onclick="applyColor('#e84040')"></span>
+                        <span class="color-dot" style="background:#2ecc71;" data-tip="Зелёный"   onclick="applyColor('#2ecc71')"></span>
+                        <span class="color-dot" style="background:#3498db;" data-tip="Синий"     onclick="applyColor('#3498db')"></span>
+                        <span class="color-dot" style="background:#9b59b6;" data-tip="Фиолетовый" onclick="applyColor('#9b59b6')"></span>
+                        <span class="color-dot" style="background:#f1c40f;" data-tip="Жёлтый"   onclick="applyColor('#f1c40f')"></span>
+                        <span class="color-dot" style="background:#1abc9c;" data-tip="Бирюзовый" onclick="applyColor('#1abc9c')"></span>
+                        <span class="color-dot" style="background:#e91e99;" data-tip="Розовый"   onclick="applyColor('#e91e99')"></span>
+                        <span class="color-dot" style="background:#ff6b35;" data-tip="Коралловый" onclick="applyColor('#ff6b35')"></span>
+                        <span class="color-dot" style="background:#c9cdd6; border:1px solid rgba(255,255,255,0.1);" data-tip="Светлый" onclick="applyColor('#c9cdd6')"></span>
+                        <span class="color-dot" style="background:#8a909e;" data-tip="Серый"     onclick="applyColor('#8a909e')"></span>
+                        <span class="color-dot" style="background:#fff; border:1px solid rgba(255,255,255,0.15);" data-tip="Белый" onclick="applyColor('#ffffff')"></span>
+                        <button type="button" class="reset-btn" data-tip="Убрать цвет у выделенного текста"
+                                onclick="applyColor(false)"><i class="fas fa-times"></i> Сбросить</button>
+
+                        <div class="divider-v"></div>
+
+                        <span class="quick-colors-label">Заголовок:</span>
+                        <button type="button" class="heading-btn" data-tip="Большой заголовок (H1)" onclick="applyHeading(1)">H1</button>
+                        <button type="button" class="heading-btn" data-tip="Средний заголовок (H2)" onclick="applyHeading(2)">H2</button>
+                        <button type="button" class="heading-btn" data-tip="Малый заголовок (H3)"   onclick="applyHeading(3)">H3</button>
+                        <button type="button" class="reset-btn"  data-tip="Обычный текст (убрать заголовок)"
+                                onclick="applyHeading(false)"><i class="fas fa-paragraph"></i></button>
+                    </div>
+
+                    <!-- Редактор Quill -->
+                    <div class="editor-wrap">
+                        <div id="quill-editor"></div>
+                    </div>
+                    <input type="hidden" name="content" id="contentInput">
+                </div>
+
+            </div>
+
+            <!-- ── КНОПКИ ── -->
+            <div class="form-actions">
+                <a href="{{ url_for('admin_articles') }}" class="btn-cancel">
+                    <i class="fas fa-times"></i> Отмена
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i>
+                    {{ 'Сохранить изменения' if article else 'Создать статью' }}
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+// Превью загружаемого изображения
+function previewImage(input) {
+    var preview = document.getElementById('imagePreview');
+    var label   = document.getElementById('previewLabel');
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.add('visible');
+            label.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Превью выбранной игры
+function updateGamePreview() {
+    var sel     = document.getElementById('gameSelect');
+    var opt     = sel.options[sel.selectedIndex];
+    var preview = document.getElementById('gamePreview');
+    var img     = document.getElementById('gamePreviewImg');
+    var name    = document.getElementById('gamePreviewName');
+
+    if (sel.value && opt) {
+        var imgSrc = opt.getAttribute('data-image');
+        if (imgSrc) {
+            img.src            = imgSrc;
+            img.style.display  = 'block';
+        } else {
+            img.style.display  = 'none';
+        }
+        name.textContent  = opt.text;
+        preview.style.display = 'flex';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Запустить при загрузке если игра уже выбрана
+window.addEventListener('DOMContentLoaded', updateGamePreview);
+
+// Drag-and-drop визуал
+var area = document.getElementById('uploadArea');
+['dragenter','dragover'].forEach(function(ev) {
+    area.addEventListener(ev, function(e) { e.preventDefault(); area.classList.add('drag-over'); });
+});
+['dragleave','drop'].forEach(function(ev) {
+    area.addEventListener(ev, function() { area.classList.remove('drag-over'); });
+});
+</script>
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+var quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Текст статьи...',
+    modules: {
+        toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'color': ['#e8650a','#e84040','#2ecc71','#3498db','#9b59b6','#f1c40f','#1abc9c','#e91e99','#ff6b35','#ffffff','#c9cdd6','#8a909e','#e0e4ec',false] }],
+            [{ 'align': [] }],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['link', 'image'],
+            ['clean']
+        ]
+    }
+});
+
+// Загружаем существующий контент
+{% if article and article.content %}
+quill.root.innerHTML = {{ article.content | tojson }};
+var fc = quill.root.firstChild;
+if (fc && fc.tagName === 'P' && (fc.innerHTML === '' || fc.innerHTML === '<br>') && quill.root.children.length > 1) {
+    quill.root.removeChild(fc);
+}
+{% endif %}
+
+// Сабмит — пишем в hidden input
+document.getElementById('articleForm').addEventListener('submit', function() {
+    document.getElementById('contentInput').value = quill.root.innerHTML;
+});
+
+// Загрузка фото
+document.getElementById('photoUploadInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('image', file);
+    fetch('{{ url_for("upload_image") }}', { method: 'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (data.url) {
+                var range = quill.getSelection(true);
+                quill.insertEmbed(range ? range.index : quill.getLength(), 'image', data.url);
+                setTimeout(function(){
+                    quill.root.querySelectorAll('img').forEach(function(img){
+                        img.style.display = 'block'; img.style.margin = '12px auto';
+                    });
+                }, 100);
+            }
+        })
+        .catch(function(){ alert('Ошибка загрузки'); });
+    e.target.value = '';
+});
+
+// YouTube вставка
+function insertYoutube() {
+    var url = prompt('Вставьте ссылку на YouTube:');
+    if (!url) return;
+    var match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (!match) { alert('Неверная ссылка YouTube'); return; }
+    var id = match[1];
+    var idx = (quill.getSelection(true) || {index: quill.getLength()}).index;
+    quill.clipboard.dangerouslyPasteHTML(idx,
+        '<div style="text-align:center;margin:18px 0;">' +
+        '<iframe width="560" height="315" src="https://www.youtube.com/embed/' + id + '" ' +
+        'frameborder="0" allowfullscreen style="border-radius:12px;max-width:100%;"></iframe></div>');
+}
+
+// Цвет текста
+function applyColor(color) {
+    var range = quill.getSelection();
+    if (range && range.length > 0) {
+        quill.formatText(range.index, range.length, 'color', color || false);
+    } else {
+        quill.format('color', color || false);
+    }
+    quill.focus();
+}
+
+// Заголовок
+function applyHeading(level) {
+    quill.format('header', level || false);
+    quill.focus();
+}
+
+// Тултипы на кнопках тулбара
+document.addEventListener('DOMContentLoaded', function() {
+    var tips = {
+        'ql-bold':'Жирный (Ctrl+B)', 'ql-italic':'Курсив (Ctrl+I)',
+        'ql-underline':'Подчёркнутый', 'ql-strike':'Зачёркнутый',
+        'ql-blockquote':'Цитата', 'ql-code-block':'Блок кода',
+        'ql-link':'Вставить ссылку', 'ql-image':'Картинка по URL',
+        'ql-clean':'Очистить форматирование', 'ql-align':'Выравнивание',
+        'ql-color':'Цвет текста'
+    };
+    document.querySelectorAll('.ql-toolbar button, .ql-toolbar .ql-picker-label').forEach(function(el) {
+        var cls = Array.from(el.classList).find(function(c){ return tips[c]; });
+        if (cls) el.setAttribute('title', tips[cls]);
+    });
+});
+</script>
+</div>
+</div>
+{% endblock %}

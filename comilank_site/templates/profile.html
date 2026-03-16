@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .profile-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding:36px 20px 72px; box-sizing:border-box;
+    }
+    .profile-inner { width:100%; max-width:860px; display:flex; flex-direction:column; gap:14px; }
+
+    .profile-main-card {
+        background:#141416; border-radius:26px;
+        border:1px solid rgba(255,255,255,0.06);
+        overflow:hidden; position:relative;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.04),0 30px 60px rgba(0,0,0,0.55);
+    }
+    .profile-main-card::after {
+        content:''; position:absolute; bottom:-14px; left:10%;
+        width:80%; height:26px;
+        background:radial-gradient(ellipse,rgba(232,101,10,0.28) 0%,transparent 70%);
+        filter:blur(10px); pointer-events:none; border-radius:50%;
+    }
+
+    /* Banner */
+    .profile-banner {
+        height:110px; position:relative; overflow:hidden;
+        background:linear-gradient(135deg,#0e0a06,#1a0e04,#0e0a06);
+    }
+    .profile-banner::after {
+        content:''; position:absolute; inset:0;
+        background:
+            radial-gradient(ellipse at 30% 60%, rgba(232,101,10,0.12) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(180,60,0,0.08) 0%, transparent 50%);
+    }
+
+    /* Info row */
+    .profile-info-row { display:flex; align-items:flex-end; gap:18px; padding:0 28px 20px; margin-top:-42px; position:relative; z-index:2; flex-wrap:wrap; }
+    .profile-avatar {
+        width:78px; height:78px; border-radius:50%;
+        background:linear-gradient(135deg,#c8580a,#8a3010);
+        display:flex; align-items:center; justify-content:center;
+        font-size:2rem; font-weight:800; color:rgba(255,255,255,0.9);
+        border:3px solid #141416; text-transform:uppercase; flex-shrink:0;
+        box-shadow:0 0 20px rgba(200,88,10,0.3);
+        overflow:hidden; cursor:pointer; position:relative; transition:0.2s;
+    }
+    .profile-avatar:hover { box-shadow:0 0 28px rgba(232,101,10,0.55); }
+    .profile-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+    .profile-avatar .av-overlay {
+        position:absolute; inset:0; border-radius:50%;
+        background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;
+        opacity:0; transition:0.2s;
+    }
+    .profile-avatar:hover .av-overlay { opacity:1; }
+    .av-overlay i { color:#e8650a; font-size:1.2rem; }
+    /* Вкладка аватарки */
+    .avatar-upload-zone {
+        border:2px dashed rgba(232,101,10,0.22); border-radius:14px;
+        padding:20px; text-align:center; cursor:pointer;
+        background:#0f0f12; transition:0.2s; position:relative;
+    }
+    .avatar-upload-zone:hover { border-color:rgba(232,101,10,0.45); background:rgba(232,101,10,0.04); }
+    .avatar-upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .avatar-preview-wrap { display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin-top:16px; }
+    .avatar-preview-img {
+        width:80px; height:80px; border-radius:50%;
+        object-fit:cover; border:2px solid rgba(232,101,10,0.3);
+        display:none;
+    }
+    .avatar-preview-img.visible { display:block; }
+    .profile-name-block { flex:1; padding-bottom:4px; }
+    .profile-username { font-size:1.45rem; font-weight:800; color:#e8650a; line-height:1.2; letter-spacing:-0.3px; }
+
+    .role-badge { display:inline-flex; align-items:center; gap:6px; padding:3px 11px; border-radius:20px; font-size:0.74rem; font-weight:700; margin-top:6px; }
+    .role-0 { background:rgba(255,255,255,0.04); color:#3d4350; border:1px solid rgba(255,255,255,0.07); }
+    .role-1 { background:rgba(50,120,255,0.1); color:#4488ff; border:1px solid rgba(50,120,255,0.2); }
+    .role-2 { background:rgba(40,180,80,0.1); color:#40b860; border:1px solid rgba(40,180,80,0.2); }
+    .role-3 { background:rgba(140,60,255,0.1); color:#9966ff; border:1px solid rgba(140,60,255,0.2); }
+    .role-4 { background:rgba(232,101,10,0.12); color:#e8650a; border:1px solid rgba(232,101,10,0.25); }
+
+    /* Stats bar */
+    .profile-stats { display:flex; border-top:1px solid rgba(255,255,255,0.04); }
+    .stat-box { flex:1; text-align:center; padding:16px 8px; border-right:1px solid rgba(255,255,255,0.04); }
+    .stat-box:last-child { border-right:none; }
+    .stat-num { font-size:1.45rem; font-weight:800; color:#e8650a; display:block; }
+    .stat-lbl { font-size:0.72rem; color:#3d4350; margin-top:3px; display:flex; align-items:center; justify-content:center; gap:4px; }
+    .stat-lbl i { color:#c8580a; opacity:0.5; font-size:0.65rem; }
+
+    /* Details */
+    .profile-details { padding:18px 28px 22px; display:grid; grid-template-columns:1fr 1fr; gap:12px; border-top:1px solid rgba(255,255,255,0.04); }
+    @media (max-width:600px) { .profile-details { grid-template-columns:1fr; } }
+    .detail-row { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#3d4350; }
+    .detail-row i { color:#c8580a; opacity:0.5; width:13px; font-size:0.72rem; }
+    .detail-row strong { color:#8a909e; }
+
+    /* Back link */
+    .back-link { display:inline-flex; align-items:center; gap:6px; color:#3d4350; text-decoration:none; font-size:0.8rem; transition:color 0.15s; margin-bottom:4px; }
+    .back-link:hover { color:#c8580a; }
+
+    /* Sub cards */
+    .sub-card { background:#141416; border-radius:20px; border:1px solid rgba(255,255,255,0.05); padding:22px 26px; }
+    .sub-title { font-size:0.78rem; font-weight:700; color:#e8650a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px; display:flex; align-items:center; gap:7px; opacity:0.75; }
+    .sub-title i { opacity:0.8; }
+
+    /* Article items */
+    .art-item {
+        display:flex; align-items:center; gap:12px;
+        background:#0f0f12; border-radius:12px; padding:10px 14px;
+        border:1px solid rgba(255,255,255,0.04); text-decoration:none;
+        transition:all 0.18s; margin-bottom:8px; position:relative; overflow:hidden;
+    }
+    .art-item::before { content:''; position:absolute; inset:0; border-radius:12px; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.07) 0%,transparent 60%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .art-item:last-child { margin-bottom:0; }
+    .art-item:hover { border-color:rgba(232,101,10,0.2); }
+    .art-item:hover::before { opacity:1; }
+    .art-thumb { width:48px; height:34px; object-fit:cover; border-radius:7px; flex-shrink:0; filter:brightness(0.8) saturate(0.8); }
+    .art-thumb-ph { width:48px; height:34px; background:#131316; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#1e1e24; flex-shrink:0; }
+    .art-title-text { color:#a05030; font-size:0.86rem; font-weight:600; line-height:1.3; transition:color 0.15s; }
+    .art-item:hover .art-title-text { color:#e8650a; }
+    .art-date { color:#2e3340; font-size:0.73rem; margin-top:2px; }
+    .art-stats { margin-left:auto; display:flex; gap:9px; color:#2e3340; font-size:0.74rem; flex-shrink:0; }
+    .art-stats span { display:flex; align-items:center; gap:3px; }
+    .art-stats i { color:#c8580a; opacity:0.45; font-size:0.65rem; }
+
+    /* Security */
+    .settings-input {
+        width:100%; background:#0f0f12; border:1px solid rgba(255,255,255,0.07);
+        border-radius:10px; color:#c9cdd6; font-size:0.88rem;
+        padding:10px 14px; box-sizing:border-box; transition:border-color 0.2s; font-family:inherit;
+    }
+    .settings-input:focus { outline:none; border-color:rgba(232,101,10,0.35); }
+    .settings-label { color:#3d4350; font-size:0.78rem; margin-bottom:5px; display:block; }
+    .settings-submit {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:8px 20px; border-radius:20px; font-size:0.84rem;
+        font-weight:700; border:none; cursor:pointer; transition:all 0.2s;
+        background:rgba(232,101,10,0.12); color:#d0600c;
+        border:1px solid rgba(232,101,10,0.28); position:relative; overflow:hidden;
+    }
+    .settings-submit::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.2) 0%,transparent 70%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .settings-submit:hover { color:#e8650a; border-color:rgba(232,101,10,0.5); background:rgba(232,101,10,0.18); }
+    .settings-submit:hover::before { opacity:1; }
+
+    .sec-tabs { display:flex; gap:5px; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0; }
+    .sec-tab { padding:8px 16px 10px; font-size:0.83rem; font-weight:600; color:#2e3340; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.18s; user-select:none; border-radius:0; }
+    .sec-tab.active { color:#e8650a; border-bottom-color:#e8650a; }
+    .sec-tab:hover:not(.active) { color:#8a909e; }
+    .sec-panel { display:none; }
+    .sec-panel.active { display:block; }
+
+    .info-box { padding:12px 15px; background:#0f0f12; border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:16px; font-size:0.8rem; color:#3d4350; line-height:1.6; }
+    .info-box i { color:#c8580a; opacity:0.6; margin-right:5px; }
+    .info-box strong { color:#a05030; }
+
+    .flash-msg { padding:9px 13px; border-radius:10px; margin-bottom:12px; font-size:0.84rem; display:flex; align-items:center; gap:7px; }
+    .flash-error { background:rgba(180,30,30,0.08); border:1px solid rgba(180,30,30,0.2); color:#cc4444; }
+    .flash-success { background:rgba(40,160,70,0.08); border:1px solid rgba(40,160,70,0.18); color:#40b860; }
+
+    .ban-alert { background:rgba(180,30,30,0.08); border:1px solid rgba(180,30,30,0.2); border-radius:16px; padding:14px 18px; color:#cc4444; font-size:0.88rem; display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
+    .ban-alert i { font-size:1rem; margin-top:1px; }
+</style>
+
+<div class="profile-outer">
+<div class="profile-inner">
+
+    <a onclick="history.length > 1 ? history.back() : window.location='{{ url_for('forum') }}'; return false;" href="{{ url_for('forum') }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад
+    </a>
+
+    {% if user.is_banned() %}
+    <div class="ban-alert">
+        <i class="fas fa-ban"></i>
+        <div>
+            <strong>Пользователь заблокирован</strong>{% if user.ban_reason %} — {{ user.ban_reason }}{% endif %}
+            {% if user.banned_until %}<div style="font-size:0.78rem;margin-top:3px;opacity:0.7;">До: {{ user.banned_until.strftime('%d.%m.%Y %H:%M') }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main card -->
+    <div class="profile-main-card">
+        <div class="profile-banner"></div>
+        <div class="profile-info-row">
+            <label class="profile-avatar" {% if user.id == current_user.id %}for="avatarFileQuick" title="Сменить аватарку"{% endif %}>
+                {% if user.avatar %}
+                    <img src="{{ user.avatar }}" alt="{{ user.username }}">
+                {% else %}
+                    {{ user.username[0] }}
+                {% endif %}
+                {% if user.id == current_user.id %}
+                <div class="av-overlay"><i class="fas fa-camera"></i></div>
+                {% endif %}
+            </label>
+            {% if user.id == current_user.id %}
+            <form method="POST" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data" id="quickAvatarForm" style="display:none;">
+                <input type="file" id="avatarFileQuick" name="avatar" accept="image/*"
+                       onchange="document.getElementById('quickAvatarForm').submit()">
+            </form>
+            {% endif %}
+            <div class="profile-name-block">
+                <div class="profile-username">{{ user.username }}</div>
+                {% set role_names = {0: ('Участник', 'fas fa-user'), 1: ('Модератор', 'fas fa-shield-alt'), 2: ('Редактор', 'fas fa-pen'), 3: ('Ст. Модератор', 'fas fa-user-shield'), 4: ('Основатель', 'fas fa-crown')} %}
+                {% set rname, ricon = role_names.get(user.role, ('Участник', 'fas fa-user')) %}
+                <div class="role-badge role-{{ user.role }}"><i class="{{ ricon }}"></i> {{ rname }}</div>
+            </div>
+        </div>
+        <div class="profile-stats">
+            <div class="stat-box">
+                <span class="stat-num">{{ user.articles.count() }}</span>
+                <div class="stat-lbl"><i class="fas fa-newspaper"></i> Статей</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">{{ user.comments.count() }}</span>
+                <div class="stat-lbl"><i class="fas fa-comment"></i> Комментариев</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">{% set tl = namespace(v=0) %}{% for art in user.articles %}{% set tl.v = tl.v + art.likes %}{% endfor %}{{ tl.v }}</span>
+                <div class="stat-lbl"><i class="fas fa-thumbs-up"></i> Лайков</div>
+            </div>
+        </div>
+        <div class="profile-details">
+            <div class="detail-row"><i class="fas fa-calendar-plus"></i> Регистрация: <strong>{% if user.created_at %}{{ user.created_at.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</strong></div>
+            <div class="detail-row"><i class="fas fa-clock"></i> Последний визит: <strong>{% if user.last_seen %}{{ user.last_seen.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</strong></div>
+            <div class="detail-row"><i class="fas fa-id-badge"></i> ID: <strong>#{{ user.id }}</strong></div>
+            {% if current_user.is_authenticated and (current_user.id == user.id or current_user.role >= 3) %}
+            <div class="detail-row"><i class="fas fa-envelope"></i> Email: <strong>{{ user.email }}</strong></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Articles -->
+    {% if user.articles.count() > 0 %}
+    <div class="sub-card">
+        <div class="sub-title"><i class="fas fa-newspaper"></i> Статьи автора</div>
+        {% for art in user.articles.limit(10) %}
+        <a href="{{ url_for('article', article_id=art.id) }}" class="art-item">
+            {% if art.get_image_url() %}
+                <img src="{{ art.get_image_url() }}" class="art-thumb" alt="">
+            {% else %}
+                <div class="art-thumb-ph"><i class="fas fa-image" style="font-size:0.85rem;"></i></div>
+            {% endif %}
+            <div style="flex:1; min-width:0; position:relative; z-index:1;">
+                <div class="art-title-text">{{ art.title }}</div>
+                <div class="art-date">{{ art.created_at.strftime('%d.%m.%Y') }}</div>
+            </div>
+            <div class="art-stats" style="position:relative; z-index:1;">
+                <span><i class="fas fa-eye"></i> {{ art.views }}</span>
+                <span><i class="fas fa-thumbs-up"></i> {{ art.likes }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Security (own profile only) -->
+    {% if current_user.is_authenticated and current_user.id == user.id %}
+    <div class="sub-card">
+        <div class="sub-title"><i class="fas fa-shield-alt"></i> Безопасность</div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div class="flash-msg {% if cat=='error' %}flash-error{% else %}flash-success{% endif %}">
+                    <i class="fas {% if cat=='error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i> {{ msg }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <div class="sec-tabs">
+            <div class="sec-tab active" onclick="switchTab('panel-pw', this)"><i class="fas fa-lock" style="margin-right:5px;font-size:0.75rem;"></i> Пароль</div>
+            <div class="sec-tab" onclick="switchTab('panel-key', this)"><i class="fas fa-key" style="margin-right:5px;font-size:0.75rem;"></i> Ключ восстановления</div>
+        </div>
+
+        <div class="sec-panel" id="panel-avatar">
+            {% if user.id == current_user.id %}
+            <div class="avatar-preview-wrap">
+                {% if user.avatar %}
+                <img src="{{ user.avatar }}" alt="" class="avatar-preview-img visible" id="avatarPreview">
+                {% else %}
+                <img src="" alt="" class="avatar-preview-img" id="avatarPreview">
+                {% endif %}
+                <div>
+                    <div style="color:#8a909e; font-size:0.85rem; margin-bottom:10px;">
+                        {% if user.avatar %}Текущая аватарка установлена{% else %}Аватарка не установлена — используется первая буква имени{% endif %}
+                    </div>
+                    <form method="POST" action="{{ url_for('upload_avatar') }}" enctype="multipart/form-data" id="avatarForm">
+                        <div class="avatar-upload-zone">
+                            <input type="file" name="avatar" accept="image/*" onchange="previewAvatar(this)">
+                            <i class="fas fa-camera" style="font-size:1.8rem; color:#3d4350; margin-bottom:8px; display:block;"></i>
+                            <div style="color:#3d4350; font-size:0.85rem;"><strong style="color:#c8580a;">Нажмите</strong> или перетащите фото</div>
+                            <div style="color:#252830; font-size:0.75rem; margin-top:4px;">PNG, JPG, WEBP · до 5MB</div>
+                        </div>
+                        <button type="submit" class="settings-submit" style="margin-top:14px;"><i class="fas fa-save"></i> Сохранить аватарку</button>
+                    </form>
+                </div>
+            </div>
+            {% if user.avatar %}
+            <form method="POST" action="{{ url_for('delete_avatar') }}" style="margin-top:12px;"
+                  onsubmit="return confirm('Удалить аватарку?');">
+                <button type="submit" class="settings-submit" style="background:rgba(180,30,30,0.1);border-color:rgba(180,30,30,0.3);color:#cc4444;">
+                    <i class="fas fa-trash"></i> Удалить аватарку
+                </button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="sec-panel active" id="panel-pw">
+            <form method="POST" action="{{ url_for('change_password') }}">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div><label class="settings-label">Текущий пароль</label><input type="password" name="current_password" class="settings-input" required placeholder="••••••••"></div>
+                    <div><label class="settings-label">Новый пароль</label><input type="password" name="new_password" class="settings-input" required placeholder="Мин. 6 символов"></div>
+                    <div><label class="settings-label">Подтвердить</label><input type="password" name="confirm_password" class="settings-input" required placeholder="Повторите"></div>
+                </div>
+                <button type="submit" class="settings-submit"><i class="fas fa-lock"></i> Сменить пароль</button>
+            </form>
+        </div>
+
+        <div class="sec-panel" id="panel-key">
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                Ключ восстановления позволяет сбросить пароль если забудете его.
+                После <strong>3 неудачных попыток входа</strong> система предложит ввести этот ключ.
+                Храните его в надёжном месте — <strong>мы его не восстановим</strong>.
+            </div>
+            <form method="POST" action="{{ url_for('update_recovery_key') }}">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                    <div>
+                        <label class="settings-label">Новый ключ восстановления</label>
+                        <input type="text" name="recovery_key" class="settings-input" placeholder="Мин. 6 символов" required>
+                    </div>
+                    <div>
+                        <label class="settings-label">Текущий ключ</label>
+                        <input type="text" class="settings-input" value="{{ '••••••' if current_user.recovery_key else 'Не установлен' }}" disabled style="opacity:0.5;">
+                    </div>
+                </div>
+                <button type="submit" class="settings-submit"><i class="fas fa-key"></i> Сохранить ключ</button>
+            </form>
+        </div>
+
+    <script>
+    function switchTab(panelId, tabEl) {
+        document.querySelectorAll('.sec-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(panelId).classList.add('active');
+        tabEl.classList.add('active');
+    }
+    </script>
+    {% endif %}
+
+</div>
+</div>
+<script>
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = document.getElementById('avatarPreview');
+        img.src = e.target.result;
+        img.classList.add('visible');
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+</script>
+{% endblock %}

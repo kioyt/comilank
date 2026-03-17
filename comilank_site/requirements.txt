@@ -1,0 +1,10 @@
+flask
+requests
+gunicorn
+flask-sqlalchemy
+flask-login
+werkzeug
+pillow
+Flask-Mail
+python-dotenv
+psycopg2-binary

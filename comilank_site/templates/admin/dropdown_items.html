@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Разделы / DLC | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .drop-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding:44px 20px 80px; box-sizing:border-box;
+    }
+    .drop-card {
+        width:100%; max-width:800px; background:#141416;
+        border-radius:28px; border:1px solid rgba(255,255,255,0.06);
+        padding:32px 36px 40px; box-sizing:border-box; position:relative;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.05),0 40px 80px rgba(0,0,0,0.6);
+    }
+    .drop-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse,rgba(232,101,10,0.32) 0%,transparent 70%);
+        filter:blur(12px); pointer-events:none; border-radius:50%;
+    }
+
+    /* Header */
+    .drop-header { margin-bottom:24px; }
+    .drop-title { font-size:1.5rem; font-weight:700; color:#e8650a; margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+    .drop-title i { opacity:0.8; }
+
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 16px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; transition:all 0.2s; cursor:pointer; border:none; position:relative; overflow:hidden; }
+    .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .btn-secondary { background:rgba(255,255,255,0.035); color:#4e5460; border:1px solid rgba(255,255,255,0.07); }
+    .btn-secondary::before { background:radial-gradient(circle at 50% 0%,rgba(255,255,255,0.06) 0%,transparent 70%); }
+    .btn-secondary:hover { background:rgba(255,255,255,0.065); color:#8a909e; }
+    .btn-secondary:hover::before { opacity:1; }
+
+    /* Article info block */
+    .article-info {
+        background:#0f0f12; border-radius:16px; padding:16px 20px;
+        border:1px solid rgba(232,101,10,0.14); margin-bottom:22px;
+    }
+    .article-info-label { color:#c8580a; font-size:0.73rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; opacity:0.7; }
+    .article-info-title { color:#c9cdd6; font-size:1rem; font-weight:700; line-height:1.35; margin-bottom:6px; }
+    .article-info-meta { color:#3d4350; font-size:0.8rem; }
+    .article-info-meta span { margin-right:12px; }
+
+    /* Add button row */
+    .add-row { display:flex; justify-content:flex-end; margin-bottom:18px; }
+    .btn-add {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:9px 20px; border-radius:22px; font-size:0.86rem;
+        font-weight:700; text-decoration:none; transition:all 0.2s;
+        background:rgba(232,101,10,0.12); color:#d0600c;
+        border:1px solid rgba(232,101,10,0.28);
+        position:relative; overflow:hidden;
+    }
+    .btn-add::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.2) 0%,transparent 70%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .btn-add:hover { color:#e8650a; border-color:rgba(232,101,10,0.5); background:rgba(232,101,10,0.18); }
+    .btn-add:hover::before { opacity:1; }
+
+    /* Dropdown items list */
+    .drop-list { display:flex; flex-direction:column; gap:10px; }
+
+    .drop-item {
+        background:#0f0f12; border-radius:16px;
+        border:1px solid rgba(255,255,255,0.05);
+        padding:16px 20px; display:flex; align-items:flex-start; gap:16px;
+        transition:border-color 0.2s, box-shadow 0.2s; position:relative; overflow:hidden;
+    }
+    .drop-item::before { content:''; position:absolute; inset:0; border-radius:16px; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.06) 0%,transparent 60%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .drop-item:hover { border-color:rgba(232,101,10,0.18); box-shadow:0 4px 24px rgba(0,0,0,0.35); }
+    .drop-item:hover::before { opacity:1; }
+
+    .drop-num {
+        width:36px; height:36px; background:rgba(232,101,10,0.1);
+        border:1px solid rgba(232,101,10,0.2); border-radius:10px;
+        display:flex; align-items:center; justify-content:center;
+        color:#c8580a; font-weight:800; font-size:0.95rem;
+        flex-shrink:0; position:relative; z-index:1;
+    }
+
+    .drop-body { flex:1; position:relative; z-index:1; }
+    .drop-item-title { color:#c9cdd6; font-weight:700; font-size:0.95rem; margin-bottom:5px; }
+    .drop-item-page {
+        display:inline-flex; align-items:center; gap:5px;
+        color:#3d4350; font-size:0.78rem; margin-bottom:6px;
+    }
+    .drop-item-page i { color:#c8580a; opacity:0.5; font-size:0.7rem; }
+    .drop-status {
+        display:inline-flex; align-items:center; gap:5px;
+        font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:20px;
+    }
+    .drop-status.active { background:rgba(50,180,80,0.12); color:#40b860; border:1px solid rgba(50,180,80,0.2); }
+    .drop-status.active::before { content:''; display:inline-block; width:6px; height:6px; background:#40b860; border-radius:50%; }
+    .drop-status.hidden { background:rgba(255,255,255,0.04); color:#3d4350; border:1px solid rgba(255,255,255,0.07); }
+    .drop-status.hidden::before { content:''; display:inline-block; width:6px; height:6px; background:#3d4350; border-radius:50%; }
+
+    .drop-actions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; position:relative; z-index:1; }
+    .drop-btns { display:flex; gap:6px; }
+
+    .dbn { display:inline-flex; align-items:center; gap:4px; padding:5px 11px; border-radius:16px; font-size:0.76rem; font-weight:600; text-decoration:none; transition:all 0.18s; cursor:pointer; border:none; position:relative; overflow:hidden; }
+    .dbn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .dbn.edit { background:rgba(200,88,10,0.06); border:1px solid rgba(200,88,10,0.16); color:#a04808; }
+    .dbn.edit::before { background:radial-gradient(circle at 50% 0%,rgba(200,88,10,0.15) 0%,transparent 70%); }
+    .dbn.edit:hover { background:rgba(200,88,10,0.14); border-color:rgba(200,88,10,0.35); color:#e8650a; }
+    .dbn.edit:hover::before { opacity:1; }
+    .dbn.toggle { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:#3d4350; }
+    .dbn.toggle:hover { color:#8a909e; border-color:rgba(255,255,255,0.15); }
+    .dbn.del { background:rgba(140,25,25,0.06); border:1px solid rgba(140,25,25,0.14); color:#5a2525; }
+    .dbn.del::before { background:radial-gradient(circle at 50% 0%,rgba(185,40,40,0.12) 0%,transparent 70%); }
+    .dbn.del:hover { background:rgba(150,30,30,0.14); border-color:rgba(185,40,40,0.32); color:#c04040; }
+    .dbn.del:hover::before { opacity:1; }
+
+    .move-btns { display:flex; flex-direction:column; gap:3px; }
+    .move-btn { display:flex; align-items:center; justify-content:center; width:22px; height:22px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:6px; color:#2e3340; text-decoration:none; font-size:0.68rem; transition:all 0.15s; }
+    .move-btn:hover { color:#c8580a; border-color:rgba(200,88,10,0.2); background:rgba(200,88,10,0.06); }
+
+    .empty-state { text-align:center; padding:60px 20px; color:#1e2028; }
+    .empty-state i { font-size:2.4rem; display:block; margin-bottom:12px; opacity:0.1; }
+    .empty-state p { font-size:0.88rem; }
+</style>
+
+<div class="drop-outer">
+<div class="drop-card">
+
+    <div class="drop-header">
+        <h1 class="drop-title"><i class="fas fa-list"></i> Управление разделами</h1>
+        <a href="{{ url_for('article', article_id=article.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Назад
+        </a>
+    </div>
+
+    <!-- Info about article -->
+    <div class="article-info">
+        <div class="article-info-label">Статья:</div>
+        <div class="article-info-title">{{ article.title }}</div>
+        <div class="article-info-meta">
+            <span><i class="fas fa-user" style="color:#c8580a; opacity:0.5; font-size:0.7rem; margin-right:4px;"></i>Автор: {{ article.author.username }}</span>
+            <span><i class="fas fa-calendar" style="color:#c8580a; opacity:0.5; font-size:0.7rem; margin-right:4px;"></i>Создано: {{ article.created_at.strftime('%d.%m.%Y') }}</span>
+        </div>
+    </div>
+
+    <!-- Add button -->
+    <div class="add-row">
+        <a href="{{ url_for('admin_dropdown_create', article_id=article.id) }}" class="btn-add">
+            <i class="fas fa-plus"></i> Новый пункт
+        </a>
+    </div>
+
+    <!-- List -->
+    {% if dropdowns %}
+    <div class="drop-list">
+        {% for item in dropdowns %}
+        <div class="drop-item">
+            <div class="drop-num">{{ loop.index }}</div>
+
+            <div class="drop-body">
+                <div class="drop-item-title">{{ item.title }}</div>
+                {% if item.extra_page %}
+                <div class="drop-item-page">
+                    <i class="fas fa-file-alt"></i>
+                    Страница: {{ item.extra_page.title | truncate(40) }}
+                </div>
+                {% else %}
+                <div class="drop-item-page">
+                    <i class="fas fa-clock"></i>
+                    <span style="color:#252830;">Страница не привязана</span>
+                </div>
+                {% endif %}
+                <div>
+                    {% if item.is_active %}
+                        <span class="drop-status active">Активен</span>
+                    {% else %}
+                        <span class="drop-status hidden">Скрыт</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="drop-actions">
+                <div class="drop-btns">
+                    <a href="{{ url_for('admin_dropdown_edit', item_id=item.id) }}" class="dbn edit"><i class="fas fa-edit"></i> Ред.</a>
+                    <form method="POST" action="{{ url_for('admin_dropdown_toggle', item_id=item.id) }}" style="display:inline;">
+                        <button type="submit" class="dbn toggle">
+                            {% if item.is_active %}<i class="fas fa-eye-slash"></i> Скрыть{% else %}<i class="fas fa-eye"></i> Показать{% endif %}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin_dropdown_delete', item_id=item.id) }}" onsubmit="return confirm('Удалить пункт?');" style="display:inline;">
+                        <button type="submit" class="dbn del"><i class="fas fa-trash"></i> Удалить</button>
+                    </form>
+                </div>
+                <div class="move-btns">
+                    <a href="{{ url_for('admin_dropdown_move', item_id=item.id, direction='up') }}" class="move-btn"><i class="fas fa-chevron-up"></i></a>
+                    <a href="{{ url_for('admin_dropdown_move', item_id=item.id, direction='down') }}" class="move-btn"><i class="fas fa-chevron-down"></i></a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-list"></i>
+        <p>Пунктов пока нет — добавьте первый</p>
+    </div>
+    {% endif %}
+
+</div>
+</div>
+{% endblock %}

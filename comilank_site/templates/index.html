@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comilank - стример</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ========== БАЗОВЫЕ СТИЛИ (полностью сохранены) ========== */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0c0c0c; color:#f0f0f0; font-family:'Inter',sans-serif; min-height:100vh; display:flex; justify-content:center; align-items:center; padding:20px; overflow-x:hidden; position:relative; }
+        .container { max-width:1200px; width:100%; background:#121212; border-radius:48px; padding:48px; box-shadow:0 25px 50px -8px rgba(255,102,0,0.25); border:1px solid #2a2a2a; position:relative; z-index:10; backdrop-filter:blur(4px); }
+
+        .fullscreen-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,102,0,0.3);
+            color: #ff6600; width: 38px; height: 38px;
+            border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; z-index: 100;
+            backdrop-filter: blur(6px);
+        }
+        .fullscreen-btn:hover {
+            background: rgba(255,102,0,0.12);
+            border-color: rgba(255,102,0,0.7);
+            box-shadow: 0 0 14px rgba(255,102,0,0.25);
+            transform: scale(1.08);
+        }
+        .fullscreen-btn svg {
+            width: 16px; height: 16px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            transition: all 0.2s;
+        }
+
+        .floating-icons { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+        .icon { position:absolute; font-size:32px; opacity:0.12; transition:all 0.5s cubic-bezier(0.25,0.1,0.2,1.5); pointer-events:auto; cursor:pointer; color:#aaa; animation:float 12s infinite alternate ease-in-out; }
+        .icon:hover { opacity:1; color:#ff6600; text-shadow:0 0 30px #ff6600; transform:scale(1.6) rotate(15deg); }
+        @keyframes float { 0%{transform:translateY(0px) rotate(0deg);} 100%{transform:translateY(-40px) rotate(12deg);} }
+        .icon1 { top:5%; left:2%; animation-duration:11s; } .icon2 { top:12%; right:4%; animation-duration:13s; } .icon3 { bottom:8%; left:5%; animation-duration:9s; } .icon4 { bottom:18%; right:7%; animation-duration:14s; } .icon5 { top:25%; left:10%; animation-duration:10s; } .icon6 { top:35%; right:11%; animation-duration:12s; } .icon7 { bottom:25%; left:13%; animation-duration:8s; } .icon8 { bottom:35%; right:14%; animation-duration:15s; } .icon9 { top:45%; left:18%; animation-duration:9.5s; } .icon10 { top:55%; right:18%; animation-duration:11.5s; } .icon11 { bottom:45%; left:20%; animation-duration:10.5s; } .icon12 { bottom:55%; right:22%; animation-duration:13.5s; } .icon13 { top:8%; left:25%; animation-duration:12.5s; } .icon14 { top:18%; right:25%; animation-duration:8.5s; } .icon15 { bottom:12%; left:28%; animation-duration:14.5s; } .icon16 { bottom:22%; right:28%; animation-duration:9.2s; } .icon17 { top:65%; left:30%; animation-duration:11.2s; } .icon18 { top:75%; right:30%; animation-duration:10.2s; }
+
+        .header { display:flex; align-items:center; gap:20px; margin-bottom:40px; flex-wrap:wrap; }  /* уменьшили gap для компактности */
+        .avatar { width:110px; height:110px; border-radius:50%; object-fit:cover; border:3px solid #ff6600; box-shadow:0 0 20px rgba(255,102,0,0.5); transition:box-shadow 0.3s,transform 0.3s; flex-shrink:0; }
+        .avatar:hover { transform:scale(1.03); box-shadow:0 0 40px #ff6600,0 0 80px #ff6600; }
+        .title { flex:1; }
+        .title h1 { font-size:3.2rem; font-weight:600; color:#fff; letter-spacing:1px; }
+        .title h1 span { transition:color 0.2s,text-shadow 0.2s; cursor:default; }
+        .title h1 span:hover { color:#ff6600; text-shadow:0 0 10px #ff6600; }
+        .title p { color:#aaa; font-size:1.2rem; margin-top:6px; }
+        .title p span { transition:color 0.2s,text-shadow 0.2s; }
+        .title p span:hover { color:#ff6600; text-shadow:0 0 8px #ff6600; }
+
+        .live-indicator { display:inline-flex; align-items:center; font-weight:600; padding:6px 14px; border-radius:40px; transition:0.3s; flex-shrink:0; }
+        .live-indicator.live-on { background:#ff6600; color:#121212; box-shadow:0 0 20px #ff6600; }
+        .live-indicator.live-off { background:#555; color:#ccc; box-shadow:0 0 15px #555; }
+        .live-dot { width:10px; height:10px; background:currentColor; border-radius:50%; margin-right:8px; animation:pulse 1.4s infinite; }
+        .live-indicator.live-off .live-dot { animation:none; }
+        @keyframes pulse { 0%{opacity:1; transform:scale(1);} 50%{opacity:0.5; transform:scale(1.3);} 100%{opacity:1; transform:scale(1);} }
+
+        /* ========== ССЫЛКИ АУТЕНТИФИКАЦИИ ========== */
+        .auth-links {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-left: auto;
+        }
+        .auth-link {
+            color: #ff6600;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: 0.2s;
+            padding: 5px 10px;
+            border-radius: 30px;
+        }
+        .auth-link:hover {
+            background: #ff6600;
+            color: #121212;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #ff6600;
+        }
+
+        .tabs { display:flex; gap:8px; margin-bottom:36px; border-bottom:1px solid #2a2a2a; padding-bottom:12px; flex-wrap:wrap; }
+        .tab-button { background:transparent; border:none; color:#aaa; font-size:1.2rem; padding:10px 24px; cursor:pointer; border-radius:40px; font-weight:500; transition:0.2s; }
+        .tab-button:hover { color:#ff6600; background:#1f1f1f; }
+        .tab-button.active { color:#ff6600; background:#1a1a1a; font-weight:600; }
+        .tab-content { display:none; animation:fadeIn 0.4s ease; }
+        .tab-content.active { display:block; }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+        .live-block { margin:30px 0 20px; padding:30px; background:#1a1a1a; border-radius:60px; border:2px solid #ff6600; box-shadow:0 0 30px #ff6600; position:relative; overflow:hidden; min-height:180px; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+        .live-block .live-text { font-size:1.8rem; font-weight:700; color:#ff6600; text-align:center; z-index:10; position:relative; background:rgba(0,0,0,0.5); padding:15px 30px; border-radius:60px; backdrop-filter:blur(5px); box-shadow:0 0 20px rgba(255,102,0,0.5); }
+        .live-block .floating-live-icons { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+        .live-block .floating-live-icons i { position:absolute; color:#ff6600; opacity:0.2; font-size:24px; animation:floatLive 6s infinite alternate ease-in-out; }
+        @keyframes floatLive { 0%{transform:translateY(0px) rotate(0deg);} 100%{transform:translateY(-20px) rotate(10deg);} }
+
+        .spinning-reel { width:100%; max-width:420px; height:210px; margin:30px auto; overflow:hidden; border:2px solid #ff6600; border-radius:30px; background:#1a1a1a; box-shadow:0 0 30px rgba(255,102,0,0.5); position:relative; }
+        .reel-track { display:flex; flex-direction:column; transform:translate3d(0,0,0); backface-visibility:hidden; will-change:transform; }
+        .reel-item { height:70px; line-height:70px; padding:0 25px; color:white; font-weight:500; font-size:1.2rem; text-align:center; border-bottom:1px solid #ff6600; background:rgba(255,102,0,0.1); white-space:nowrap; text-shadow:0 0 8px rgba(255,102,0,0.7); transition:all 0.3s ease; }
+        .reel-item.selected { background:#ff6600; color:#121212; text-shadow:0 0 20px #ffaa33, 0 0 40px #ff6600; box-shadow:0 0 30px #ff6600, inset 0 0 10px rgba(0,0,0,0.5); transform:scale(1.02); border-color:#fff; animation:burst 0.6s ease-out; }
+        @keyframes burst { 0% { box-shadow:0 0 0 #ff6600, inset 0 0 0 rgba(0,0,0,0); } 30% { box-shadow:0 0 50px #ff6600, inset 0 0 20px #000; } 100% { box-shadow:0 0 30px #ff6600, inset 0 0 10px rgba(0,0,0,0.5); } }
+        .reel-item:last-child { border-bottom:none; }
+        @keyframes spinDown { 0%{transform:translateY(0);} 100%{transform:translateY(-4480px);} }
+        .reel-control { text-align:center; margin:20px 0 10px; }
+        .reel-btn { background:#ff6600; border:none; color:#121212; padding:14px 36px; border-radius:60px; cursor:pointer; font-weight:700; font-size:1.4rem; box-shadow:0 8px 0 #b34700; transform:translateY(0); transition:0.1s; }
+        .reel-btn:active { transform:translateY(5px); box-shadow:0 3px 0 #b34700; }
+        .reel-btn:disabled { background:#555; box-shadow:0 5px 0 #333; transform:translateY(3px); pointer-events:none; color:#aaa; }
+        .reel-indicator { position:absolute; left:-25px; top:50%; transform:translateY(-50%); width:0; height:0; border-top:12px solid transparent; border-bottom:12px solid transparent; border-right:20px solid #ff6600; filter:drop-shadow(0 0 8px #ff6600); z-index:20; pointer-events:none; }
+
+        /* ── Конгратс-оверлей ── */
+        .congrats-overlay {
+            position: fixed; inset: 0; z-index: 30000;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .congrats-overlay.active { opacity: 1; pointer-events: auto; }
+        .congrats-bg {
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 40%, rgba(255,102,0,0.22) 0%, rgba(0,0,0,0.88) 70%);
+            backdrop-filter: blur(3px);
+        }
+        .congrats-card {
+            position: relative; z-index: 1;
+            background: linear-gradient(145deg, #1a1a1a, #141414);
+            border: 2px solid #ff6600;
+            border-radius: 28px; padding: 36px 44px;
+            text-align: center; max-width: 420px; width: 90%;
+            box-shadow: 0 0 60px rgba(255,102,0,0.5), 0 30px 60px rgba(0,0,0,0.8);
+            animation: congratsPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes congratsPop {
+            from { transform: scale(0.5) translateY(40px); opacity: 0; }
+            to   { transform: scale(1) translateY(0);      opacity: 1; }
+        }
+        @keyframes borderSpin {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .congrats-emoji { font-size: 3.5rem; display: block; margin-bottom: 10px;
+            animation: emojiSpin 0.6s ease-out 0.1s both; }
+        @keyframes emojiSpin {
+            from { transform: rotate(-20deg) scale(0.6); opacity: 0; }
+            to   { transform: rotate(0deg) scale(1);     opacity: 1; }
+        }
+        .congrats-title { font-size: 1.6rem; font-weight: 800; color: #ff6600;
+            text-shadow: 0 0 20px rgba(255,102,0,0.6); margin-bottom: 6px; }
+        .congrats-sub { font-size: 1rem; color: #ccc; margin-bottom: 6px; }
+        .congrats-game { font-size: 1.3rem; font-weight: 700; color: #ffaa33;
+            margin: 10px 0 20px; text-shadow: 0 0 10px rgba(255,170,51,0.5); }
+        .congrats-close {
+            background: #ff6600; color: #121212; border: none;
+            padding: 10px 32px; border-radius: 40px; font-size: 1rem;
+            font-weight: 700; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 0 #b34700; font-family: inherit;
+        }
+        .congrats-close:hover { background: #ff8833; transform: scale(1.06); box-shadow: 0 0 20px #ff6600; }
+        /* Конфетти */
+        .confetti-piece {
+            position: absolute; width: 8px; height: 8px; border-radius: 2px;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        /* Блокировка кнопок угадывания во время вращения */
+        .guess-btn.disabled-spin { opacity: 0.35; pointer-events: none; cursor: default; }
+        .guess-title { font-size:1.2rem; color:#ffaa33; margin-bottom:15px; }
+        .guess-buttons { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+        .guess-btn { background:#2a2a2a; border:1px solid #ff6600; color:#fff; padding:8px 16px; border-radius:30px; font-size:0.9rem; cursor:pointer; transition:all 0.2s; box-shadow:0 0 5px rgba(255,102,0,0.3); }
+        .guess-btn:hover { background:#ff6600; color:#121212; transform:scale(1.05); box-shadow:0 0 15px #ff6600; }
+        .guess-btn.selected { background:#ff6600; color:#121212; box-shadow:0 0 20px #ff6600; border-color:#fff; }
+
+        .weather-container { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:20px; margin-top:30px; }
+        .weather-card { background:#1e1e1e; border-radius:30px; padding:20px; text-align:center; border:1px solid #ff6600; box-shadow:0 0 20px rgba(255,102,0,0.3); transition:all 0.3s; cursor:pointer; position:relative; overflow:hidden; }
+        .weather-card::before { content:''; position:absolute; top:-2px; left:-2px; right:-2px; bottom:-2px; background:linear-gradient(45deg,#ff6600,transparent); opacity:0; transition:opacity 0.3s; z-index:-1; border-radius:32px; }
+        .weather-card:hover { transform:scale(1.03); box-shadow:0 0 40px #ff6600; }
+        .weather-card:hover::before { opacity:0.3; }
+        .weather-city { font-size:1.5rem; font-weight:600; color:#ff6600; margin-bottom:5px; }
+        .weather-time { font-size:0.9rem; color:#aaa; margin-bottom:10px; }
+        .weather-icon { font-size:3rem; margin:10px 0; filter:drop-shadow(0 0 10px #ff6600); }
+        .weather-temp { font-size:2rem; font-weight:500; }
+        .weather-desc { font-size:0.9rem; color:#ccc; margin-top:5px; }
+
+        .geo-button { background:#2a2a2a; border:2px solid #ff6600; color:#fff; padding:12px 24px; border-radius:60px; font-size:1.2rem; cursor:pointer; margin:20px auto 0; display:inline-block; transition:0.2s; box-shadow:0 0 10px rgba(255,102,0,0.3); }
+        .geo-button:hover { background:#ff6600; color:#121212; transform:scale(1.05); box-shadow:0 0 20px #ff6600; }
+
+        .donate-container { display:flex; flex-direction:column; align-items:center; gap:40px; margin-top:30px; }
+        .donate-links { display:flex; gap:40px; flex-wrap:wrap; justify-content:center; }
+        .donate-card { background:#1a1a1a; border:2px solid #ff6600; border-radius:40px; padding:30px 40px; text-align:center; transition:0.3s; box-shadow:0 0 30px rgba(255,102,0,0.5); min-width:250px; }
+        .donate-card:hover { transform:scale(1.05) translateY(-5px); box-shadow:0 0 60px #ff6600; }
+        .donate-card a { color:#ff6600; font-size:1.5rem; font-weight:600; text-decoration:none; display:block; margin:15px 0 5px; }
+        .donate-card a:hover { text-decoration:underline; color:#ffaa33; }
+        .donate-card i { font-size:4rem; color:#ff6600; filter:drop-shadow(0 0 15px #ff6600); }
+        .donate-desc { color:#ccc; font-size:1rem; margin-top:10px; }
+
+        .game-container { background:#1a1a1a; border-radius:60px; padding:30px; border:1px solid #ff6600; text-align:center; width:100%; box-shadow:0 0 30px rgba(255,102,0,0.3); }
+        .game-title { font-size:2rem; color:#ff6600; margin-bottom:20px; }
+        .burj { width:80px; margin:20px auto; transition:transform 0.2s,filter 0.2s; cursor:pointer; filter:drop-shadow(0 0 10px #ffaa33); user-select:none; -webkit-user-select:none; }
+        .burj:active { transform:scale(1.3); filter:drop-shadow(0 0 30px #ff6600); }
+        .game-container { user-select:none; -webkit-user-select:none; }
+        .burj svg { width:100%; height:auto; }
+        .click-counter { font-size:1.2rem; color:#ffaa33; }
+        .progress-bar { width:100%; height:20px; background:#333; border-radius:10px; margin:20px 0; overflow:hidden; }
+        .progress-fill { height:100%; width:0%; background:linear-gradient(90deg,#ffaa33,#ff6600); transition:width 0.3s; }
+        .game-message { color:#ff6600; font-size:1.2rem; min-height:2rem; }
+
+        .link { color:#ff6600; text-decoration:none; font-weight:600; font-size:1.3rem; border-bottom:2px solid transparent; transition:border-color 0.2s; }
+        .link:hover { border-bottom-color:#ff6600; }
+        .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#222; color:#ff6600; padding:14px 28px; border-radius:60px; font-weight:600; box-shadow:0 10px 30px rgba(255,102,0,0.7); border:1px solid #ff6600; z-index:9999; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; backdrop-filter:blur(5px); }
+        .toast.show { opacity:1; }
+        h2 { font-size:2rem; margin-bottom:15px; font-weight:500; color:#ff6600; }
+        p { color:#ccc; line-height:1.6; }
+
+        .scene-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:20000; display:none; justify-content:center; align-items:center; }
+        .scene-overlay.active { display:flex; }
+        #scene-canvas { width:100%; height:100%; display:block; }
+        .close-scene { position:absolute; top:25px; right:35px; color:white; font-size:50px; cursor:pointer; z-index:20001; transition:color 0.2s,transform 0.2s; }
+        .close-scene:hover { color:#ff6600; transform:scale(1.2); }
+
+        /* Виджет следующего стрима */
+        .next-stream-widget {
+            position: fixed; bottom: 22px; left: 22px; z-index: 8000;
+            max-width: 220px; width: calc(100vw - 44px);
+            background: rgba(14,14,16,0.97);
+            border: 1px solid rgba(232,101,10,0.3);
+            border-radius: 16px; padding: 14px 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,101,10,0.06);
+            font-family: Inter, -apple-system, sans-serif;
+            animation: nsw-in 0.4s ease;
+        }
+        @keyframes nsw-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .nsw-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1px; color: #e8650a; margin-bottom: 5px;
+            display: flex; align-items: center; gap: 5px; }
+        .nsw-dot { width: 6px; height: 6px; border-radius: 50%; background: #e8650a;
+            box-shadow: 0 0 6px rgba(232,101,10,0.8);
+            animation: nsw-pulse 1.4s ease-in-out infinite; flex-shrink: 0; }
+        @keyframes nsw-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .nsw-title { font-size: 0.82rem; font-weight: 700; color: #e8e8f0;
+            margin-bottom: 8px; line-height: 1.3; }
+        .nsw-timer { display: flex; gap: 6px; }
+        .nsw-unit { text-align: center; flex: 1; }
+        .nsw-num { font-size: 1.25rem; font-weight: 800; color: #e8650a;
+            font-variant-numeric: tabular-nums; line-height: 1; }
+        .nsw-uname { font-size: 0.58rem; color: #4e5460; text-transform: uppercase;
+            letter-spacing: 0.5px; margin-top: 2px; }
+        .nsw-desc { font-size: 0.72rem; color: #5a6070; margin-top: 8px; line-height: 1.4; }
+        .nsw-live { font-size: 0.78rem; font-weight: 700; color: #30c060;
+            text-align: center; padding: 4px 0; }
+
+        .copyright { text-align: center; margin: 40px 0 0; padding: 20px 0 0; color: #888; font-size: 14px; border-top: 1px solid #333; }
+        @media (max-width: 600px) { .copyright { font-size: 12px; margin: 30px 0 0; padding: 15px 0 0; } }
+
+        /* Flash-сообщения (внизу) */
+        .flash-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 20px auto 0;
+        }
+        .flash-message {
+            background: #1e1e1e;
+            border-left: 4px solid #ff6600;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #ffaa33;
+            font-weight: 500;
+        }
+
+        /* ========== ГЛАВНАЯ: НОВЫЕ СЕКЦИИ ========== */
+        .home-section { margin-bottom: 30px; }
+        .home-section-title {
+            font-size: 0.95rem; font-weight: 800; color: #ff6600;
+            letter-spacing: 1.8px; text-transform: uppercase;
+            margin-bottom: 14px; display: flex; align-items: center; gap: 9px;
+        }
+        .home-section-title::before {
+            content: ''; width: 4px; height: 16px;
+            background: #ff6600; border-radius: 2px; flex-shrink: 0;
+            box-shadow: 0 0 8px rgba(255,102,0,0.5);
+        }
+
+        /* Платформы стрима */
+        .stream-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 700px) { .stream-grid { grid-template-columns: repeat(2, 1fr); } }
+        .platform-card {
+            background: linear-gradient(145deg, #1c1c1c, #161616);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 18px; padding: 16px 12px 12px;
+            text-align: center; transition: all 0.25s; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .platform-card.plat-live { border-color: rgba(255,102,0,0.45); box-shadow: 0 0 18px rgba(255,102,0,0.18); }
+        .platform-card:hover { transform: translateY(-2px); border-color: rgba(255,102,0,0.3); }
+        .platform-card-icon { font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; gap: 7px; margin-bottom: 8px; }
+        .platform-card-icon i { font-size: 1.4rem; }
+        .platform-card-status { font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; padding: 3px 9px; border-radius: 20px; display: inline-block; margin-bottom: 12px; min-height: 22px; }
+        .status-live { background: rgba(255,102,0,0.18); color: #ff6600; border: 1px solid rgba(255,102,0,0.35); }
+        .status-offline { background: rgba(255,255,255,0.04); color: #555; border: 1px solid rgba(255,255,255,0.06); }
+        .live-dot-sm { width: 6px; height: 6px; background: #ff6600; border-radius: 50%; display: inline-block; margin-right: 3px; animation: pulse 1.4s infinite; }
+        .platform-watch-btn {
+            display: block; text-decoration: none; width: 100%;
+            background: rgba(255,102,0,0.1); border: 1px solid rgba(255,102,0,0.25);
+            color: #ff6600; padding: 6px 0; border-radius: 25px;
+            font-size: 0.78rem; font-weight: 600; transition: all 0.2s;
+            margin-top: auto;
+        }
+        .platform-watch-btn:hover { background: #ff6600; color: #121212; box-shadow: 0 0 12px rgba(255,102,0,0.4); }
+
+        /* Двухколоночный layout */
+        .home-two-cols {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 18px; margin-bottom: 24px;
+            align-items: stretch;
+        }
+        @media (max-width: 700px) { .home-two-cols { grid-template-columns: 1fr; } }
+        /* Колонки тянутся по высоте */
+        .home-two-cols > div { display: flex; flex-direction: column; }
+        .home-two-cols > div .media-card { flex: 1; display: flex; flex-direction: column; }
+        /* Карточка стрима — изображение растягивается на всю высоту */
+        .media-card.stream-card { padding: 0; }
+        .media-card.stream-card .card-thumb-wrap { flex: 1; }
+        .media-card.stream-card .card-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 185px; }
+        /* Обёртка для моментов и голосования */
+        .section-card {
+            background: #161616; border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.06); overflow: hidden;
+            flex: 1; padding: 16px;
+        }
+        .section-card-empty {
+            background: #161616; border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 30px 20px; flex: 1;
+        }
+        /* Голосование — карточка */
+        .vote-card {
+            background: #161616; border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 20px 18px;
+        }
+
+        /* Топ зрителей/донатеров */
+        .top-section {
+            background: #161616; border-radius: 18px;
+            padding: 18px 16px; border: 1px solid rgba(255,255,255,0.06);
+        }
+        .top-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .top-item:last-child { border-bottom: none; }
+        .top-rank { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+        .rank-1 { background: rgba(255,215,0,0.15); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); }
+        .rank-2 { background: rgba(192,192,192,0.12); color: #c0c0c0; border: 1px solid rgba(192,192,192,0.25); }
+        .rank-3 { background: rgba(205,127,50,0.12); color: #cd7f32; border: 1px solid rgba(205,127,50,0.25); }
+        .top-name { flex: 1; font-size: 0.88rem; font-weight: 600; color: #e0e0e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .top-meta { font-size: 0.75rem; color: #666; white-space: nowrap; }
+        .top-amount { font-size: 0.88rem; font-weight: 700; color: #ff6600; white-space: nowrap; }
+
+        /* Карточки (последний стрим, статья, новость) */
+        .media-card {
+            background: #161616; border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.06); overflow: hidden;
+            transition: all 0.25s; display: block; text-decoration: none; color: inherit;
+        }
+        .media-card:hover { border-color: rgba(255,102,0,0.3); box-shadow: 0 0 16px rgba(255,102,0,0.12); transform: translateY(-2px); }
+        .card-thumb-wrap { position: relative; overflow: hidden; margin: -1px -1px 0; }
+        .card-thumb-wrap img { width: 100%; height: 185px; object-fit: cover; display: block; transition: transform 0.3s; }
+        .media-card:hover .card-thumb-wrap img { transform: scale(1.03); }
+        .card-thumb-ph { width: 100%; height: 185px; background: #1d1d1d; display: flex; align-items: center; justify-content: center; color: #ff6600; font-size: 2rem; opacity: 0.3; }
+        .stream-plat-icons { position: absolute; bottom: 7px; right: 7px; display: flex; gap: 4px; }
+        .s-plat-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; text-decoration: none; transition: transform 0.15s; border: 1px solid rgba(255,255,255,0.1); }
+        .s-plat-icon:hover { transform: scale(1.15); }
+        .s-plat-yt { background: #ff0000; color: white; }
+        .s-plat-tw { background: #9146ff; color: white; }
+        .s-plat-tt { background: #111; color: white; }
+        .card-body-p { padding: 13px 14px; }
+        .card-body-p h4 { font-size: 0.9rem; font-weight: 700; color: #f0f0f0; margin-bottom: 5px; line-height: 1.35; }
+        .card-body-p .card-desc { font-size: 0.78rem; color: #888; line-height: 1.5; margin-bottom: 9px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-rating-p { font-size: 0.78rem; color: #ffaa33; margin-bottom: 8px; }
+        .card-views-p { font-size: 0.73rem; color: #555; margin-bottom: 9px; }
+        .card-action-btn {
+            display: inline-block; background: rgba(255,102,0,0.1); border: 1px solid rgba(255,102,0,0.25);
+            color: #ff6600; padding: 5px 14px; border-radius: 20px;
+            font-size: 0.76rem; font-weight: 600;
+        }
+        .media-card:hover .card-action-btn { background: #ff6600; color: #121212; }
+
+        /* Моменты стрима */
+        .moments-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        @media (max-width: 600px) { .moments-grid { grid-template-columns: repeat(2, 1fr); } }
+        .moment-card { background: #181818; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: all 0.2s; text-decoration: none; display: block; }
+        .moment-card:hover { transform: translateY(-2px); border-color: rgba(255,102,0,0.3); box-shadow: 0 0 12px rgba(255,102,0,0.1); }
+        .moment-thumb-wrap { position: relative; }
+        .moment-thumb-wrap img { width: 100%; height: 80px; object-fit: cover; display: block; }
+        .moment-thumb-ph { width: 100%; height: 80px; background: #1d1d1d; display: flex; align-items: center; justify-content: center; color: #ff6600; font-size: 1.2rem; opacity: 0.35; }
+        .moment-views-badge { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,0.75); color: #ccc; font-size: 0.62rem; padding: 2px 5px; border-radius: 4px; }
+        .moment-label { font-size: 0.72rem; color: #bbb; padding: 5px 8px 7px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .view-all-link { display: inline-flex; align-items: center; gap: 5px; color: #ff6600; font-size: 0.8rem; font-weight: 600; border: 1px solid rgba(255,102,0,0.25); padding: 5px 14px; border-radius: 20px; text-decoration: none; transition: all 0.2s; }
+        .view-all-link:hover { background: rgba(255,102,0,0.08); }
+
+        /* Голосование */
+        .vote-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+        @media (max-width: 600px) { .vote-grid { grid-template-columns: repeat(2, 1fr); } }
+        .vote-game-card {
+            background: #181818; border-radius: 14px; overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.07); cursor: pointer; transition: all 0.2s; text-align: center; padding-bottom: 10px;
+        }
+        .vote-game-card:hover { border-color: rgba(255,102,0,0.35); transform: translateY(-2px); }
+        .vote-game-card.selected { border-color: #ff6600; box-shadow: 0 0 14px rgba(255,102,0,0.25); }
+        .vote-game-img { width: 100%; height: 95px; object-fit: cover; display: block; }
+        .vote-game-ph { width: 100%; height: 95px; background: #1d1d1d; display: flex; align-items: center; justify-content: center; color: #ff6600; font-size: 1.8rem; opacity: 0.3; }
+        .vote-game-name { font-size: 0.76rem; font-weight: 600; color: #e0e0e0; padding: 7px 7px 2px; line-height: 1.3; }
+        .vote-game-vcount { font-size: 0.68rem; color: #666; padding: 2px 0; }
+        .vote-submit-btn {
+            display: block; width: 100%; padding: 10px; border: none;
+            background: rgba(255,102,0,0.12); border: 1px solid rgba(255,102,0,0.3);
+            color: #ff6600; font-size: 0.85rem; font-weight: 700;
+            border-radius: 28px; cursor: pointer; transition: all 0.2s;
+            font-family: inherit; margin-top: 2px;
+        }
+        .vote-submit-btn:hover:not(:disabled) { background: #ff6600; color: #121212; box-shadow: 0 0 15px rgba(255,102,0,0.4); }
+        .vote-submit-btn:disabled { opacity: 0.4; cursor: default; }
+        .vote-poll-closed { text-align: center; color: #666; font-size: 0.85rem; padding: 8px 0; font-style: italic; }
+    </style>
+</head>
+<body>
+<script>
+// ── VPN детектор v3 для главной страницы ──
+(function(){
+    if (sessionStorage.getItem('vpn_ok')) return;
+    var _shown = false;
+    function showVpnNotice() {
+        if (_shown) return; _shown = true;
+        sessionStorage.setItem('vpn_ok','1');
+        var st = document.createElement('style');
+        st.textContent = '@keyframes _vpnIn{0%{opacity:0;transform:translateY(20px) scale(.96)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes _vpnOut{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(14px)}}';
+        document.head.appendChild(st);
+        var box = document.createElement('div');
+        box.id = '_vpn_box';
+        box.innerHTML =
+            '<div style="width:3px;flex-shrink:0;border-radius:3px;background:linear-gradient(180deg,#e8650a,#c8450a);align-self:stretch"></div>'+
+            '<div style="flex:1;padding-left:12px">'+
+              '<div style="color:#e8650a;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">⚠ Обнаружен VPN</div>'+
+              '<div style="color:#8a909e;font-size:0.79rem;line-height:1.6">Мы обнаружили, что вы используете <strong style="color:#c9cdd6">VPN</strong>. Просим отключить его — иначе сайт может работать некорректно.</div>'+
+              '<button id="_vpn_ok" style="margin-top:10px;padding:5px 16px;border-radius:8px;background:rgba(232,101,10,.12);border:1px solid rgba(232,101,10,.4);color:#e8650a;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">✓ Понятно</button>'+
+            '</div>'+
+            '<button id="_vpn_x" style="flex-shrink:0;margin-left:8px;background:none;border:none;color:#454a56;font-size:1.15rem;cursor:pointer;line-height:1;padding:2px 4px">&times;</button>';
+        Object.assign(box.style,{
+            position:'fixed',bottom:'22px',right:'22px',zIndex:'2147483647',
+            background:'rgba(16,16,18,0.97)',border:'1px solid rgba(232,101,10,.22)',
+            borderRadius:'14px',padding:'14px 16px',maxWidth:'300px',width:'calc(100vw - 44px)',
+            display:'flex',alignItems:'flex-start',gap:'0',
+            boxShadow:'0 4px 8px rgba(0,0,0,.4),0 16px 48px rgba(0,0,0,.7)',
+            fontFamily:'Inter,-apple-system,sans-serif',animation:'_vpnIn .4s cubic-bezier(.22,.68,0,1.2) both'
+        });
+        document.body.appendChild(box);
+        function closeBox(){ box.style.animation='_vpnOut .25s ease both'; setTimeout(function(){if(box.parentNode)box.remove();},270); }
+        document.getElementById('_vpn_ok').addEventListener('click',closeBox);
+        document.getElementById('_vpn_x').addEventListener('click',closeBox);
+    }
+    function tryVpnApi(ip){ return fetch('https://vpnapi.io/api/'+ip+'?key=free').then(function(r){return r.json();}).then(function(d){if(d&&d.security&&(d.security.vpn||d.security.proxy||d.security.tor)){showVpnNotice();return true;}return false;}); }
+    function tryProxyCheck(ip){ return fetch('https://proxycheck.io/v2/'+ip+'?vpn=1&asn=1').then(function(r){return r.json();}).then(function(data){var keys=Object.keys(data).filter(function(k){return k!=='status'&&k!=='message';});if(!keys.length)return false;var info=data[keys[0]];if(info&&(info.proxy==='yes'||info.vpn==='yes'||info.type==='VPN')){showVpnNotice();return true;}return false;}); }
+    function tryIpApi(ip){ return fetch('https://ip-api.com/json/'+ip+'?fields=proxy,hosting').then(function(r){return r.json();}).then(function(d){if(d&&(d.proxy||d.hosting)){showVpnNotice();return true;}return false;}); }
+    function runChecks(ip){
+        tryVpnApi(ip).catch(function(){});
+        setTimeout(function(){if(!_shown)tryProxyCheck(ip).catch(function(){});},600);
+        setTimeout(function(){if(!_shown)tryIpApi(ip).catch(function(){});},1400);
+    }
+    setTimeout(function(){
+        fetch('https://api.ipify.org?format=json').then(function(r){return r.json();}).then(function(d){if(d&&d.ip)runChecks(d.ip);})
+        .catch(function(){ fetch('https://ipapi.co/json/').then(function(r){return r.json();}).then(function(d){if(d&&d.ip)runChecks(d.ip);}).catch(function(){}); });
+    },1500);
+})();
+</script>
+    <!-- Фоновые плавающие иконки -->
+    <div class="floating-icons">
+        <i class="icon icon1 fa-solid fa-gamepad" data-name="Джойстик"></i>
+        <i class="icon icon2 fa-solid fa-computer-mouse" data-name="Мышь"></i>
+        <i class="icon icon3 fa-solid fa-keyboard" data-name="Клавиатура"></i>
+        <i class="icon icon4 fa-solid fa-headphones" data-name="Наушники"></i>
+        <i class="icon icon5 fa-solid fa-display" data-name="Монитор"></i>
+        <i class="icon icon6 fa-solid fa-floppy-disk" data-name="Дискета"></i>
+        <i class="icon icon7 fa-solid fa-compact-disc" data-name="CD"></i>
+        <i class="icon icon8 fa-solid fa-camera" data-name="Камера"></i>
+        <i class="icon icon9 fa-solid fa-microchip" data-name="Процессор"></i>
+        <i class="icon icon10 fa-solid fa-wifi" data-name="Wi-Fi"></i>
+        <i class="icon icon11 fa-solid fa-bolt" data-name="Молния"></i>
+        <i class="icon icon12 fa-solid fa-crown" data-name="Корона"></i>
+        <i class="icon icon13 fa-solid fa-cloud" data-name="Облако"></i>
+        <i class="icon icon14 fa-solid fa-tree" data-name="Дерево"></i>
+        <i class="icon icon15 fa-solid fa-cat" data-name="Кот"></i>
+        <i class="icon icon16 fa-solid fa-moon" data-name="Луна"></i>
+        <i class="icon icon17 fa-solid fa-star" data-name="Звезда"></i>
+        <i class="icon icon18 fa-solid fa-sun" data-name="Солнце"></i>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="container">
+        <button class="fullscreen-btn" onclick="toggleFullscreen()" id="fsBtn" title="Полный экран">
+            <svg id="fsIcon" viewBox="0 0 24 24">
+                <polyline points="15 3 21 3 21 9"/>
+                <polyline points="9 21 3 21 3 15"/>
+                <line x1="21" y1="3" x2="14" y2="10"/>
+                <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+        </button>
+
+        <!-- ШАПКА -->
+        <div class="header">
+            <img src="{{ url_for('static', filename='comilank.jpg') }}" alt="Comilank" class="avatar">
+            <div class="title">
+                <h1><span>C</span><span>O</span><span>M</span><span>I</span><span>L</span><span>A</span><span>N</span><span>K</span></h1>
+                <p><span>с</span><span>т</span><span>р</span><span>и</span><span>м</span><span>е</span><span>р</span> <span>/</span> <span>г</span><span>е</span><span>й</span><span>м</span><span>е</span><span>р</span> <span>/</span> <span>п</span><span>р</span><span>о</span><span>с</span><span>т</span><span>о</span> <span>х</span><span>о</span><span>р</span><span>о</span><span>ш</span><span>и</span><span>й</span> <span>ч</span><span>е</span><span>л</span><span>о</span><span>в</span><span>е</span><span>к</span></p>
+            </div>
+            <!-- Добавить ссылку на форум -->
+            <a href="{{ url_for('forum') }}" class="auth-link">Форум</a>
+
+            <!-- ========== БЛОК АУТЕНТИФИКАЦИИ ========== -->
+            <div class="auth-links">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('profile', username=current_user.username) }}" class="auth-link">
+                        <i class="fas fa-user"></i> {{ current_user.username }}
+                    </a>
+                    {% if current_user.role >= 2 %}
+                        <a href="{{ url_for('admin_panel') }}" class="auth-link">
+                            <i class="fas fa-cog"></i> Админка
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="auth-link">
+                        <i class="fas fa-sign-out-alt"></i> Выход
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="auth-link">
+                        <i class="fas fa-sign-in-alt"></i> Вход
+                    </a>
+                    <a href="{{ url_for('register') }}" class="auth-link">
+                        <i class="fas fa-user-plus"></i> Регистрация
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ВКЛАДКИ -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'main')">Главная</button>
+            <button class="tab-button" onclick="openTab(event, 'games')">Игры</button>
+            <button class="tab-button" onclick="openTab(event, 'weather')">Погода</button>
+            <button class="tab-button" onclick="openTab(event, 'donate')">Поддержать</button>
+            <button class="tab-button" onclick="openTab(event, 'contacts')">Контакты</button>
+        </div>
+
+        <!-- ═══════════════ ГЛАВНАЯ ═══════════════ -->
+        <div id="main" class="tab-content active">
+
+            <!-- 1. ГДЕ Я СТРИМЛЮ -->
+            <div class="home-section">
+                <div class="home-section-title">ГДЕ Я СТРИМЛЮ</div>
+                <div class="stream-grid">
+                    {% if stream_platforms %}
+                        {% for p in stream_platforms %}
+                        <div class="platform-card {{ 'plat-live' if p.is_live else '' }}">
+                            <div class="platform-card-icon">
+                                <i class="{{ p.icon_class }}" style="color:{{ p.color }};"></i>
+                                <span>{{ p.name }}</span>
+                            </div>
+                            {% if p.key != 'telegram' %}
+                            <div class="platform-card-status {{ 'status-live' if p.is_live else 'status-offline' }}">
+                                {% if p.is_live %}<span class="live-dot-sm"></span>ONLINE{% else %}OFFLINE{% endif %}
+                            </div>
+                            {% else %}
+                            <div class="platform-card-status" style="visibility:hidden;">·</div>
+                            {% endif %}
+                            <a href="{{ p.stream_url if (p.is_live and p.stream_url and p.key != 'telegram') else p.channel_url }}"
+                               target="_blank" class="platform-watch-btn">
+                               {{ 'Перейти' if p.key == 'telegram' else 'Смотреть' }}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        {% for pd in [
+                            ('YouTube',  'youtube',  'fab fa-youtube',  '#ff0000', 'https://youtube.com/@comilank?si=chTQSh7wKdOonUxL'),
+                            ('Twitch',   'twitch',   'fab fa-twitch',   '#9146ff', 'https://www.twitch.tv/comilank_game'),
+                            ('TikTok',   'tiktok',   'fab fa-tiktok',   '#ffffff', 'https://www.tiktok.com/@comilank'),
+                            ('Telegram', 'telegram', 'fab fa-telegram', '#2aabee', 'https://t.me/Comilank')
+                        ] %}
+                        <div class="platform-card">
+                            <div class="platform-card-icon">
+                                <i class="{{ pd[2] }}" style="color:{{ pd[3] }};"></i>
+                                <span>{{ pd[0] }}</span>
+                            </div>
+                            {% if pd[1] != 'telegram' %}
+                            <div class="platform-card-status status-offline">OFFLINE</div>
+                            {% else %}
+                            <div class="platform-card-status" style="visibility:hidden;">·</div>
+                            {% endif %}
+                            <a href="{{ pd[4] }}" target="_blank" class="platform-watch-btn">
+                                {{ 'Перейти' if pd[1] == 'telegram' else 'Смотреть' }}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 2. ТОП ЗРИТЕЛЕЙ + ТОП ДОНАТЕРОВ -->
+            <div class="home-two-cols">
+
+                <!-- ТОП АКТИВНЫХ ЗРИТЕЛЕЙ -->
+                <div class="top-section">
+                    <div class="home-section-title" style="margin-bottom:10px;">ТОП АКТИВНЫХ ЗРИТЕЛЕЙ</div>
+                    {% if top_viewers %}
+                        {% for v in top_viewers %}
+                        <div class="top-item">
+                            <div class="top-rank rank-{{ loop.index }}">
+                                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+                            </div>
+                            <div class="top-name">{{ v.name }}</div>
+                            {% if v.show_messages %}
+                            <div class="top-meta">{{ v.messages }} сообщ.</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div style="font-size:0.82rem;padding:16px 0;text-align:center;">
+                        <i class="fas fa-user-slash" style="display:block;font-size:1.8rem;margin-bottom:8px;color:#ff6600;opacity:0.25;"></i>
+                        <span style="color:#555;">Нет данных</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- ТОП ДОНАТЕРОВ -->
+                <div class="top-section">
+                    <div class="home-section-title" style="margin-bottom:10px;">ТОП ДОНАТЕРОВ</div>
+                    {% if top_donators %}
+                        {% for d in top_donators %}
+                        <div class="top-item">
+                            <div class="top-rank rank-{{ loop.index }}">
+                                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}
+                            </div>
+                            <div class="top-name">{{ d.name }}</div>
+                            <div class="top-amount">{{ d.amount }} ₽</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div style="font-size:0.82rem;padding:16px 0;text-align:center;">
+                        <i class="fas fa-coins" style="display:block;font-size:1.8rem;margin-bottom:8px;color:#ff6600;opacity:0.25;"></i>
+                        <span style="color:#555;">Нет данных</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 3. ПОСЛЕДНИЙ СТРИМ + ПОСЛЕДНЯЯ СТАТЬЯ -->
+            <div class="home-two-cols">
+
+                <!-- ПОСЛЕДНИЙ СТРИМ -->
+                <div>
+                    <div class="home-section-title">ПОСЛЕДНИЙ СТРИМ</div>
+                    {% if last_stream and last_stream.title %}
+                    <a href="{{ last_stream.url or '#' }}" target="_blank" class="media-card stream-card">
+                        <div class="card-thumb-wrap">
+                            {% if last_stream.thumbnail_url %}
+                            <img src="{{ last_stream.thumbnail_url }}" alt="{{ last_stream.title }}">
+                            {% else %}
+                            <div class="card-thumb-ph"><i class="fas fa-video"></i></div>
+                            {% endif %}
+                            <div class="stream-plat-icons">
+                                {% if last_stream.tiktok_url %}
+                                <a href="{{ last_stream.tiktok_url }}" target="_blank" class="s-plat-icon s-plat-tt" onclick="event.stopPropagation();" title="TikTok"><i class="fab fa-tiktok"></i></a>
+                                {% endif %}
+                                {% if last_stream.twitch_url %}
+                                <a href="{{ last_stream.twitch_url }}" target="_blank" class="s-plat-icon s-plat-tw" onclick="event.stopPropagation();" title="Twitch"><i class="fab fa-twitch"></i></a>
+                                {% endif %}
+                                {% if last_stream.yt_url %}
+                                <a href="{{ last_stream.yt_url }}" target="_blank" class="s-plat-icon s-plat-yt" onclick="event.stopPropagation();" title="YouTube"><i class="fab fa-youtube"></i></a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body-p">
+                            <h4>{{ last_stream.title }}</h4>
+                            {% if last_stream.views %}
+                            <div class="card-views-p"><i class="fas fa-eye" style="font-size:0.65rem;"></i> {{ last_stream.views }} просмотров</div>
+                            {% endif %}
+                            <span class="card-action-btn">→ Смотреть запись</span>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="media-card" style="cursor:default;">
+                        <div class="card-thumb-ph"><i class="fas fa-video-slash"></i></div>
+                        <div class="card-body-p" style="text-align:center;color:#555;padding:16px;">
+                            Стрим не добавлен
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- ПОСЛЕДНЯЯ СТАТЬЯ (авто с форума) -->
+                <div>
+                    <div class="home-section-title">ПОСЛЕДНЯЯ СТАТЬЯ</div>
+                    {% if last_article %}
+                    <a href="{{ url_for('article', article_id=last_article.id) }}" class="media-card">
+                        <div class="card-thumb-wrap">
+                            {% if last_article.get_image_url() %}
+                            <img src="{{ last_article.get_image_url() }}" alt="{{ last_article.title }}">
+                            {% else %}
+                            <div class="card-thumb-ph"><i class="fas fa-gamepad"></i></div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body-p">
+                            <h4>{{ last_article.title }}</h4>
+                            {% if last_article.preview %}
+                            <div class="card-desc">{{ last_article.preview | truncate(100) }}</div>
+                            {% elif last_article.content %}
+                            <div class="card-desc">{{ last_article.content | striptags | truncate(100) }}</div>
+                            {% endif %}
+                            {% if last_article.rating %}<div class="card-rating-p">★ Оценка: {{ last_article.rating }}/10</div>{% endif %}
+                            <span class="card-action-btn">Читать статью</span>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="media-card" style="padding:30px;text-align:center;color:#555;">
+                        <i class="fas fa-file-alt" style="display:block;font-size:2rem;margin-bottom:8px;opacity:0.3;"></i>
+                        Статей пока нет
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 4. ЛУЧШИЕ МОМЕНТЫ + ПОСЛЕДНЯЯ НОВОСТЬ -->
+            <div class="home-two-cols">
+
+                <!-- ЛУЧШИЕ МОМЕНТЫ СТРИМА -->
+                <div>
+                    <div class="home-section-title">ЛУЧШИЕ МОМЕНТЫ СТРИМА</div>
+                    {% if stream_moments %}
+                    <div class="section-card">
+                        <div class="moments-grid">
+                            {% for m in stream_moments[:3] %}
+                            <a href="{{ m.url }}" target="_blank" class="moment-card">
+                                <div class="moment-thumb-wrap">
+                                    {% if m.thumbnail_url %}
+                                    <img src="{{ m.thumbnail_url }}" alt="{{ m.title }}">
+                                    {% else %}
+                                    <div class="moment-thumb-ph"><i class="fas fa-play"></i></div>
+                                    {% endif %}
+                                    {% if m.views %}<div class="moment-views-badge">{{ m.views }}</div>{% endif %}
+                                </div>
+                                <div class="moment-label">{{ m.game or m.title }}</div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        <a href="{{ stream_moments[0].url }}" target="_blank" class="view-all-link" style="margin-top:10px;display:inline-flex;">→ Смотреть все</a>
+                    </div>
+                    {% else %}
+                    <div class="media-card" style="cursor:default;">
+                        <div class="card-thumb-ph"><i class="fas fa-film"></i></div>
+                        <div class="card-body-p" style="text-align:center;color:#555;padding:16px;">
+                            Моменты не добавлены
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- ПОСЛЕДНЯЯ НОВОСТЬ (авто с форума) -->
+                <div>
+                    <div class="home-section-title">ПОСЛЕДНЯЯ НОВОСТЬ</div>
+                    {% if last_news %}
+                    <a href="{{ url_for('article', article_id=last_news.id) }}" class="media-card">
+                        <div class="card-thumb-wrap">
+                            {% if last_news.get_image_url() %}
+                            <img src="{{ last_news.get_image_url() }}" alt="{{ last_news.title }}">
+                            {% else %}
+                            <div class="card-thumb-ph" style="color:#ff6600;opacity:0.25;"><i class="fas fa-newspaper"></i></div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body-p">
+                            <h4>{{ last_news.title }}</h4>
+                            {% if last_news.preview %}
+                            <div class="card-desc">{{ last_news.preview | truncate(100) }}</div>
+                            {% elif last_news.content %}
+                            <div class="card-desc">{{ last_news.content | striptags | truncate(100) }}</div>
+                            {% endif %}
+                            {% if last_news.rating %}<div class="card-rating-p">★ Оценка: {{ last_news.rating }}/10</div>{% endif %}
+                            <span class="card-action-btn">Читать новость</span>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="media-card" style="cursor:default;">
+                        <div class="card-thumb-ph" style="color:#ff6600;opacity:0.25;"><i class="fas fa-newspaper"></i></div>
+                        <div class="card-body-p" style="text-align:center;color:#555;padding:16px;">
+                            Новостей пока нет
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 5. ВО ЧТО ИГРАЕМ В СЛЕДУЮЩИЙ РАЗ? -->
+            <div class="home-section">
+                <div class="home-section-title">ВО ЧТО ИГРАЕМ В СЛЕДУЮЩИЙ РАЗ?</div>
+                <div class="vote-card">
+                {% if next_poll and next_poll.games %}
+                    {% set total_v = namespace(n=0) %}
+                    {% for g in next_poll.games %}{% set total_v.n = total_v.n + g.votes %}{% endfor %}
+                    <div class="vote-grid" id="voteGrid">
+                        {% for game in next_poll.games %}
+                        <div class="vote-game-card {{ 'selected' if current_user_vote == game.id else '' }}"
+                             data-id="{{ game.id }}"
+                             onclick="selectVoteGame(this, {{ game.id }})"
+                             style="cursor:{{ 'pointer' if next_poll.active else 'default' }};">
+                            {% if game.image_url %}
+                            <img src="{{ game.image_url }}" alt="{{ game.name }}" class="vote-game-img">
+                            {% else %}
+                            <div class="vote-game-ph"><i class="fas fa-gamepad"></i></div>
+                            {% endif %}
+                            <div class="vote-game-name">{{ game.name }}</div>
+                            {% if total_v.n > 0 %}
+                            <div class="vote-game-vcount">{{ game.votes }} голос.</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if next_poll.active %}
+                        {% if current_user.is_authenticated %}
+                        <form method="POST" action="{{ url_for('vote_next_game') }}" id="voteForm">
+                            <input type="hidden" name="game_id" id="voteGameId" value="{{ current_user_vote or '' }}">
+                            <button type="submit" class="vote-submit-btn" id="voteSubmitBtn"
+                                {{ 'disabled' if not next_poll.active }}>
+                                {% if current_user_vote %}✓ Вы проголосовали — изменить{% else %}Голосовать{% endif %}
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{{ url_for('login') }}" class="vote-submit-btn" style="display:block;text-align:center;text-decoration:none;max-width:260px;">
+                            Войдите, чтобы голосовать
+                        </a>
+                        {% endif %}
+                    {% else %}
+                    <div class="vote-poll-closed">🏁 Голосование завершено</div>
+                    {% endif %}
+                {% else %}
+                <div style="color:#555;font-size:0.85rem;padding:24px 0;text-align:center;">
+                    <i class="fas fa-poll" style="display:block;font-size:2.2rem;margin-bottom:10px;color:#ff6600;opacity:0.25;"></i>
+                    Опрос ещё не создан
+                </div>
+                {% endif %}
+                </div>
+            </div>
+
+        </div>
+        <!-- ═══════════════ КОНЕЦ ГЛАВНОЙ ═══════════════ -->
+
+        <!-- ИГРЫ (барабан) -->
+        <div id="games" class="tab-content">
+            <h2>Во что играю</h2>
+            <p>Нажми «Крутить», чтобы запустить барабан.</p>
+            <div class="spinning-reel">
+                <div class="reel-indicator"></div>
+                <div class="reel-track" id="reelTrack">
+                    <!-- 16 игр + 3 дубликата (64 элемента) -->
+                    <div class="reel-item">🔫 Red Dead 2</div><div class="reel-item">🔥 Fahrenheit</div><div class="reel-item">⚔️ Dota 2</div><div class="reel-item">⚡ God of War</div><div class="reel-item">📝 Alan Wake</div><div class="reel-item">🌲 Alan Wake 2</div><div class="reel-item">💧 Heavy Rain</div><div class="reel-item">🧩 Тетрис</div><div class="reel-item">🎭 Detroit</div><div class="reel-item">🐴 Red Dead 1</div><div class="reel-item">🚗 GTA V</div><div class="reel-item">🌟 Star Wars</div><div class="reel-item">🔫 Mafia II</div><div class="reel-item">🔫 Mafia 1</div><div class="reel-item">🔫 Mafia 3</div><div class="reel-item">🕸️ Spider-Man</div>
+                    <!-- Дубликат 1 -->
+                    <div class="reel-item">🔫 Red Dead 2</div><div class="reel-item">🔥 Fahrenheit</div><div class="reel-item">⚔️ Dota 2</div><div class="reel-item">⚡ God of War</div><div class="reel-item">📝 Alan Wake</div><div class="reel-item">🌲 Alan Wake 2</div><div class="reel-item">💧 Heavy Rain</div><div class="reel-item">🧩 Тетрис</div><div class="reel-item">🎭 Detroit</div><div class="reel-item">🐴 Red Dead 1</div><div class="reel-item">🚗 GTA V</div><div class="reel-item">🌟 Star Wars</div><div class="reel-item">🔫 Mafia II</div><div class="reel-item">🔫 Mafia 1</div><div class="reel-item">🔫 Mafia 3</div><div class="reel-item">🕸️ Spider-Man</div>
+                    <!-- Дубликат 2 -->
+                    <div class="reel-item">🔫 Red Dead 2</div><div class="reel-item">🔥 Fahrenheit</div><div class="reel-item">⚔️ Dota 2</div><div class="reel-item">⚡ God of War</div><div class="reel-item">📝 Alan Wake</div><div class="reel-item">🌲 Alan Wake 2</div><div class="reel-item">💧 Heavy Rain</div><div class="reel-item">🧩 Тетрис</div><div class="reel-item">🎭 Detroit</div><div class="reel-item">🐴 Red Dead 1</div><div class="reel-item">🚗 GTA V</div><div class="reel-item">🌟 Star Wars</div><div class="reel-item">🔫 Mafia II</div><div class="reel-item">🔫 Mafia 1</div><div class="reel-item">🔫 Mafia 3</div><div class="reel-item">🕸️ Spider-Man</div>
+                    <!-- Дубликат 3 -->
+                    <div class="reel-item">🔫 Red Dead 2</div><div class="reel-item">🔥 Fahrenheit</div><div class="reel-item">⚔️ Dota 2</div><div class="reel-item">⚡ God of War</div><div class="reel-item">📝 Alan Wake</div><div class="reel-item">🌲 Alan Wake 2</div><div class="reel-item">💧 Heavy Rain</div><div class="reel-item">🧩 Тетрис</div><div class="reel-item">🎭 Detroit</div><div class="reel-item">🐴 Red Dead 1</div><div class="reel-item">🚗 GTA V</div><div class="reel-item">🌟 Star Wars</div><div class="reel-item">🔫 Mafia II</div><div class="reel-item">🔫 Mafia 1</div><div class="reel-item">🔫 Mafia 3</div><div class="reel-item">🕸️ Spider-Man</div>
+                </div>
+            </div>
+            <div class="reel-control">
+                <button class="reel-btn" id="spinButton" onclick="startSpin()">Крутить</button>
+            </div>
+
+            <!-- Блок угадывания -->
+            <div class="guess-section">
+                <div class="guess-title">👇 Угадай, какая игра выпадет:</div>
+                <div class="guess-buttons" id="guessButtons"></div>
+            </div>
+        </div>
+
+        <!-- ПОГОДА -->
+        <div id="weather" class="tab-content">
+            <h2>Погода в городах</h2>
+            <div class="weather-container" id="weatherContainer"><div style="color:#888;text-align:center;padding:30px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#ff6600;display:block;margin-bottom:10px;"></i>Загрузка погоды...</div></div>
+            <div style="text-align: center;">
+                <button class="geo-button" onclick="showGeoModal()">
+                    <i class="fas fa-location-dot"></i> Сказать мой город
+                </button>
+            </div>
+        </div>
+
+        <!-- ПОДДЕРЖАТЬ ДОНАТОМ -->
+        <div id="donate" class="tab-content">
+            <h2>Поддержать стримера</h2>
+            <div class="donate-container">
+                <div class="donate-links">
+                    <div class="donate-card">
+                        <i class="fab fa-donationalerts"></i>
+                        <a href="https://www.donationalerts.com/r/comilank" target="_blank">DonationAlerts</a>
+                        <div class="donate-desc">На покупку игр, которые хотите, чтобы я прошёл</div>
+                    </div>
+                    <div class="donate-card">
+                        <i class="fas fa-donate"></i>
+                        <a href="https://donatepay.ru/don/Comilank" target="_blank">Donatepay</a>
+                        <div class="donate-desc">На развитие канала и новые проекты</div>
+                    </div>
+                </div>
+                <!-- Мини-игра -->
+                <div class="game-container">
+                    <div class="game-title">🏗️ Построй Бурж-Халиф 🏗️</div>
+                    <div class="burj" id="burjClick">
+                        <svg width="80" height="120" viewBox="0 0 100 200">
+                            <rect x="30" y="150" width="40" height="40" fill="#ff6600" rx="5" />
+                            <rect x="35" y="110" width="30" height="40" fill="#ff9933" rx="5" />
+                            <rect x="40" y="70" width="20" height="40" fill="#ffaa33" rx="5" />
+                            <rect x="45" y="30" width="10" height="40" fill="#ffcc66" rx="3" />
+                            <circle cx="50" cy="20" r="8" fill="#ffff99" />
+                        </svg>
+                    </div>
+                    <div class="click-counter">Кликов: <span id="clickCount">0</span></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="game-message" id="gameMessage">Кликни на башню, чтобы поддержать!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- КОНТАКТЫ -->
+        <div id="contacts" class="tab-content">
+            <h2>Контакты</h2>
+            <p>Скоро появятся 🙃</p>
+        </div>
+
+        <!-- Flash-сообщения (перенесены вниз, перед копирайтом) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- КОПИРАЙТ -->
+        <div class="copyright">© 2026 Comilank. Все права защищены.</div>
+    </div>
+
+    <!-- КОНГРАТС ОВЕРЛЕЙ -->
+    <div id="congratsOverlay" class="congrats-overlay">
+        <div class="congrats-bg" onclick="closeCongratsOverlay()"></div>
+        <div class="congrats-card" id="congratsCard">
+            <div style="position:absolute;top:-3px;left:-3px;right:-3px;bottom:-3px;border-radius:30px;background:linear-gradient(45deg,#ff6600,#ffaa33,#ff3366,#ff6600);z-index:-1;animation:borderSpin 3s linear infinite;opacity:0.7;"></div>
+            <span class="congrats-emoji" id="congratsEmoji">🎉</span>
+            <div class="congrats-title">🎯 ТЫ УГАДАЛ!</div>
+            <div class="congrats-sub">Выпала игра:</div>
+            <div class="congrats-game" id="congratsGame">-</div>
+            <div style="margin:8px 0 14px;padding:12px 16px;background:rgba(0,0,0,0.35);border-radius:14px;border:1px solid rgba(255,102,0,0.2);">
+                <div style="font-size:1rem;font-weight:700;color:#fff;margin-bottom:4px;" id="congratsCharName">-</div>
+                <div style="font-size:0.82rem;color:#aaa;font-style:italic;" id="congratsCharDesc">-</div>
+            </div>
+            <button class="congrats-close" onclick="closeCongratsOverlay()">🎰 Отлично!</button>
+        </div>
+    </div>
+
+    <!-- OVERLAY ДЛЯ 3D-СЦЕН -->
+    <div id="sceneOverlay" class="scene-overlay"><div class="close-scene" onclick="closeScene()">&times;</div><canvas id="scene-canvas"></canvas></div>
+
+    <!-- МОДАЛ ГЕОЛОКАЦИИ -->
+    <div id="geoModal" style="
+        display:none; position:fixed; inset:0; z-index:25000;
+        background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+        align-items:center; justify-content:center;
+    ">
+        <div id="geoModalCard" style="
+            background:linear-gradient(145deg,#1a1a1c,#141416);
+            border:1px solid rgba(255,102,0,0.35);
+            border-radius:28px; padding:36px 40px;
+            max-width:420px; width:90%; text-align:center;
+            box-shadow:0 0 60px rgba(255,102,0,0.25), 0 30px 80px rgba(0,0,0,0.8);
+            position:relative;
+            animation:geoModalIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+        ">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,102,0,0.12);border:2px solid rgba(255,102,0,0.35);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+                <i class="fas fa-location-dot" style="font-size:1.8rem;color:#ff6600;filter:drop-shadow(0 0 10px #ff6600);"></i>
+            </div>
+            <div style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:10px;">Разрешить геолокацию?</div>
+            <div style="color:#888;font-size:0.92rem;line-height:1.6;margin-bottom:24px;">
+                Сайт запросит разрешение браузера на доступ к вашему местоположению — только для отображения погоды вашего города. Данные не сохраняются и не передаются третьим лицам.
+            </div>
+            <div style="display:flex;gap:14px;justify-content:center;">
+                <button onclick="closeGeoModal()" style="
+                    padding:11px 28px;border-radius:50px;
+                    background:rgba(255,255,255,0.05);
+                    border:1px solid rgba(255,255,255,0.12);
+                    color:#aaa;font-size:0.95rem;font-weight:600;
+                    cursor:pointer;font-family:inherit;
+                    transition:all 0.2s;
+                " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                    Отмена
+                </button>
+                <button onclick="confirmGeoAndGet()" style="
+                    padding:11px 32px;border-radius:50px;
+                    background:linear-gradient(135deg,#ff6600,#e8500a);
+                    border:none;color:#fff;font-size:0.95rem;font-weight:700;
+                    cursor:pointer;font-family:inherit;
+                    box-shadow:0 4px 20px rgba(255,102,0,0.45);
+                    transition:all 0.2s;
+                " onmouseover="this.style.transform='scale(1.04)';this.style.boxShadow='0 6px 28px rgba(255,102,0,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(255,102,0,0.45)'">
+                    <i class="fas fa-location-crosshairs" style="margin-right:6px;"></i> Разрешить
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes geoModalIn {
+            from { opacity:0; transform:scale(0.85) translateY(20px); }
+            to   { opacity:1; transform:scale(1) translateY(0); }
+        }
+    </style>
+
+    <!-- Три.js убран — сцены встроены напрямую -->
+
+    <script>
+        // ========== ПОЛНЫЙ ЭКРАН ==========
+        var _fsExpand = '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
+        var _fsCompress = '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>';
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                var ic = document.getElementById('fsIcon'); if(ic) ic.innerHTML = _fsCompress;
+            } else {
+                document.exitFullscreen();
+                var ic = document.getElementById('fsIcon'); if(ic) ic.innerHTML = _fsExpand;
+            }
+        }
+        document.addEventListener('fullscreenchange', function(){
+            var ic = document.getElementById('fsIcon'); if(!ic) return;
+            ic.innerHTML = document.fullscreenElement ? _fsCompress : _fsExpand;
+        });
+
+        // ========== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
+        function openTab(evt, tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // ========== ФУНКЦИЯ ДЛЯ ГЕНЕРАЦИИ ПЛАВАЮЩИХ ИКОНОК ==========
+        function generateFloatingIcons(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+        }
+
+        // ========== LIVE INDICATOR (оставляем, статус берётся из БД через Flask) ==========
+        (function(){
+            const ind = document.getElementById('liveIndicator');
+            if (!ind) return;
+            // Если хоть одна платформа live — показываем live индикатор
+            const liveCards = document.querySelectorAll('.platform-card.plat-live');
+            if (liveCards.length > 0) {
+                ind.classList.add('live-on');
+                ind.classList.remove('live-off');
+            } else {
+                ind.classList.add('live-off');
+                ind.classList.remove('live-on');
+            }
+        })();
+
+        // ========== ГОЛОСОВАНИЕ "ВО ЧТО ИГРАЕМ" ==========
+        let selectedVoteId = null;
+        {% if current_user_vote %}
+        selectedVoteId = {{ current_user_vote }};
+        {% endif %}
+
+        function selectVoteGame(el, id) {
+            const poll = document.querySelector('.vote-grid');
+            if (!poll) return;
+            // Проверяем, что голосование активно
+            const submitBtn = document.getElementById('voteSubmitBtn');
+            if (!submitBtn) return; // голосование закрыто
+            document.querySelectorAll('.vote-game-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedVoteId = id;
+            document.getElementById('voteGameId').value = id;
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✓ Голосовать';
+        }
+
+        // ========== БАРАБАН (перепись) ==========
+        const reelTrack = document.getElementById('reelTrack');
+        const spinButton = document.getElementById('spinButton');
+        const gameNames = [
+            'Red Dead 2', 'Fahrenheit', 'Dota 2', 'God of War', 'Alan Wake', 'Alan Wake 2', 'Heavy Rain', 'Тетрис',
+            'Detroit', 'Red Dead 1', 'GTA V', 'Star Wars', 'Mafia II', 'Mafia 1', 'Mafia 3', 'Spider-Man'
+        ];
+
+        const ITEM_H   = 70;
+        const ITEMS    = 16;
+        const DUPES    = 4;
+        const TOTAL    = ITEMS * DUPES;
+        const TRACK_H  = ITEM_H * TOTAL;
+
+        // Текущая Y-позиция (JS-управляемая, без CSS-анимации = без чёрной полосы)
+        let reelY = 0;
+        let rafIdle = null;
+        let isSpinning = false;
+        let isShowingResult = false;   // пауза idle пока виден результат
+        let selectedGuessIndex = null;
+
+        // Устанавливаем начальную трансформацию
+        reelTrack.style.transition = 'none';
+        reelTrack.style.transform  = `translate3d(0,${reelY}px,0)`;
+
+        // --- Холостой ход: медленная прокрутка через RAF ---
+        function idleTick() {
+            if (isShowingResult) { rafIdle = requestAnimationFrame(idleTick); return; }
+            reelY -= 0.4;   // медленная скорость
+            if (reelY < -TRACK_H / 2) reelY += TRACK_H / 2;
+            reelTrack.style.transform = `translate3d(0,${reelY}px,0)`;
+            rafIdle = requestAnimationFrame(idleTick);
+        }
+        rafIdle = requestAnimationFrame(idleTick);
+
+        // --- Кнопки угадывания ---
+        function initGuessButtons() {
+            const container = document.getElementById('guessButtons');
+            container.innerHTML = '';
+            gameNames.forEach((name, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'guess-btn';
+                btn.textContent = name;
+                btn.dataset.index = idx;
+                btn.addEventListener('click', () => {
+                    if (isSpinning) return;  // блокируем во время вращения
+                    document.querySelectorAll('.guess-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedGuessIndex = idx;
+                });
+                container.appendChild(btn);
+            });
+        }
+        initGuessButtons();
+
+        // --- Старт вращения ---
+        function startSpin() {
+            if (spinButton.disabled || isSpinning) return;
+            isSpinning = true;
+            spinButton.disabled = true;
+
+            // Блокируем кнопки угадывания
+            document.querySelectorAll('.guess-btn').forEach(b => b.classList.add('disabled-spin'));
+
+            // Убираем выделение
+            document.querySelectorAll('.reel-item').forEach(el => el.classList.remove('selected'));
+
+            // Останавливаем холостой ход
+            if (rafIdle) { cancelAnimationFrame(rafIdle); rafIdle = null; }
+
+            // Быстрое вращение через RAF
+            let speed = 2;
+            const maxSpeed = 22;
+            const accelFrames = 40;
+            const totalDuration = 5000; // мс
+            const startTime = performance.now();
+            let phase = 'accel'; // accel → cruise → decel → snap
+
+            function spinTick(now) {
+                const elapsed = now - startTime;
+
+                if (phase === 'accel') {
+                    speed = Math.min(maxSpeed, 2 + (elapsed / 1000) * maxSpeed);
+                    if (elapsed >= accelFrames * 16) phase = 'cruise';
+                }
+                if (phase === 'cruise' && elapsed >= totalDuration - 800) {
+                    phase = 'decel';
+                }
+                if (phase === 'decel') {
+                    speed = Math.max(3, speed * 0.95);
+                    if (speed <= 3.1) { stopSpin(); return; }
+                }
+
+                reelY -= speed;
+                if (reelY < -TRACK_H / 2) reelY += TRACK_H / 2;
+                reelTrack.style.transition = 'none';
+                reelTrack.style.transform  = `translate3d(0,${reelY}px,0)`;
+
+                requestAnimationFrame(spinTick);
+            }
+            requestAnimationFrame(spinTick);
+        }
+
+        // --- Остановка: плавный снап на случайную игру ---
+        function stopSpin() {
+            const randomUnique = Math.floor(Math.random() * ITEMS);
+
+            // Ищем ближайший элемент с этим индексом
+            const viewportCenter = 105;
+            const trackCenter = viewportCenter - reelY;
+            let bestIndex = 0, minDist = Infinity;
+            for (let i = 0; i < TOTAL; i++) {
+                if (i % ITEMS === randomUnique) {
+                    const elemCenter = i * ITEM_H + ITEM_H / 2;
+                    const dist = Math.abs(elemCenter - trackCenter);
+                    if (dist < minDist) { minDist = dist; bestIndex = i; }
+                }
+            }
+
+            const targetY = viewportCenter - (bestIndex * ITEM_H + ITEM_H / 2);
+
+            // Плавный снап через CSS transition
+            reelTrack.style.transition = 'transform 0.55s cubic-bezier(0.17, 0.89, 0.32, 1.15)';
+            reelTrack.style.transform  = `translate3d(0,${targetY}px,0)`;
+            reelY = targetY;
+
+            // После снапа
+            setTimeout(() => {
+                reelTrack.style.transition = 'none';
+
+                // Подсвечиваем выпавший элемент
+                document.querySelectorAll('.reel-item').forEach((el, idx) => {
+                    if (idx === bestIndex) el.classList.add('selected');
+                    else el.classList.remove('selected');
+                });
+
+                const gameName = gameNames[randomUnique];
+                showToast(`🎰 Выпало: ${gameName}`);
+
+                // Разблокируем кнопки угадывания
+                document.querySelectorAll('.guess-btn').forEach(b => b.classList.remove('disabled-spin'));
+                isSpinning = false;
+                spinButton.disabled = false;
+
+                // Проверяем угадывание
+                const isGuessed = (selectedGuessIndex !== null && selectedGuessIndex === randomUnique);
+                if (isGuessed) {
+                    setTimeout(() => showCongratsOverlay(gameName, randomUnique), 300);
+                    selectedGuessIndex = null;
+                    document.querySelectorAll('.guess-btn').forEach(b => b.classList.remove('selected'));
+                }
+
+                // Ставим паузу idle пока виден результат (3.5 сек)
+                isShowingResult = true;
+                setTimeout(() => {
+                    isShowingResult = false;
+                    document.querySelectorAll('.reel-item').forEach(el => el.classList.remove('selected'));
+                }, 3500);
+
+            }, 600);
+        }
+
+        // --- Конгратс с персонажем ---
+        const GAME_CHARS = {
+            'Red Dead 2':   { bg:'linear-gradient(135deg,#3d1a0a,#8b2500)', char:'🤠', name:'Артур Морган',   desc:'Ковбой из банды Ван дер Линде' },
+            'Fahrenheit':   { bg:'linear-gradient(135deg,#0a1a3d,#001a4d)', char:'🔥', name:'Лукас Кейн',     desc:'Видения... Я должен всё вспомнить' },
+            'Dota 2':       { bg:'linear-gradient(135deg,#1a0a3d,#2d0060)', char:'⚔️', name:'Герой Dota',     desc:'Битва за Древний Трон продолжается' },
+            'God of War':   { bg:'linear-gradient(135deg,#3d0a0a,#600000)', char:'⚡', name:'Кратос',         desc:'Бог Войны. Сын Зевса. Отец Атрея' },
+            'Alan Wake':    { bg:'linear-gradient(135deg,#0a1a0a,#001a1a)', char:'🔦', name:'Алан Уэйк',      desc:'Писатель, захваченный тьмой Брайт-Фолс' },
+            'Alan Wake 2':  { bg:'linear-gradient(135deg,#060f0f,#0a1f1f)', char:'📖', name:'Алан & Сага',    desc:'Тьма глубже, но свет сильнее' },
+            'Heavy Rain':   { bg:'linear-gradient(135deg,#0a0a1a,#00003d)', char:'💧', name:'Итан Марс',      desc:'Что ты готов сделать ради сына?' },
+            'Тетрис':       { bg:'linear-gradient(135deg,#0a2a0a,#003300)', char:'🧩', name:'Тетромино',      desc:'Ты думал, всё просто? Глубже!' },
+            'Detroit':      { bg:'linear-gradient(135deg,#0a1a2a,#002244)', char:'🤖', name:'Коннор',         desc:'Меня зовут Коннор. Я андроид от CyberLife' },
+            'Red Dead 1':   { bg:'linear-gradient(135deg,#2a1a0a,#5c2800)', char:'🐴', name:'Джон Марстон',   desc:'Я просто хочу вернуться к семье' },
+            'GTA V':        { bg:'linear-gradient(135deg,#0a2a0a,#003300)', char:'🚗', name:'Майкл / Тревор', desc:'Лос-Сантос — город мечт и безумия' },
+            'Star Wars':    { bg:'linear-gradient(135deg,#0a0a2a,#000033)', char:'⚔️', name:'Джедай',         desc:'Да пребудет с тобой Сила' },
+            'Mafia II':     { bg:'linear-gradient(135deg,#1a1a0a,#2a2000)', char:'🎩', name:'Вито Скалетта', desc:'Из Сицилии — в сердце американской мафии' },
+            'Mafia 1':      { bg:'linear-gradient(135deg,#2a1a0a,#3d1500)', char:'🚬', name:'Томми Анджело', desc:'Я рассказал тебе о гангстерской жизни...' },
+            'Mafia 3':      { bg:'linear-gradient(135deg,#0a1a0a,#001500)', char:'🔫', name:'Линкольн Клей',  desc:'Новый Бордо. Ни один картель не устоит' },
+            'Spider-Man':   { bg:'linear-gradient(135deg,#2a0a0a,#5c0000)', char:'🕸️', name:'Питер Паркер',  desc:'С великой силой приходит великая ответственность' },
+        };
+
+        function showCongratsOverlay(gameName, gameIndex) {
+            const overlay = document.getElementById('congratsOverlay');
+            const card    = document.getElementById('congratsCard');
+            const info    = GAME_CHARS[gameName] || { bg:'linear-gradient(135deg,#1a1a1a,#2a2a2a)', char:'🎰', name:gameName, desc:'Отличное угадывание!' };
+
+            document.getElementById('congratsGame').textContent   = gameName;
+            document.getElementById('congratsEmoji').textContent  = info.char;
+            document.getElementById('congratsCharName').textContent = info.name;
+            document.getElementById('congratsCharDesc').textContent = info.desc;
+            card.style.background = info.bg;
+            overlay.classList.add('active');
+            spawnConfetti(overlay);
+            setTimeout(closeCongratsOverlay, 7000);
+        }
+
+        function closeCongratsOverlay() {
+            const overlay = document.getElementById('congratsOverlay');
+            overlay.classList.remove('active');
+            // Убираем конфетти
+            overlay.querySelectorAll('.confetti-piece').forEach(c => c.remove());
+        }
+
+        function spawnConfetti(parent) {
+            const colors = ['#ff6600','#ffaa33','#ff3366','#33ccff','#66ff66','#ff99ff','#ffff33'];
+            for (let i = 0; i < 60; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti-piece';
+                const size = 6 + Math.random() * 8;
+                c.style.cssText = `
+                    left:${10 + Math.random() * 80}%;
+                    top:-20px;
+                    width:${size}px; height:${size}px;
+                    background:${colors[Math.floor(Math.random() * colors.length)]};
+                    border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+                    animation-duration:${1.5 + Math.random() * 2}s;
+                    animation-delay:${Math.random() * 0.5}s;
+                `;
+                document.getElementById('congratsOverlay').appendChild(c);
+            }
+        }
+
+        // ========== ПОГОДА (данные с Open-Meteo) ==========
+        const cities = [
+            { name: 'Дубай',           lat: 25.2048,  lon: 55.2708,   tz: 'Asia/Dubai' },
+            { name: 'Москва',          lat: 55.7558,  lon: 37.6173,   tz: 'Europe/Moscow' },
+            { name: 'Лондон',          lat: 51.5074,  lon: -0.1278,   tz: 'Europe/London' },
+            { name: 'Нью-Йорк',        lat: 40.7128,  lon: -74.0060,  tz: 'America/New_York' },
+            { name: 'Токио',           lat: 35.6895,  lon: 139.6917,  tz: 'Asia/Tokyo' },
+            { name: 'Сидней',          lat: -33.8688, lon: 151.2093,  tz: 'Australia/Sydney' },
+            { name: 'Рио-де-Жанейро', lat: -22.9068, lon: -43.1729,  tz: 'America/Sao_Paulo' },
+            { name: 'Кейптаун',        lat: -33.9249, lon: 18.4241,   tz: 'Africa/Johannesburg' },
+            { name: 'Берлин',          lat: 52.5200,  lon: 13.4050,   tz: 'Europe/Berlin' },
+            { name: 'Сеул',            lat: 37.5665,  lon: 126.9780,  tz: 'Asia/Seoul' }
+        ];
+
+        function getWeatherIcon(code) {
+            if (code === 0) return 'fa-sun';
+            if ([1,2,3].includes(code)) return 'fa-cloud-sun';
+            if ([45,48].includes(code)) return 'fa-smog';
+            if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'fa-cloud-rain';
+            if ([71,73,75,77].includes(code)) return 'fa-snowflake';
+            if ([85,86].includes(code)) return 'fa-wind';
+            if ([95,96,99].includes(code)) return 'fa-cloud-bolt';
+            return 'fa-cloud';
+        }
+        function getWeatherDescription(code) {
+            if (code === 0) return 'Ясно';
+            if ([1,2,3].includes(code)) return 'Облачно';
+            if ([45,48].includes(code)) return 'Туман';
+            if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'Дождь';
+            if ([71,73,75,77].includes(code)) return 'Снег';
+            if ([85,86].includes(code)) return 'Метель';
+            if ([95,96,99].includes(code)) return 'Гроза';
+            return 'Переменная';
+        }
+        function getWeatherType(code) {
+            // Делегируем расширенной версии из scene-блока если доступна
+            if (window.getWeatherType && window.getWeatherType !== getWeatherType) return window.getWeatherType(code);
+            if (code === 0) return 'sunny';
+            if ([1,2,3].includes(code)) return 'cloudy';
+            if ([45,48].includes(code)) return 'foggy';
+            if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'rainy';
+            if ([71,73,75,77].includes(code)) return 'snowy';
+            if ([85,86].includes(code)) return 'blizzard';
+            if ([95,96,99].includes(code)) return 'stormy';
+            return 'cloudy';
+        }
+
+        async function fetchWeather() {
+            const container = document.getElementById('weatherContainer');
+            try {
+                const results = await Promise.all(cities.map(city =>
+                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&timezone=${encodeURIComponent(city.tz)}`)
+                        .then(r => r.json())
+                        .then(data => ({
+                            ...city,
+                            temp: data.current_weather.temperature,
+                            code: data.current_weather.weathercode,
+                            time: data.current_weather.time,
+                            wind: data.current_weather.windspeed
+                        }))
+                        .catch(() => ({ ...city, temp: '?', code: 0, time: new Date().toISOString(), wind: 0 }))
+                ));
+                container.innerHTML = results.map(c => `
+                    <div class="weather-card" data-tz="${c.tz}" data-code="${c.code}" data-temp="${c.temp}" data-name="${c.name}" data-wind="${c.wind || 0}">
+                        <div class="weather-city">${c.name}</div>
+                        <div class="weather-time" data-tz="${c.tz}">--:--</div>
+                        <i class="weather-icon fas ${getWeatherIcon(c.code)}"></i>
+                        <div class="weather-temp">${c.temp}°C</div>
+                        <div class="weather-desc">${getWeatherDescription(c.code)}</div>
+                    </div>
+                `).join('');
+                updateCityTimes();
+                setInterval(updateCityTimes, 1000);
+                // Обновлять реальные данные каждые 10 минут
+                setInterval(fetchWeather, 600000);
+                document.querySelectorAll('.weather-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        showWeatherScene(
+                            card.dataset.name,
+                            getWeatherType(parseInt(card.dataset.code)),
+                            parseFloat(card.dataset.temp),
+                            parseFloat(card.dataset.wind || 0)
+                        );
+                    });
+                });
+            } catch(e) {
+                container.innerHTML = '<div style="color:#888;grid-column:1/-1;text-align:center;padding:20px;">Ошибка загрузки погоды</div>';
+            }
+        }
+
+        function updateCityTimes() {
+            document.querySelectorAll('.weather-time[data-tz]').forEach(el => {
+                try {
+                    el.textContent = new Date().toLocaleTimeString('ru-RU',
+                        { hour:'2-digit', minute:'2-digit', timeZone: el.dataset.tz });
+                } catch(e) {}
+            });
+        }
+
+        function showGeoModal() {
+            const m = document.getElementById('geoModal');
+            m.style.display = 'flex';
+            // Перезапустить анимацию карточки
+            const card = document.getElementById('geoModalCard');
+            card.style.animation = 'none';
+            card.offsetHeight;
+            card.style.animation = 'geoModalIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both';
+        }
+        function closeGeoModal() {
+            document.getElementById('geoModal').style.display = 'none';
+        }
+        function confirmGeoAndGet() {
+            closeGeoModal();
+            getUserLocationWeather();
+        }
+        // Закрыть модал кликом по фону
+        document.getElementById('geoModal').addEventListener('click', function(e) {
+            if (e.target === this) closeGeoModal();
+        });
+
+        async function getUserLocationWeather() {
+            if (!navigator.geolocation) {
+                showToast('⚠️ Геолокация не поддерживается');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async pos => {
+                const { latitude: lat, longitude: lon } = pos.coords;
+                try {
+                    const [geo, weather] = await Promise.all([
+                        fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ru`).then(r=>r.json()),
+                        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`).then(r=>r.json())
+                    ]);
+                    const cityName = geo.results?.[0]?.name || 'Моё местоположение';
+                    const { temperature: temp, weathercode: code, windspeed: wind } = weather.current_weather;
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    const container = document.getElementById('weatherContainer');
+                    // Удаляем старую карточку геолокации если есть
+                    const old = container.querySelector('.geo-user-card');
+                    if (old) old.remove();
+                    const card = document.createElement('div');
+                    card.className = 'weather-card geo-user-card';
+                    card.dataset.tz = tz; card.dataset.code = code;
+                    card.dataset.temp = temp; card.dataset.name = cityName; card.dataset.wind = wind;
+                    card.style.border = '2px solid rgba(255,102,0,0.6)';
+                    card.style.boxShadow = '0 0 30px rgba(255,102,0,0.25)';
+                    card.innerHTML = `
+                        <div class="weather-city">${cityName}</div>
+                        <div class="weather-time" data-tz="${tz}">--:--</div>
+                        <i class="weather-icon fas ${getWeatherIcon(code)}"></i>
+                        <div class="weather-temp">${temp}°C</div>
+                        <div class="weather-desc">${getWeatherDescription(code)}</div>
+                        <div style="font-size:0.7rem;color:#ff6600;margin-top:4px;opacity:0.7;"><i class="fas fa-location-dot"></i> Мой город</div>
+                    `;
+                    card.addEventListener('click', () => showWeatherScene(cityName, getWeatherType(code), temp, wind));
+                    container.insertBefore(card, container.firstChild);
+                    updateCityTimes();
+                    showToast('📍 Город определён: ' + cityName);
+                } catch(e) { showToast('⚠️ Ошибка получения погоды'); }
+            }, () => showToast('⚠️ Не удалось получить геолокацию'));
+        }
+
+        // ========== ПОГОДНЫЕ CANVAS-СЦЕНЫ (v3 — расширенные, реальные города) ==========
+        (function(){
+            let RAF = null, CVS = null, CTX = null, T = 0, SCENE = {};
+
+            // Сидовый генератор для стабильного силуэта города
+            function srng(seed) {
+                let h = 0xdeadbeef;
+                for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 0x9e3779b9) >>> 0;
+                let s = h;
+                return () => { s ^= s << 13; s ^= s >> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
+            }
+
+            // Конфигурация силуэтов для известных городов
+            const CITY_PROFILES = {
+                'Дубай':    { style:'futuristic', color:'rgba(10,8,4,', winColor:'rgba(255,200,80,' },
+                'Москва':   { style:'classic',    color:'rgba(8,8,12,',  winColor:'rgba(200,160,80,' },
+                'Лондон':   { style:'dense',      color:'rgba(8,10,12)', winColor:'rgba(160,180,220,' },
+                'Нью-Йорк': { style:'manhattan',  color:'rgba(8,8,10,',  winColor:'rgba(220,200,100,' },
+                'Токио':    { style:'dense',      color:'rgba(6,6,10,',  winColor:'rgba(180,220,255,' },
+                'Сидней':   { style:'coastal',    color:'rgba(8,10,8,',  winColor:'rgba(180,220,160,' },
+                'Берлин':   { style:'classic',    color:'rgba(8,8,10,',  winColor:'rgba(200,200,220,' },
+                'Сеул':     { style:'futuristic', color:'rgba(6,6,10,',  winColor:'rgba(200,220,255,' },
+            };
+
+            function buildCity(W, H, seed) {
+                const rng = srng(seed || 'default');
+                const profile = CITY_PROFILES[seed] || {};
+                const style = profile.style || 'classic';
+                const baseY = H * 0.74;
+                const bldgs = [], wins = [];
+                let x = 0;
+                while (x < W + 40) {
+                    let w, h;
+                    if (style === 'futuristic') {
+                        w = 18 + rng() * 45; h = H * (0.18 + rng() * 0.4);
+                    } else if (style === 'manhattan') {
+                        w = 22 + rng() * 38; h = H * (0.15 + rng() * 0.5);
+                    } else if (style === 'coastal') {
+                        w = 30 + rng() * 70; h = H * (0.06 + rng() * 0.22);
+                    } else {
+                        w = 28 + rng() * 58; h = H * (0.1 + rng() * 0.3);
+                    }
+                    const b = { x, y: baseY - h, w, h, baseY };
+                    bldgs.push(b);
+                    const wArr = [];
+                    const rows = Math.floor(h / 14), cols = Math.floor(w / 11);
+                    for (let r = 0; r < rows; r++)
+                        for (let c = 0; c < cols; c++)
+                            if (rng() < 0.42) wArr.push([c, r]);
+                    wins.push(wArr);
+                    x += w + (rng() < 0.18 ? 2 : 0);
+                }
+                return { bldgs, wins, baseY, profile };
+            }
+
+            function drawCity(alpha, windowColorBase) {
+                const { bldgs, wins, baseY, profile } = SCENE.city;
+                const W = CVS.width, H = CVS.height;
+                const bc = (profile && profile.color) ? profile.color : 'rgba(8,8,14,';
+                const wc = (profile && profile.winColor) ? profile.winColor : 'rgba(255,200,100,';
+                CTX.fillStyle = `${bc}${alpha})`;
+                bldgs.forEach(b => CTX.fillRect(b.x, b.y, b.w, b.h));
+                CTX.fillStyle = `${bc}${alpha})`;
+                CTX.fillRect(0, baseY, W, H - baseY);
+                bldgs.forEach((b, i) => {
+                    wins[i].forEach(([c, r]) => {
+                        const wop = windowColorBase ? windowColorBase : `${wc}0.35)`;
+                        CTX.fillStyle = wop;
+                        CTX.fillRect(b.x + c * 11 + 2, b.y + r * 14 + 3, 5, 8);
+                    });
+                });
+            }
+
+            function makePtcls(type, W, H, wind) {
+                const cnt = {
+                    rainy:260, stormy:340, snowy:240, blizzard:380,
+                    foggy:55, sunny:50, cloudy:20, heatwave:35,
+                    sandstorm:280, rainbow:20
+                }[type] || 0;
+                const wv = (wind || 0) / 25;
+                return Array.from({ length: cnt }, () => {
+                    if (type === 'rainy') {
+                        return { x:Math.random()*W*1.4-W*0.2, y:Math.random()*H,
+                            vx:wv*3+1, vy:9+Math.random()*5, len:15, op:0.35+Math.random()*0.35 };
+                    }
+                    if (type === 'stormy') {
+                        return { x:Math.random()*W*1.5-W*0.25, y:Math.random()*H,
+                            vx:wv*4+4, vy:16+Math.random()*7, len:24, op:0.4+Math.random()*0.3 };
+                    }
+                    if (type === 'blizzard') {
+                        const sz = 1+Math.random()*4;
+                        return { x:Math.random()*W, y:Math.random()*H,
+                            vx:wv*2+3+Math.random()*2, vy:2+Math.random()*4,
+                            sz, op:0.5+Math.random()*0.5, ph:Math.random()*Math.PI*2 };
+                    }
+                    if (type === 'snowy') {
+                        const sz = 1+Math.random()*5;
+                        return { x:Math.random()*W, y:Math.random()*H,
+                            vx:wv*0.6+(Math.random()-0.5)*0.4, vy:0.3+Math.random()*1.3,
+                            sz, op:0.5+Math.random()*0.5, ph:Math.random()*Math.PI*2 };
+                    }
+                    if (type === 'foggy') {
+                        return { x:Math.random()*W, y:H*(0.05+Math.random()*0.85),
+                            vx:0.1+Math.random()*0.3, sz:W*(0.14+Math.random()*0.22),
+                            op:0.025+Math.random()*0.04 };
+                    }
+                    if (type === 'sandstorm') {
+                        return { x:Math.random()*W, y:Math.random()*H,
+                            vx:5+Math.random()*8, vy:(Math.random()-0.5)*1.5,
+                            sz:1+Math.random()*3, op:0.12+Math.random()*0.18 };
+                    }
+                    if (type === 'heatwave') {
+                        return { x:Math.random()*W, y:H*(0.5+Math.random()*0.4),
+                            vx:(Math.random()-0.5)*0.3, vy:-(0.3+Math.random()*0.6),
+                            sz:W*(0.04+Math.random()*0.1), op:0.02+Math.random()*0.025 };
+                    }
+                    return { x:Math.random()*W, y:Math.random()*H,
+                        vx:(Math.random()-0.5)*0.5, vy:-(0.2+Math.random()*0.4),
+                        sz:1.5+Math.random()*2, op:0.2+Math.random()*0.3 };
+                });
+            }
+
+            function drawSky(colors) {
+                const g = CTX.createLinearGradient(0, 0, 0, CVS.height);
+                colors.forEach(([s, c]) => g.addColorStop(s, c));
+                CTX.fillStyle = g; CTX.fillRect(0, 0, CVS.width, CVS.height);
+            }
+
+            function drawHUD(city, temp, desc, wind) {
+                const W = CVS.width, H = CVS.height;
+                const g = CTX.createLinearGradient(0, H-200, 0, H);
+                g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.88)');
+                CTX.fillStyle = g; CTX.fillRect(0, H-200, W, 200);
+                const fs = Math.min(W*0.052, 46);
+                CTX.textAlign = 'center';
+                CTX.shadowColor = 'rgba(0,0,0,0.9)'; CTX.shadowBlur = 18;
+                CTX.fillStyle = '#fff'; CTX.font = `700 ${fs}px Inter,sans-serif`;
+                CTX.fillText(city, W/2, H-78);
+                CTX.font = `${fs*0.68}px Inter,sans-serif`;
+                CTX.fillStyle = '#ffd580';
+                const windStr = wind > 4 ? `  ·  💨 ${Math.round(wind)} км/ч` : '';
+                CTX.fillText(`${temp}°C  ·  ${desc}${windStr}`, W/2, H-36);
+                CTX.shadowBlur = 0; CTX.textAlign = 'left';
+            }
+
+            // ── SUNNY ──
+            function drawSunny(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#040e28'],[0.28,'#0a3080'],[0.62,'#1a7fc4'],[0.88,'#5aaee0'],[1,'#a8d8f0']]);
+                const sx = W*0.72, sy = H*0.17, sr = Math.min(W,H)*0.092;
+                CTX.save(); CTX.translate(sx, sy); CTX.rotate(T*0.004);
+                for (let i = 0; i < 16; i++) {
+                    const a = (i/16)*Math.PI*2;
+                    const pulse = 0.1+0.06*Math.sin(T*0.05+i);
+                    CTX.beginPath(); CTX.moveTo(Math.cos(a)*sr*1.3, Math.sin(a)*sr*1.3);
+                    CTX.lineTo(Math.cos(a)*sr*2.6, Math.sin(a)*sr*2.6);
+                    CTX.strokeStyle = `rgba(255,218,50,${pulse})`; CTX.lineWidth = 3+2*Math.sin(T*0.06+i); CTX.stroke();
+                }
+                CTX.restore();
+                const halo = CTX.createRadialGradient(sx,sy,sr*0.5,sx,sy,sr*4);
+                halo.addColorStop(0,'rgba(255,235,80,0.25)'); halo.addColorStop(1,'rgba(255,180,0,0)');
+                CTX.fillStyle = halo; CTX.beginPath(); CTX.arc(sx,sy,sr*4,0,Math.PI*2); CTX.fill();
+                const sg = CTX.createRadialGradient(sx-sr*0.2,sy-sr*0.2,0,sx,sy,sr);
+                sg.addColorStop(0,'#fffce0'); sg.addColorStop(0.4,'#ffe040'); sg.addColorStop(1,'#ff8c00');
+                CTX.fillStyle = sg; CTX.beginPath(); CTX.arc(sx,sy,sr,0,Math.PI*2); CTX.fill();
+                [[0.05,0.22,0.09],[0.38,0.15,0.07],[0.62,0.26,0.08]].forEach(([fx,fy,fr],i) => {
+                    const cx = ((fx*W + T*(0.18+i*0.12)) % (W+300))-150;
+                    const cr = Math.min(W,H)*fr;
+                    CTX.fillStyle = 'rgba(255,255,255,0.22)';
+                    [0,0.5,1,1.5,0.9].forEach((o,j) => { CTX.beginPath(); CTX.arc(cx+o*cr*0.9,fy*H+(j%2)*cr*0.25,cr*(0.65+j*0.08),0,Math.PI*2); CTX.fill(); });
+                });
+                drawCity(0.6, null);
+                // Блик на земле
+                const glare = CTX.createLinearGradient(0,SCENE.city.baseY,0,H);
+                glare.addColorStop(0,'rgba(100,160,220,0.12)'); glare.addColorStop(1,'rgba(0,0,0,0)');
+                CTX.fillStyle = glare; CTX.fillRect(0,SCENE.city.baseY,W,H-SCENE.city.baseY);
+                drawHUD(city, temp, 'Солнечно', wind);
+            }
+
+            // ── CLOUDY ──
+            function drawCloudy(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#0c111e'],[0.4,'#1e2c45'],[0.75,'#3a4f6a'],[1,'#5a6e80']]);
+                for (let i = 0; i < 5; i++) {
+                    const cx = ((W*0.1+W*0.22*i+T*(0.1+i*0.05)) % (W+400))-200;
+                    const cr = Math.min(W,H)*(0.08+(i%3)*0.025);
+                    CTX.fillStyle = `rgba(70,90,120,0.5)`;
+                    for (let j = 0; j < 6; j++) { CTX.beginPath(); CTX.arc(cx+j*cr*0.58,H*(0.09+i*0.07)+(j%2)*cr*0.2,cr*(0.65+j*0.07),0,Math.PI*2); CTX.fill(); }
+                }
+                for (let i = 0; i < 4; i++) {
+                    const cx = ((W*0.2+W*0.28*i+T*(0.2+i*0.08)) % (W+500))-250;
+                    const cr = Math.min(W,H)*(0.1+(i%2)*0.03);
+                    CTX.fillStyle = `rgba(100,120,155,0.6)`;
+                    for (let j = 0; j < 7; j++) { CTX.beginPath(); CTX.arc(cx+j*cr*0.52,H*(0.18+i*0.09)+(j%2)*cr*0.18,cr*(0.7+j*0.06),0,Math.PI*2); CTX.fill(); }
+                }
+                const sg = CTX.createRadialGradient(W*0.38,H*0.27,0,W*0.38,H*0.27,W*0.32);
+                sg.addColorStop(0,`rgba(180,200,240,${0.06+0.04*Math.sin(T*0.03)})`); sg.addColorStop(1,'rgba(0,0,0,0)');
+                CTX.fillStyle = sg; CTX.fillRect(0,0,W,H*0.6);
+                drawCity(0.85, null);
+                drawHUD(city, temp, 'Облачно', wind);
+            }
+
+            // ── FOGGY ──
+            function drawFoggy(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#1a1a22'],[0.5,'#2a2d38'],[1,'#3a3d4a']]);
+                drawCity(0.2, `rgba(60,70,90,0.07)`);
+                [[0.12,0.72],[0.38,0.74],[0.63,0.73],[0.86,0.72]].forEach(([fx,fy]) => {
+                    const lg = CTX.createRadialGradient(fx*W,fy*H,0,fx*W,fy*H,W*0.13);
+                    lg.addColorStop(0,'rgba(255,210,100,0.2)'); lg.addColorStop(1,'rgba(255,180,50,0)');
+                    CTX.fillStyle = lg; CTX.beginPath(); CTX.ellipse(fx*W,fy*H,W*0.13,H*0.09,0,0,Math.PI*2); CTX.fill();
+                });
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; if (p.x > W+p.sz) p.x = -p.sz;
+                    const fg = CTX.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz);
+                    fg.addColorStop(0,`rgba(180,190,210,${p.op})`); fg.addColorStop(1,'rgba(180,190,210,0)');
+                    CTX.fillStyle = fg; CTX.beginPath(); CTX.ellipse(p.x,p.y,p.sz,p.sz*0.35,0,0,Math.PI*2); CTX.fill();
+                });
+                const og = CTX.createLinearGradient(0,0,0,H);
+                og.addColorStop(0,'rgba(160,170,190,0)'); og.addColorStop(0.55,'rgba(160,170,190,0.07)'); og.addColorStop(1,'rgba(200,210,230,0.28)');
+                CTX.fillStyle = og; CTX.fillRect(0,0,W,H);
+                drawHUD(city, temp, 'Туман', wind);
+            }
+
+            // ── RAINY ──
+            function drawRainy(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#07080f'],[0.4,'#0d1520'],[1,'#1a2535']]);
+                for (let i = 0; i < 5; i++) {
+                    const cx = ((W*0.08+W*0.24*i+T*(0.16+i*0.06)) % (W+400))-200;
+                    const cr = Math.min(W,H)*0.1;
+                    CTX.fillStyle = `rgba(14,18,30,0.9)`;
+                    for (let j = 0; j < 7; j++) { CTX.beginPath(); CTX.arc(cx+j*cr*0.52,H*(0.07+i*0.05)+(j%2)*cr*0.18,cr*0.82,0,Math.PI*2); CTX.fill(); }
+                }
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.y > H+20) { p.y = -15; p.x = Math.random()*W*1.3-W*0.15; }
+                    if (p.x > W+20) p.x -= W*1.3; if (p.x < -W*0.15) p.x += W*1.3;
+                    CTX.beginPath(); CTX.moveTo(p.x,p.y); CTX.lineTo(p.x-p.vx*1.8,p.y-p.len);
+                    CTX.strokeStyle = `rgba(140,190,255,${p.op})`; CTX.lineWidth = 1.2; CTX.stroke();
+                });
+                drawCity(0.92, null);
+                for (let i = 0; i < 6; i++) {
+                    const px = W*(0.06+i*0.18), py = SCENE.city.baseY+H*0.04;
+                    const phase = (T*0.045+i*1.1);
+                    const ripR = (phase%3)*W*0.03;
+                    CTX.beginPath(); CTX.ellipse(px,py,ripR,ripR*0.28,0,0,Math.PI*2);
+                    CTX.strokeStyle = `rgba(100,150,220,${Math.max(0,0.45-(phase%3)*0.15)})`; CTX.lineWidth = 1; CTX.stroke();
+                }
+                drawHUD(city, temp, 'Дождь', wind);
+            }
+
+            // ── SNOWY ──
+            function drawSnowy(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#04060f'],[0.4,'#0a1428'],[0.8,'#142240'],[1,'#1e3058']]);
+                if (!SCENE.stars) SCENE.stars = Array.from({length:90},()=>({x:Math.random()*W,y:Math.random()*H*0.6,sz:Math.random()*1.8+0.4,ph:Math.random()*Math.PI*2}));
+                SCENE.stars.forEach(s => {
+                    const a = 0.28+0.28*Math.sin(T*0.02+s.ph);
+                    CTX.beginPath(); CTX.arc(s.x,s.y,s.sz,0,Math.PI*2);
+                    CTX.fillStyle = `rgba(200,220,255,${a})`; CTX.fill();
+                });
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx+Math.sin(T*0.013+p.ph)*0.35; p.y += p.vy;
+                    if (p.y > SCENE.city.baseY+10) { p.y = -10; p.x = Math.random()*W; }
+                    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+                    if (p.sz > 3) {
+                        CTX.save(); CTX.translate(p.x,p.y); CTX.rotate(T*0.015+p.ph);
+                        for (let a = 0; a < 6; a++) {
+                            const angle = a/6*Math.PI*2;
+                            CTX.beginPath(); CTX.moveTo(0,0); CTX.lineTo(Math.cos(angle)*p.sz,Math.sin(angle)*p.sz);
+                            CTX.strokeStyle = `rgba(210,230,255,${p.op})`; CTX.lineWidth = p.sz*0.22; CTX.stroke();
+                        }
+                        CTX.restore();
+                    } else {
+                        CTX.beginPath(); CTX.arc(p.x,p.y,p.sz*0.8,0,Math.PI*2);
+                        CTX.fillStyle = `rgba(220,235,255,${p.op})`; CTX.fill();
+                    }
+                });
+                drawCity(0.9, null);
+                const snowLayer = CTX.createLinearGradient(0,SCENE.city.baseY-10,0,SCENE.city.baseY+22);
+                snowLayer.addColorStop(0,'rgba(225,238,255,0.65)'); snowLayer.addColorStop(1,'rgba(220,235,255,0)');
+                CTX.fillStyle = snowLayer; CTX.fillRect(0,SCENE.city.baseY-10,W,32);
+                drawHUD(city, temp, 'Снег', wind);
+            }
+
+            // ── BLIZZARD (метель) ──
+            function drawBlizzard(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#020408'],[0.5,'#06101a'],[1,'#0c1a28']]);
+                // Мощный горизонтальный ветер
+                const wintensity = 0.55 + 0.1*Math.sin(T*0.04);
+                CTX.fillStyle = `rgba(160,190,230,${wintensity*0.04})`; CTX.fillRect(0,0,W,H);
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; p.y += p.vy + Math.sin(T*0.03+p.ph)*0.5;
+                    if (p.x > W+20) p.x = -20;
+                    if (p.y > H+10) p.y = -10; if (p.y < -10) p.y = H+10;
+                    // Горизонтальные черточки снега
+                    CTX.beginPath(); CTX.moveTo(p.x,p.y); CTX.lineTo(p.x-p.vx*2,p.y-p.vy);
+                    CTX.strokeStyle = `rgba(210,230,255,${p.op})`; CTX.lineWidth = p.sz*0.4; CTX.stroke();
+                });
+                // Туманная дымка от метели
+                const drift = CTX.createLinearGradient(0,H*0.5,0,H);
+                drift.addColorStop(0,'rgba(160,190,220,0)'); drift.addColorStop(1,`rgba(160,190,220,${0.22+0.08*Math.sin(T*0.025)})`);
+                CTX.fillStyle = drift; CTX.fillRect(0,H*0.5,W,H*0.5);
+                drawCity(0.7, `rgba(140,180,230,0.25)`);
+                // Сугробы
+                const driftG = CTX.createLinearGradient(0,SCENE.city.baseY-5,0,SCENE.city.baseY+30);
+                driftG.addColorStop(0,'rgba(200,220,255,0.8)'); driftG.addColorStop(1,'rgba(180,210,255,0)');
+                CTX.fillStyle = driftG; CTX.fillRect(0,SCENE.city.baseY-5,W,35);
+                drawHUD(city, temp, 'Метель', wind);
+            }
+
+            // ── STORMY ──
+            function drawStormy(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#010205'],[0.3,'#05080c'],[0.7,'#080c14'],[1,'#0c1220']]);
+                for (let i = 0; i < 6; i++) {
+                    const cx = ((W*0.07+W*0.19*i+T*(0.38+i*0.14)) % (W+500))-250;
+                    const cr = Math.min(W,H)*(0.12+(i%2)*0.04);
+                    CTX.fillStyle = `rgba(10,12,20,0.96)`;
+                    for (let j = 0; j < 8; j++) { CTX.beginPath(); CTX.arc(cx+j*cr*0.46,H*(0.05+i*0.09)+(j%2)*cr*0.14,cr*0.88,0,Math.PI*2); CTX.fill(); }
+                }
+                // Дождь
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.y > H+25 || p.x > W+30) { p.y = Math.random()*H*0.3; p.x = Math.random()*W; }
+                    CTX.beginPath(); CTX.moveTo(p.x,p.y); CTX.lineTo(p.x-p.vx*2.2,p.y-p.len);
+                    CTX.strokeStyle = `rgba(120,170,230,${p.op*0.75})`; CTX.lineWidth = 1.3; CTX.stroke();
+                });
+                // Молния
+                if (!SCENE.lightning) SCENE.lightning = { next:50, flash:0, bolts:[] };
+                const L = SCENE.lightning;
+                if (T >= L.next) {
+                    L.flash = 10; L.next = T+40+Math.random()*70;
+                    const lx = W*(0.12+Math.random()*0.76);
+                    let pts = [{x:lx,y:0}], y = 0;
+                    while (y < H*0.84) { y += 22+Math.random()*28; const dx = (Math.random()-0.5)*90; pts.push({x:pts[pts.length-1].x+dx,y}); }
+                    L.bolts = [pts];
+                    // До 3 ветвей
+                    const numBranches = Math.floor(Math.random()*3)+1;
+                    for (let b = 0; b < numBranches; b++) {
+                        const bi = Math.floor(pts.length*(0.2+Math.random()*0.4));
+                        const bpts = [pts[bi]]; let by = pts[bi].y;
+                        while (by < H*(0.6+Math.random()*0.2)) { by += 18+Math.random()*22; bpts.push({x:bpts[bpts.length-1].x+(Math.random()-0.55)*55,y:by}); }
+                        L.bolts.push(bpts);
+                    }
+                }
+                if (L.flash > 0) {
+                    CTX.fillStyle = `rgba(210,230,255,${L.flash*0.013})`; CTX.fillRect(0,0,W,H);
+                    L.bolts.forEach(bpts => {
+                        CTX.beginPath(); CTX.moveTo(bpts[0].x,bpts[0].y);
+                        bpts.forEach(p => CTX.lineTo(p.x,p.y));
+                        CTX.strokeStyle = `rgba(180,215,255,${L.flash*0.12})`; CTX.lineWidth = 1.5+L.flash*0.35;
+                        CTX.shadowColor = '#aaccff'; CTX.shadowBlur = 24; CTX.stroke(); CTX.shadowBlur = 0;
+                    });
+                    L.flash--;
+                }
+                drawCity(0.96, null);
+                drawHUD(city, temp, 'Гроза', wind);
+            }
+
+            // ── HEATWAVE (сильная жара) ──
+            function drawHeatwave(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#1a0800'],[0.3,'#6b2200'],[0.65,'#e04400'],[0.85,'#f07000'],[1,'#ffc060']]);
+                // Солнце — раскалённое
+                const sx = W*0.68, sy = H*0.15, sr = Math.min(W,H)*0.11;
+                const halo2 = CTX.createRadialGradient(sx,sy,sr,sx,sy,sr*5);
+                halo2.addColorStop(0,'rgba(255,100,0,0.35)'); halo2.addColorStop(1,'rgba(255,50,0,0)');
+                CTX.fillStyle = halo2; CTX.beginPath(); CTX.arc(sx,sy,sr*5,0,Math.PI*2); CTX.fill();
+                const sgH = CTX.createRadialGradient(sx-sr*0.15,sy-sr*0.2,0,sx,sy,sr);
+                sgH.addColorStop(0,'#fffae0'); sgH.addColorStop(0.3,'#ffcc00'); sgH.addColorStop(1,'#ff4400');
+                CTX.fillStyle = sgH; CTX.beginPath(); CTX.arc(sx,sy,sr,0,Math.PI*2); CTX.fill();
+                drawCity(0.55, `rgba(255,140,40,0.25)`);
+                // Мерцание воздуха
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx + Math.sin(T*0.04+p.op*10)*0.15;
+                    p.y += p.vy;
+                    if (p.y < H*0.4) { p.y = H*(0.85+Math.random()*0.1); p.x = Math.random()*W; }
+                    const hg = CTX.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*W);
+                    hg.addColorStop(0,`rgba(255,150,0,${p.op})`); hg.addColorStop(1,'rgba(255,100,0,0)');
+                    CTX.fillStyle = hg; CTX.fillRect(p.x-p.sz*W,p.y-p.sz*100,p.sz*W*2,p.sz*100*2);
+                });
+                // Земля горячая
+                const gnd = CTX.createLinearGradient(0,SCENE.city.baseY,0,H);
+                gnd.addColorStop(0,'rgba(180,60,0,0.3)'); gnd.addColorStop(1,'rgba(80,20,0,0.6)');
+                CTX.fillStyle = gnd; CTX.fillRect(0,SCENE.city.baseY,W,H-SCENE.city.baseY);
+                drawHUD(city, temp, 'Сильная жара', wind);
+            }
+
+            // ── SANDSTORM (песчаная буря) ──
+            function drawSandstorm(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#1a0e04'],[0.5,'#3d1e08'],[1,'#6b3810']]);
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x > W+20) p.x = -20;
+                    if (p.y > H+5) p.y = 0; if (p.y < -5) p.y = H+5;
+                    CTX.beginPath(); CTX.arc(p.x,p.y,p.sz,0,Math.PI*2);
+                    CTX.fillStyle = `rgba(200,130,60,${p.op})`; CTX.fill();
+                });
+                // Общая оранжевая дымка
+                const sw = T*0.8;
+                const sandG = CTX.createLinearGradient(0,0,0,H);
+                sandG.addColorStop(0,`rgba(180,100,30,${0.35+0.1*Math.sin(T*0.02)})`);
+                sandG.addColorStop(0.5,`rgba(160,80,20,0.25)`);
+                sandG.addColorStop(1,`rgba(120,60,10,0.4)`);
+                CTX.fillStyle = sandG; CTX.fillRect(0,0,W,H);
+                drawCity(0.5, `rgba(200,120,50,0.2)`);
+                drawHUD(city, temp, 'Песчаная буря', wind);
+            }
+
+            // ── RAINBOW (после дождя) ──
+            function drawRainbow(city, temp, wind) {
+                const W = CVS.width, H = CVS.height;
+                drawSky([[0,'#0a1a2a'],[0.4,'#1a3a55'],[0.7,'#2a5a70'],[1,'#4a8090']]);
+                // Радуга
+                const rx = W*0.5, ry = H*0.85;
+                const rw = W*0.65;
+                const rainbow = ['#ff0000','#ff8800','#ffff00','#00cc00','#0088ff','#4400cc','#8800aa'];
+                rainbow.forEach((color, i) => {
+                    const r = rw - i*18;
+                    CTX.beginPath(); CTX.arc(rx, ry, r, Math.PI, 0);
+                    CTX.strokeStyle = color.replace(')',`,${0.28+0.05*Math.sin(T*0.02)})`).replace('rgb','rgba').replace('#','rgba(').replace(/([0-9a-f]{2})/gi,m=>parseInt(m,16)+',').slice(0,-1);
+                    // Проще:
+                    const alpha = 0.3 + 0.06*Math.sin(T*0.02+i*0.3);
+                    CTX.strokeStyle = color + Math.round(alpha*255).toString(16).padStart(2,'0');
+                    CTX.lineWidth = 14; CTX.stroke();
+                });
+                // Остаточный дождь лёгкий
+                SCENE.ptcls.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.y > H+10) { p.y = -5; p.x = Math.random()*W; }
+                    CTX.beginPath(); CTX.moveTo(p.x,p.y); CTX.lineTo(p.x-p.vx,p.y-8);
+                    CTX.strokeStyle = `rgba(140,190,255,${p.op*0.4})`; CTX.lineWidth = 1; CTX.stroke();
+                });
+                // Сочные облака
+                for (let i = 0; i < 3; i++) {
+                    const cx = ((W*0.15+W*0.35*i+T*(0.08+i*0.05)) % (W+300))-150;
+                    const cr = Math.min(W,H)*0.09;
+                    CTX.fillStyle = `rgba(120,160,200,0.5)`;
+                    for (let j = 0; j < 5; j++) { CTX.beginPath(); CTX.arc(cx+j*cr*0.6,H*0.12+i*H*0.07,cr*(0.7+j*0.06),0,Math.PI*2); CTX.fill(); }
+                }
+                drawCity(0.82, null);
+                drawHUD(city, temp, 'После дождя', wind);
+            }
+
+            // Маппинг weather-кодов → тип сцены (расширенный)
+            function getWeatherType(code) {
+                if (code === 0) return 'sunny';
+                if ([1,2,3].includes(code)) return 'cloudy';
+                if ([45,48].includes(code)) return 'foggy';
+                if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'rainy';
+                if ([71,73,75,77].includes(code)) return 'snowy';
+                if ([85,86].includes(code)) return 'blizzard';
+                if ([95,96,99].includes(code)) return 'stormy';
+                return 'cloudy';
+            }
+            window.getWeatherType = getWeatherType;
+
+            const DRAWFNS = {
+                sunny:drawSunny, cloudy:drawCloudy, foggy:drawFoggy,
+                rainy:drawRainy, snowy:drawSnowy, blizzard:drawBlizzard,
+                stormy:drawStormy, heatwave:drawHeatwave,
+                sandstorm:drawSandstorm, rainbow:drawRainbow
+            };
+
+            window.showWeatherScene = function(cityName, type, temp, wind) {
+                wind = wind || 0;
+                // Авто-выбор сцены по температуре для экстремалки
+                if (type === 'sunny' && temp > 38) type = 'heatwave';
+                if (type === 'sunny' && cityName === 'Дубай' && temp > 30) type = 'heatwave';
+                // Автоматически песчаная буря для Дубая при ветре
+                if (cityName === 'Дубай' && wind > 35 && type !== 'stormy') type = 'sandstorm';
+                CVS = document.getElementById('scene-canvas');
+                CVS.width = window.innerWidth; CVS.height = window.innerHeight;
+                CTX = CVS.getContext('2d');
+                document.getElementById('sceneOverlay').classList.add('active');
+                if (RAF) { cancelAnimationFrame(RAF); RAF = null; }
+                T = 0;
+                SCENE = {
+                    city: buildCity(CVS.width, CVS.height, cityName),
+                    ptcls: makePtcls(type, CVS.width, CVS.height, wind)
+                };
+                const fn = DRAWFNS[type] || DRAWFNS.cloudy;
+                (function loop() { CTX.clearRect(0,0,CVS.width,CVS.height); fn(cityName,temp,wind); T++; RAF=requestAnimationFrame(loop); window._wsRAF=RAF; })();
+            };
+        })();
+        function closeScene() {
+            document.getElementById('sceneOverlay').classList.remove('active');
+            if (window._wsRAF) { cancelAnimationFrame(window._wsRAF); window._wsRAF = null; }
+        }
+
+        // ========== МИНИ-ИГРА ==========
+        let clickCount = 0;
+        const maxClicks = 50;
+        const burj = document.getElementById('burjClick');
+        const clickSpan = document.getElementById('clickCount');
+        const progressFill = document.getElementById('progressFill');
+        const gameMessage = document.getElementById('gameMessage');
+
+        burj.addEventListener('click', () => {
+            if (clickCount >= maxClicks) return;
+            clickCount++;
+            clickSpan.textContent = clickCount;
+            progressFill.style.width = (clickCount / maxClicks * 100) + '%';
+            burj.style.transform = 'scale(1.2)';
+            burj.style.filter = 'drop-shadow(0 0 30px #ff6600)';
+            setTimeout(() => {
+                burj.style.transform = 'scale(1)';
+                burj.style.filter = 'drop-shadow(0 0 10px #ffaa33)';
+            }, 200);
+            if (clickCount === maxClicks) {
+                gameMessage.innerHTML = '🎉 Спасибо за поддержку! 🎉';
+                window.open('https://www.donationalerts.com/r/comilank', '_blank');
+            } else {
+                gameMessage.textContent = `Осталось кликов: ${maxClicks - clickCount}`;
+            }
+        });
+
+        // ========== TOAST ==========
+        const toast = document.getElementById('toast');
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        document.querySelectorAll('.icon').forEach(icon => {
+            icon.addEventListener('click', function() {
+                showToast(`✨ ${this.getAttribute('data-name')}`);
+            });
+        });
+
+        // ========== ЗАПУСК ПОГОДЫ ==========
+        fetchWeather();
+    </script>
+
+{% if next_stream_widget and next_stream_widget.enabled and next_stream_widget.stream_dt %}
+<div class="next-stream-widget" id="nswWidget">
+    <div class="nsw-label"><span class="nsw-dot"></span> Следующий стрим</div>
+    {% if next_stream_widget.title %}
+    <div class="nsw-title">{{ next_stream_widget.title }}</div>
+    {% endif %}
+    <div id="nswTimer" class="nsw-timer">
+        <div class="nsw-unit"><div class="nsw-num" id="nswD">--</div><div class="nsw-uname">дней</div></div>
+        <div class="nsw-unit"><div class="nsw-num" id="nswH">--</div><div class="nsw-uname">часов</div></div>
+        <div class="nsw-unit"><div class="nsw-num" id="nswM">--</div><div class="nsw-uname">минут</div></div>
+        <div class="nsw-unit"><div class="nsw-num" id="nswS">--</div><div class="nsw-uname">секунд</div></div>
+    </div>
+    <div id="nswLive" class="nsw-live" style="display:none;">🔴 Стрим идёт!</div>
+    {% if next_stream_widget.description %}
+    <div class="nsw-desc">{{ next_stream_widget.description }}</div>
+    {% endif %}
+</div>
+<script>
+(function(){
+    // stream_dt формат "2026-03-20T18:00" — добавляем секунды если нет
+    var raw = "{{ next_stream_widget.stream_dt }}";
+    if (raw.length === 16) raw += ':00'; // добавляем :ss
+    // Парсим как локальное время (без Z на конце)
+    var parts = raw.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+    var target = parts
+        ? new Date(+parts[1], +parts[2]-1, +parts[3], +parts[4], +parts[5], +parts[6])
+        : new Date(raw);
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function tick(){
+        var now = new Date();
+        var diff = target - now;
+        if(diff <= 0){
+            document.getElementById('nswTimer').style.display = 'none';
+            document.getElementById('nswLive').style.display = 'block';
+            return;
+        }
+        var d = Math.floor(diff/86400000);
+        var h = Math.floor((diff%86400000)/3600000);
+        var m = Math.floor((diff%3600000)/60000);
+        var s = Math.floor((diff%60000)/1000);
+        document.getElementById('nswD').textContent = pad(d);
+        document.getElementById('nswH').textContent = pad(h);
+        document.getElementById('nswM').textContent = pad(m);
+        document.getElementById('nswS').textContent = pad(s);
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
+{% endif %}
+</body>
+</html>

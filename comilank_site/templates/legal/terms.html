@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Пользовательское соглашение | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+    .legal-outer { min-height:100vh; background:#0a0a0b; display:flex; justify-content:center; align-items:flex-start; padding:40px 20px 72px; box-sizing:border-box; }
+    .legal-card { width:100%; max-width:780px; background:#141416; border-radius:24px; border:1px solid rgba(255,255,255,0.06); padding:36px 44px; box-shadow:0 0 0 1px rgba(232,101,10,0.05), 0 40px 80px rgba(0,0,0,.6); }
+    .legal-header { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .legal-icon { width:46px; height:46px; border-radius:14px; background:rgba(232,101,10,0.1); border:1px solid rgba(232,101,10,0.22); display:flex; align-items:center; justify-content:center; color:#c8580a; font-size:1.2rem; flex-shrink:0; }
+    .legal-title { font-size:1.5rem; font-weight:800; color:#e8650a; }
+    .legal-date { font-size:0.78rem; color:#3d4350; margin-top:2px; }
+    h2 { font-size:1rem; font-weight:800; color:#c8580a; margin:24px 0 10px; text-transform:uppercase; letter-spacing:.4px; display:flex; align-items:center; gap:7px; }
+    h2 i { opacity:.7; font-size:.9rem; }
+    p { color:#4e5460; font-size:0.88rem; line-height:1.75; margin-bottom:10px; }
+    ul { color:#4e5460; font-size:0.88rem; line-height:1.75; padding-left:20px; margin-bottom:10px; }
+    li { margin-bottom:4px; }
+    strong { color:#8a909e; }
+    .nav-btns { display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap; }
+    .back-btn { display:inline-flex; align-items:center; gap:6px; color:#3d4350; text-decoration:none; font-size:0.82rem; transition:color .15s; padding:6px 14px; border-radius:20px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02); }
+    .back-btn:hover { color:#c8580a; border-color:rgba(232,101,10,.2); background:rgba(232,101,10,.05); }
+    .highlight { background:rgba(232,101,10,0.06); border:1px solid rgba(232,101,10,0.15); border-radius:10px; padding:12px 16px; margin:12px 0; }
+    .highlight p { margin:0; }
+    hr { border:none; border-top:1px solid rgba(255,255,255,.04); margin:20px 0; }
+</style>
+
+<div class="legal-outer">
+<div class="legal-card">
+
+    <div class="nav-btns">
+        <a href="{{ url_for('index') }}" class="back-btn"><i class="fas fa-home" style="font-size:.75rem;"></i> На главную</a>
+        <a href="{{ url_for('register') }}" class="back-btn"><i class="fas fa-arrow-left" style="font-size:.75rem;"></i> Назад</a>
+    </div>
+
+    <div class="legal-header">
+        <div class="legal-icon"><i class="fas fa-file-contract"></i></div>
+        <div>
+            <div class="legal-title">Пользовательское соглашение</div>
+            <div class="legal-date">Редакция от 1 марта 2026 года · comilank.onrender.com</div>
+        </div>
+    </div>
+
+    <p>Настоящее Соглашение регулирует отношения между администрацией сайта <strong>Comilank</strong> и пользователями сайта <strong>comilank.onrender.com</strong>. Используя сайт, вы принимаете данное соглашение в полном объёме.</p>
+
+    <h2><i class="fas fa-users"></i> 1. Условия использования</h2>
+    <p>Сайт предоставляет информацию о стриминговой деятельности, игровом контенте, обзорах фильмов и сериалов, а также возможность участия в сообществе: комментарии, голосования, просмотр материалов.</p>
+    <div class="highlight">
+        <p>Использование Сайта разрешено лицам старше <strong>14 лет</strong>. Лица младше 14 лет могут пользоваться Сайтом только с согласия родителей или законных представителей.</p>
+    </div>
+
+    <h2><i class="fas fa-user-circle"></i> 1.1. Аккаунт пользователя</h2>
+    <ul>
+        <li>Пользователь обязан указывать достоверные данные при регистрации.</li>
+        <li>Пользователь несёт ответственность за сохранность данных для входа в аккаунт.</li>
+        <li>Администрация не несёт ответственности за доступ третьих лиц к аккаунту пользователя.</li>
+    </ul>
+
+    <h2><i class="fas fa-ban"></i> 2. Запрещённые действия</h2>
+    <ul>
+        <li>Оскорбления, угрозы, ненавистнические высказывания в адрес любых лиц</li>
+        <li>Спам, реклама без согласования с Администрацией</li>
+        <li>Незаконный контент (эксплуатация детей, пропаганда насилия и т.д.)</li>
+        <li>Нарушение авторских прав третьих лиц</li>
+        <li>Попытки взлома Сайта или несанкционированного доступа</li>
+        <li>Создание нескольких аккаунтов для обхода блокировки</li>
+        <li>Выдача себя за другого пользователя или Администрацию</li>
+        <li>Публикация персональных данных третьих лиц без их согласия</li>
+    </ul>
+
+    <h2><i class="fas fa-shield-alt"></i> 3. Права Администрации</h2>
+    <ul>
+        <li>Удалять любой контент, нарушающий данное Соглашение или законодательство РФ</li>
+        <li>Блокировать аккаунты и IP-адреса нарушителей без предупреждения</li>
+        <li>Изменять функционал Сайта в любое время</li>
+        <li>Реагировать на жалобы пользователей через встроенную систему репортов</li>
+        <li>Временно ограничивать доступ к аккаунту пользователя.</li>
+        <li>Удалять аккаунты пользователей полностью.</li>
+        <li>Удалять контент без объяснения причин при нарушении Соглашения.</li>
+    </ul>
+
+    <h2><i class="fas fa-comment-alt"></i> 4. Пользовательский контент</h2>
+    <p>Публикуя контент, вы:</p>
+    <ul>
+        <li><strong>Несёте полную ответственность</strong> за его содержание</li>
+        <li>Гарантируете отсутствие нарушений авторских прав</li>
+        <li>Предоставляете Администрации право отображать контент на Сайте</li>
+        <li>Предоставляете Администрации право использовать, отображать и распространять этот контент в рамках работы Сайта, приложения Comilank и связанных сервисов сообщества.</li>
+    </ul>
+
+    <h2><i class="fas fa-film"></i> 5. Контент о фильмах и сериалах</h2>
+    <p>Обзоры и статьи о фильмах и сериалах на Сайте являются авторскими редакционными материалами. Цитирование допускается с указанием источника. Администрация уважает авторские права и реагирует на обоснованные запросы правообладателей.</p>
+
+    <h2><i class="fas fa-donate"></i> 6. Добровольные донаты</h2>
+    <div class="highlight">
+        <p>Все донаты через DonationAlerts и Donatepay являются <strong>добровольными пожертвованиями</strong> и <strong>не подлежат возврату</strong>. Администрация не несёт ответственности за работу сторонних платёжных сервисов.</p>
+    </div>
+
+    <h2><i class="fas fa-cookie-bite"></i> 7. Cookies и хранение данных</h2>
+    <p>Сайт использует файлы cookie для корректной работы авторизации. Регистрируясь на Сайте, вы соглашаетесь с использованием cookie. Подробнее - в <a href="{{ url_for('cookies_page') }}" style="color:#c8580a;">Политике Cookie</a>.</p>
+
+    <h2><i class="fas fa-flag"></i> 8. Жалобы и модерация</h2>
+    <p>На Сайте предусмотрена система жалоб на комментарии и пользователей. Жалобы рассматриваются модераторами в разумные сроки. Администрация реагирует на жалобы в соответствии с ФЗ №149-ФЗ «Об информации».</p>
+
+    <h2><i class="fas fa-user-times"></i> 9. Удаление аккаунта</h2>
+    <p>Пользователь вправе удалить свой аккаунт через настройки профиля. При удалении все личные данные удаляются, публичный контент (комментарии) может быть анонимизирован.</p>
+
+    <h2><i class="fas fa-exclamation-triangle"></i> 10. Ограничение ответственности</h2>
+    <ul>
+        <li>Временная недоступность Сайта</li>
+        <li>Действия третьих лиц в отношении данных пользователей</li>
+        <li>Точность информации на внешних ресурсах, на которые ссылается Сайт</li>
+    </ul>
+
+    <h2><i class="fas fa-stop-circle"></i> 10.1. Прекращение работы Сайта</h2>
+    <p>Администрация вправе полностью или частично прекратить работу Сайта без предварительного уведомления пользователей.</p>
+
+    <h2><i class="fas fa-edit"></i> 10.2. Изменение Соглашения</h2>
+    <p>Администрация вправе изменять настоящее Соглашение. Новая редакция вступает в силу с момента публикации на Сайте.</p>
+
+    <h2><i class="fas fa-balance-scale"></i> 11. Применимое право</h2>
+    <p>Соглашение регулируется законодательством Российской Федерации (ФЗ №149-ФЗ, ФЗ №152-ФЗ, ГК РФ).</p>
+
+    <h2><i class="fas fa-envelope"></i> 12. Контакты</h2>
+    <p>Telegram: <strong>@Comilank</strong> · Раздел «Контакты» на Сайте.</p>
+
+    <hr>
+    <p style="font-size:.78rem;color:#2e3340;text-align:center;">© 2026 Comilank. Все права защищены.</p>
+
+</div>
+</div>
+{% endblock %}

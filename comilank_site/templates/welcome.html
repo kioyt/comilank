@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comilank - Добро пожаловать</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#0a0a0b;
+            color:#f0f0f0;
+            font-family:'Inter',sans-serif;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px;
+            overflow:hidden;
+            position:relative;
+        }
+
+        /* Плавающие иконки */
+        .floating-icons { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+        .icon { position:absolute; font-size:28px; opacity:0.06; color:#e8650a; animation:float 12s infinite alternate ease-in-out; }
+        @keyframes float { 0%{transform:translateY(0px) rotate(0deg);} 100%{transform:translateY(-40px) rotate(12deg);} }
+        .icon1{top:5%;left:2%;animation-duration:11s;} .icon2{top:12%;right:4%;animation-duration:13s;} .icon3{bottom:8%;left:5%;animation-duration:9s;} .icon4{bottom:18%;right:7%;animation-duration:14s;} .icon5{top:25%;left:10%;animation-duration:10s;} .icon6{top:35%;right:11%;animation-duration:12s;} .icon7{bottom:25%;left:13%;animation-duration:8s;} .icon8{bottom:35%;right:14%;animation-duration:15s;} .icon9{top:45%;left:18%;animation-duration:9.5s;} .icon10{top:55%;right:18%;animation-duration:11.5s;} .icon11{bottom:45%;left:20%;animation-duration:10.5s;} .icon12{bottom:55%;right:22%;animation-duration:13.5s;} .icon13{top:8%;left:25%;animation-duration:12.5s;} .icon14{top:18%;right:25%;animation-duration:8.5s;} .icon15{bottom:12%;left:28%;animation-duration:14.5s;} .icon16{bottom:22%;right:28%;animation-duration:9.2s;} .icon17{top:65%;left:30%;animation-duration:11.2s;} .icon18{top:75%;right:30%;animation-duration:10.2s;}
+
+        /* Карточка */
+        .welcome-card {
+            width:100%;
+            max-width:440px;
+            background:#141416;
+            border-radius:26px;
+            border:1px solid rgba(255,255,255,0.06);
+            padding:44px 40px 36px;
+            box-shadow:0 0 0 1px rgba(232,101,10,0.04), 0 40px 80px rgba(0,0,0,0.6);
+            position:relative;
+            z-index:10;
+            text-align:center;
+        }
+        .welcome-card::after {
+            content:'';
+            position:absolute;
+            bottom:-16px; left:10%;
+            width:80%; height:28px;
+            background:radial-gradient(ellipse, rgba(232,101,10,0.28) 0%, transparent 70%);
+            filter:blur(12px);
+            pointer-events:none;
+            border-radius:50%;
+        }
+
+        /* Иконка */
+        .wc-icon {
+            width:60px; height:60px;
+            border-radius:50%;
+            background:rgba(232,101,10,0.1);
+            border:1px solid rgba(232,101,10,0.22);
+            display:flex; align-items:center; justify-content:center;
+            margin:0 auto 20px;
+            font-size:1.5rem;
+            color:#c8580a;
+        }
+
+        .wc-title {
+            font-size:1.5rem;
+            font-weight:800;
+            color:#e8650a;
+            margin-bottom:8px;
+            line-height:1.3;
+        }
+        .wc-sub {
+            color:#3d4350;
+            font-size:0.84rem;
+            margin-bottom:28px;
+            line-height:1.6;
+        }
+
+        .divider { border:none; border-top:1px solid rgba(255,255,255,0.05); margin:22px 0; }
+
+        /* Кнопка продолжить */
+        .continue-btn {
+            width:100%;
+            padding:13px;
+            border-radius:20px;
+            background:rgba(232,101,10,0.14);
+            color:#d0600c;
+            border:1px solid rgba(232,101,10,0.32);
+            font-size:0.95rem;
+            font-weight:700;
+            cursor:pointer;
+            font-family:inherit;
+            transition:all 0.2s;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            text-decoration:none;
+        }
+        .continue-btn:hover {
+            color:#e8650a;
+            border-color:rgba(232,101,10,0.55);
+            background:rgba(232,101,10,0.22);
+        }
+
+        /* Бейджи с фактами */
+        .fact-row {
+            display:flex;
+            gap:8px;
+            justify-content:center;
+            flex-wrap:wrap;
+            margin-bottom:20px;
+        }
+        .fact-chip {
+            display:inline-flex;
+            align-items:center;
+            gap:5px;
+            padding:4px 10px;
+            border-radius:10px;
+            background:rgba(232,101,10,0.07);
+            border:1px solid rgba(232,101,10,0.14);
+            color:#7a4820;
+            font-size:0.72rem;
+            font-weight:600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="floating-icons">
+    <i class="icon icon1 fa-solid fa-gamepad"></i>
+    <i class="icon icon2 fa-solid fa-computer-mouse"></i>
+    <i class="icon icon3 fa-solid fa-keyboard"></i>
+    <i class="icon icon4 fa-solid fa-headphones"></i>
+    <i class="icon icon5 fa-solid fa-display"></i>
+    <i class="icon icon6 fa-solid fa-floppy-disk"></i>
+    <i class="icon icon7 fa-solid fa-compact-disc"></i>
+    <i class="icon icon8 fa-solid fa-camera"></i>
+    <i class="icon icon9 fa-solid fa-microchip"></i>
+    <i class="icon icon10 fa-solid fa-wifi"></i>
+    <i class="icon icon11 fa-solid fa-bolt"></i>
+    <i class="icon icon12 fa-solid fa-crown"></i>
+    <i class="icon icon13 fa-solid fa-cloud"></i>
+    <i class="icon icon14 fa-solid fa-star"></i>
+    <i class="icon icon15 fa-solid fa-cat"></i>
+    <i class="icon icon16 fa-solid fa-moon"></i>
+    <i class="icon icon17 fa-solid fa-fire"></i>
+    <i class="icon icon18 fa-solid fa-sun"></i>
+</div>
+
+<div class="welcome-card">
+
+    {% if request.referrer and 'login' in request.referrer %}
+        <div class="wc-icon"><i class="fas fa-door-open"></i></div>
+        <div class="wc-title">С возвращением,<br>{{ current_user.username }}!</div>
+        <div class="wc-sub">Рады снова тебя видеть.</div>
+    {% else %}
+        <div class="wc-icon"><i class="fas fa-rocket"></i></div>
+        <div class="wc-title">Добро пожаловать,<br>{{ current_user.username }}!</div>
+        <div class="wc-sub">Аккаунт успешно создан.<br>Сохрани ключ восстановления в надёжном месте.</div>
+    {% endif %}
+
+    <div class="fact-row">
+        <span class="fact-chip"><i class="fas fa-comments"></i> Комментарии</span>
+        <span class="fact-chip"><i class="fas fa-newspaper"></i> Статьи</span>
+        <span class="fact-chip"><i class="fas fa-poll"></i> Голосования</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <a href="{{ url_for('index') }}" class="continue-btn">
+        <i class="fas fa-arrow-right"></i> Продолжить на сайт
+    </a>
+
+</div>
+
+</body>
+</html>

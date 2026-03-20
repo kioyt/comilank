@@ -1,0 +1,1429 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | Comilank{% endblock %}
+
+{% block content %}
+
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .extra-outer {
+        min-height: 100vh;
+        background: #0a0a0b;
+        padding: 44px 20px 80px;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+    }
+    .extra-wrap {
+        width: 100%;
+        max-width: 860px;
+        align-self: flex-start;
+    }
+
+    /* Хлебные крошки */
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+    .breadcrumb a {
+        color: #4e5460;
+        text-decoration: none;
+        font-size: 0.82rem;
+        transition: color 0.2s;
+    }
+    .breadcrumb a:hover { color: #e8650a; }
+    .breadcrumb span { color: #2a2d35; font-size: 0.8rem; }
+    .breadcrumb .current { color: #7a8090; font-size: 0.82rem; }
+
+    /* Карточка */
+    .extra-card {
+        background: #141416;
+        border-radius: 26px;
+        border: 1px solid rgba(255,255,255,0.055);
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 0 0 1px rgba(232,101,10,0.04), 0 40px 80px rgba(0,0,0,0.55);
+    }
+    .extra-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #e8650a 50%, transparent 100%);
+        opacity: 0.5;
+    }
+
+    /* Шапка */
+    .extra-header {
+        padding: 32px 36px 24px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        position: relative;
+    }
+    .extra-header-glow {
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 280px; height: 180px;
+        background: radial-gradient(ellipse, rgba(232,101,10,0.07) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .extra-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: rgba(232,101,10,0.08);
+        border: 1px solid rgba(232,101,10,0.2);
+        color: #c8580a;
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
+    }
+    .extra-title {
+        font-size: 1.9rem;
+        font-weight: 800;
+        color: #e0e4ec;
+        letter-spacing: -0.5px;
+        line-height: 1.25;
+        margin: 0 0 14px;
+    }
+    .extra-meta {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+    .extra-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #3d4350;
+        font-size: 0.8rem;
+    }
+    .extra-meta-item i { color: #e8650a; opacity: 0.5; font-size: 0.75rem; }
+
+    /* Контент */
+    .extra-body {
+        padding: 32px 36px 36px;
+    }
+    .extra-content {
+        color: #b0b7c3;
+        font-size: 0.97rem;
+        line-height: 1.75;
+    }
+    /* Стили для контента из редактора */
+    .extra-content h1, .extra-content h2, .extra-content h3 {
+        color: #e0e4ec;
+        font-weight: 700;
+        margin: 1.4em 0 0.6em;
+        letter-spacing: -0.3px;
+    }
+    .extra-content h1 { font-size: 1.6rem; }
+    .extra-content h2 { font-size: 1.3rem; border-bottom: 1px solid rgba(232,101,10,0.15); padding-bottom: 0.4em; }
+    .extra-content h3 { font-size: 1.1rem; }
+    .extra-content p { margin-bottom: 0.9em; }
+    .extra-content strong { color: #c9cdd6; font-weight: 700; }
+    .extra-content em { font-style: italic; }
+    .extra-content a { color: #e8650a; text-decoration: none; border-bottom: 1px solid rgba(232,101,10,0.3); transition: border-color 0.2s; }
+    .extra-content a:hover { border-color: #e8650a; }
+    .extra-content img { max-width: 100%; border-radius: 14px; margin: 14px auto; display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .extra-content blockquote {
+        border-left: 3px solid #e8650a;
+        padding: 10px 18px;
+        margin: 16px 0;
+        background: rgba(232,101,10,0.04);
+        border-radius: 0 10px 10px 0;
+        color: #8a909e;
+        font-style: italic;
+    }
+    .extra-content ul, .extra-content ol {
+        padding-left: 1.5em;
+        margin-bottom: 0.9em;
+    }
+    .extra-content li { margin-bottom: 0.3em; }
+    .extra-content code {
+        background: rgba(255,255,255,0.06);
+        border-radius: 5px;
+        padding: 2px 7px;
+        font-family: monospace;
+        font-size: 0.9em;
+        color: #e8650a;
+    }
+    .extra-content pre {
+        background: #0f0f12;
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 12px;
+        padding: 16px 18px;
+        overflow-x: auto;
+        margin: 14px 0;
+    }
+    .extra-content iframe {
+        max-width: 100%;
+        border-radius: 12px;
+        display: block;
+        margin: 16px auto;
+    }
+    /* Цветные тексты из Quill */
+    .extra-content [style*="color"] { /* сохраняем цвет */ }
+
+    /* Кнопка назад */
+    .extra-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 18px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        color: #4e5460;
+        text-decoration: none;
+        font-size: 0.84rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        margin-top: 24px;
+    }
+    .extra-back:hover { background: rgba(255,255,255,0.06); color: #8a909e; border-color: rgba(255,255,255,0.12); }
+
+    /* Кнопка редактирования (только для редакторов+) */
+    .extra-edit-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 16px;
+        border-radius: 20px;
+        background: rgba(232,101,10,0.09);
+        border: 1px solid rgba(232,101,10,0.24);
+        color: #c8580a;
+        text-decoration: none;
+        font-size: 0.82rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .extra-edit-btn:hover { background: rgba(232,101,10,0.17); color: #e8650a; border-color: rgba(232,101,10,0.46); }
+
+    .extra-comments-section { margin-top: 40px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .extra-comments-title { font-size:1.3rem; font-weight:700; color:#e8650a; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+    .extra-comments-count { background:rgba(232,101,10,0.15); color:#e8650a; border:1px solid rgba(232,101,10,0.3); font-size:0.8rem; font-weight:700; padding:2px 9px; border-radius:14px; }
+    .extra-comment-form { background:#0f0f12; border-radius:16px; padding:18px; margin-bottom:22px; border:1px solid rgba(255,255,255,0.05); }
+    .extra-comment-form textarea, .ec-reply-ta {
+        width:100%; background:#141416; border:1px solid rgba(255,255,255,0.07);
+        border-radius:10px; color:#c9cdd6; font-size:0.93rem; padding:12px 14px;
+        resize:vertical; min-height:80px; font-family:inherit; box-sizing:border-box;
+        transition:border-color 0.2s; outline:none;
+    }
+    .extra-comment-form textarea:focus, .ec-reply-ta:focus { border-color:rgba(232,101,10,0.4); box-shadow:0 0 0 3px rgba(232,101,10,0.06); }
+    .extra-comment-submit {
+        margin-top:0; background:rgba(232,101,10,0.12); color:#d0600c;
+        border:1px solid rgba(232,101,10,0.28); padding:8px 22px; border-radius:18px;
+        font-weight:700; font-size:0.88rem; cursor:pointer; font-family:inherit;
+        transition:all 0.2s; display:inline-flex; align-items:center; gap:6px;
+    }
+    .extra-comment-submit:hover { background:rgba(232,101,10,0.2); color:#e8650a; border-color:rgba(232,101,10,0.5); }
+    .ec-ct-btn {
+        width:32px; height:32px; border-radius:9px; flex-shrink:0;
+        background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);
+        color:#5a6070; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+        font-size:1rem; transition:all 0.15s; font-family:inherit;
+    }
+    .ec-ct-btn:hover { background:rgba(232,101,10,0.1); border-color:rgba(232,101,10,0.3); color:#e8650a; }
+    .ec-ct-btn.active { background:rgba(232,101,10,0.15); border-color:rgba(232,101,10,0.4); color:#e8650a; }
+    .ec-gs-btn {
+        display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:18px;
+        background:rgba(232,101,10,0.08); border:1px solid rgba(232,101,10,0.25);
+        color:#c8580a; font-size:0.82rem; font-weight:700; cursor:pointer; font-family:inherit;
+        transition:all 0.15s; user-select:none; -webkit-user-select:none;
+    }
+    .ec-gs-btn:hover { background:rgba(232,101,10,0.15); color:#e8650a; }
+    .ec-gs-btn.recording { background:rgba(232,40,40,0.18) !important; border-color:rgba(232,40,40,0.5) !important; color:#ff5555 !important; animation:ecGsPulse 1s infinite; }
+    @keyframes ecGsPulse { 0%,100%{box-shadow:0 0 0 0 rgba(232,40,40,0.3)} 50%{box-shadow:0 0 0 6px rgba(232,40,40,0)} }
+    .ec-img-preview { margin:8px 0 0; position:relative; display:inline-block; }
+    .ec-img-preview img { max-height:120px; max-width:100%; border-radius:10px; border:1px solid rgba(255,255,255,0.08); display:block; }
+    .ec-img-remove { position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:#e84040; border:none; color:#fff; font-size:0.6rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .ec-emoji-panel {
+        position:absolute; bottom:calc(100% + 8px); left:0; z-index:5000;
+        background:#1a1a1e; border:1px solid rgba(255,255,255,0.1); border-radius:16px;
+        padding:10px; width:280px; box-shadow:0 20px 60px rgba(0,0,0,0.8);
+        display:flex; flex-direction:column; gap:6px;
+    }
+    .ec-emoji-cats { display:flex; gap:3px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:7px; }
+    .ec-emoji-cat-btn { background:none; border:none; cursor:pointer; font-size:1rem; padding:4px 5px; border-radius:7px; transition:background 0.1s; }
+    .ec-emoji-cat-btn:hover,.ec-emoji-cat-btn.eactive { background:rgba(232,101,10,0.15); }
+    .ec-emoji-grid { display:flex; flex-wrap:wrap; gap:1px; max-height:140px; overflow-y:auto; }
+    .ec-emoji-grid::-webkit-scrollbar { width:4px; }
+    .ec-emoji-grid::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+    .ec-emoji-item { background:none; border:none; cursor:pointer; font-size:1.2rem; padding:4px; border-radius:7px; transition:all 0.1s; line-height:1; }
+    .ec-emoji-item:hover { background:rgba(255,255,255,0.08); transform:scale(1.2); }
+    #ecGsFloatIndicator {
+        position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+        background:#1c1a18; border:1px solid rgba(232,40,40,0.4); border-radius:28px;
+        padding:10px 22px; display:none; align-items:center; gap:12px;
+        box-shadow:0 10px 40px rgba(0,0,0,0.8); z-index:99999;
+        opacity:0; transition:opacity 0.2s, transform 0.2s;
+        font-size:0.9rem; color:#ff5555; font-weight:700; font-family:inherit; user-select:none;
+    }
+    #ecGsFloatIndicator.show { display:flex; opacity:1; transform:translateX(-50%) translateY(0); }
+    #ecGsFloatIndicator .gs-dot { width:10px; height:10px; border-radius:50%; background:#ff5555; animation:ecGsPulse 1s infinite; flex-shrink:0; }
+    #ecGsFloatIndicator .gs-hint { font-size:0.72rem; color:#888; font-weight:400; margin-left:4px; }
+    .extra-comment-login { color:#3d4350; font-size:0.88rem; padding:14px; background:#0f0f12; border-radius:12px; border:1px solid rgba(255,255,255,0.05); text-align:center; margin-bottom:18px; }
+    .extra-comment-login a { color:#c8580a; text-decoration:none; }
+
+    .ec-comment { display:flex; gap:12px; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .ec-comment:last-child { border-bottom:none; }
+    .ec-reply-item { padding:10px 0 !important; }
+    .ec-avatar {
+        width:40px; height:40px; border-radius:50%; flex-shrink:0;
+        background:linear-gradient(135deg,#c8580a,#7a3008);
+        display:flex; align-items:center; justify-content:center;
+        font-weight:700; font-size:1rem; color:rgba(255,255,255,0.9);
+        text-transform:uppercase; text-decoration:none; overflow:hidden;
+        transition:transform 0.18s, box-shadow 0.18s;
+    }
+    .ec-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+    .ec-avatar-sm { width:30px; height:30px; font-size:0.8rem; }
+    .ec-avatar-link:hover { transform:scale(1.08); box-shadow:0 0 10px rgba(232,101,10,0.5); }
+    .ec-body { flex:1; }
+    .ec-head { display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap; }
+    .ec-username { font-weight:700; color:#c8580a; font-size:0.9rem; text-decoration:none; transition:color 0.15s; }
+    .ec-username:hover { color:#e8650a; }
+    .ec-date { color:#2e3340; font-size:0.78rem; }
+    .ec-badge { padding:1px 7px; border-radius:10px; font-size:0.68rem; font-weight:700; }
+    .ec-badge.admin { background:rgba(232,101,10,0.15); color:#e8650a; border:1px solid rgba(232,101,10,0.3); }
+    .ec-badge.mod   { background:#0088ff22; color:#4499ff; border:1px solid #0088ff44; }
+    .ec-badge.editor { background:#22aa4422; color:#44cc66; border:1px solid #22aa4444; }
+    .ec-text { color:#8a909e; font-size:0.92rem; line-height:1.6; word-break:break-word; margin-bottom:8px; }
+    .ec-actions { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .ec-react-btn {
+        display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+        border-radius:16px; border:1px solid #2a2a2a; background:transparent;
+        color:#888; font-size:0.82rem; cursor:pointer; transition:0.2s;
+    }
+    .ec-react-btn:hover { border-color:#555; color:#ccc; }
+    .ec-react-btn.ec-liked { border-color:#e8650a; color:#e8650a; background:rgba(232,101,10,0.1); }
+    .ec-react-btn.ec-disliked { border-color:#555; color:#aaa; background:rgba(255,255,255,0.05); }
+    .ec-reply-toggle {
+        display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+        border-radius:16px; border:1px solid #333; background:transparent;
+        color:#777; font-size:0.8rem; cursor:pointer; transition:0.2s;
+    }
+    .ec-reply-toggle:hover { border-color:rgba(232,101,10,0.4); color:#e8650a; }
+    .ec-cancel-reply {
+        display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
+        border-radius:14px; border:1px solid rgba(255,255,255,0.08); background:transparent;
+        color:#555; font-size:0.82rem; cursor:pointer; transition:0.2s;
+    }
+    .ec-cancel-reply:hover { color:#888; }
+    .ec-del-btn {
+        display:inline-flex; align-items:center; padding:3px 8px; border-radius:14px;
+        border:1px solid rgba(180,30,30,0.2); background:transparent;
+        color:#603030; font-size:0.78rem; cursor:pointer; transition:0.2s;
+    }
+    .ec-del-btn:hover { background:rgba(180,30,30,0.12); color:#cc4444; border-color:rgba(180,30,30,0.4); }
+    .ec-reply-form { margin-top:10px; }
+    .ec-reply-inner { display:flex; gap:8px; align-items:flex-start; }
+    .ec-replies-wrap { margin-top:10px; }
+    .ec-replies-toggle {
+        display:inline-flex; align-items:center; gap:6px; color:#c8580a;
+        font-size:0.82rem; cursor:pointer; padding:3px 0;
+        background:none; border:none; transition:opacity 0.2s;
+    }
+    .ec-replies-toggle:hover { opacity:0.75; }
+    .ec-replies-toggle i { font-size:0.7rem; transition:transform 0.2s; }
+    .ec-replies-toggle.open i { transform:rotate(180deg); }
+    .ec-replies { margin-top:8px; padding-left:14px; border-left:2px solid rgba(232,101,10,0.25); }
+    .ec-empty { text-align:center; padding:36px 0; color:#555; }
+    .ec-empty i { font-size:2.2rem; display:block; margin-bottom:8px; opacity:0.3; }
+
+    /* Голосование за страницу */
+    .extra-vote-section {
+        display:flex; align-items:center; gap:14px; margin:0;
+        padding:16px 36px; border-top:1px solid rgba(255,255,255,0.05);
+        border-bottom:1px solid rgba(255,255,255,0.05); flex-wrap:wrap;
+    }
+    .extra-vote-label { color:#888; font-size:0.9rem; }
+    .extra-vote-btn {
+        display:inline-flex; align-items:center; gap:7px; padding:9px 20px;
+        border-radius:36px; border:1.5px solid; font-weight:700; font-size:0.95rem;
+        cursor:pointer; transition:0.2s; background:transparent; font-family:inherit;
+    }
+    .extra-vote-btn.like { border-color:#e8650a; color:#e8650a; }
+    .extra-vote-btn.like:hover, .extra-vote-btn.like.active { background:#e8650a; color:#fff; box-shadow:0 0 14px rgba(232,101,10,0.4); }
+    .extra-vote-btn.dislike { border-color:#444; color:#888; }
+    .extra-vote-btn.dislike:hover, .extra-vote-btn.dislike.active { background:#333; color:#ccc; border-color:#666; }
+
+    /* Отступы чтобы не было впритык */
+    .extra-comments-section { margin-top:36px; padding:28px 36px 0; border-top:1px solid rgba(255,255,255,0.05); }
+    .extra-comment-form { margin-bottom:24px; }
+    #ecList .ec-comment { padding:16px 0; }
+    #ecList .ec-comment:first-child { padding-top:8px; }
+</style>
+
+<!-- VPN-уведомление выводится через base.html -->
+
+<div id="ecDelModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.72);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+    <div style="background:#141416;border:1px solid rgba(232,101,10,0.28);border-radius:22px;padding:30px 32px 24px;max-width:360px;width:calc(100% - 32px);box-shadow:0 0 0 1px rgba(232,101,10,0.07),0 32px 70px rgba(0,0,0,0.85);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e8650a,transparent);opacity:0.55;"></div>
+        <div style="font-size:1.05rem;font-weight:800;color:#e0e4ec;margin-bottom:8px;letter-spacing:-0.2px;">Удалить комментарий?</div>
+        <div style="font-size:0.86rem;color:#454b58;line-height:1.55;margin-bottom:24px;">Это действие необратимо — восстановить комментарий не получится.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="ecDelCancel" style="padding:9px 22px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#555;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.18s;"
+                onmouseover="this.style.color='#888';this.style.borderColor='rgba(255,255,255,0.18)'"
+                onmouseout="this.style.color='#555';this.style.borderColor='rgba(255,255,255,0.08)'">Отмена</button>
+            <button id="ecDelConfirm" style="padding:9px 22px;border-radius:14px;border:1px solid rgba(200,40,40,0.4);background:rgba(180,30,30,0.13);color:#cc4444;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.18s;"
+                onmouseover="this.style.background='rgba(180,30,30,0.25)';this.style.color='#ee5555'"
+                onmouseout="this.style.background='rgba(180,30,30,0.13)';this.style.color='#cc4444'"><i class="fas fa-trash" style="margin-right:5px;font-size:0.8rem;"></i>Удалить</button>
+        </div>
+    </div>
+</div>
+
+<div class="extra-outer">
+<div class="extra-wrap">
+
+    <!-- Хлебные крошки -->
+    <div class="breadcrumb">
+        <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Главная</a>
+        <span>/</span>
+        <a href="{{ url_for('forum') }}">Форум</a>
+        {% if page.article %}
+        <span>/</span>
+        <a href="{{ url_for('article', article_id=page.article.id) }}">{{ page.article.title }}</a>
+        {% endif %}
+        <span>/</span>
+        <span class="current">{{ page.title }}</span>
+    </div>
+
+    <div class="extra-card">
+        <div class="extra-header">
+            <div class="extra-header-glow"></div>
+            <div class="extra-tag"><i class="fas fa-file-alt"></i> Дополнительная страница</div>
+            <h1 class="extra-title">{{ page.title }}</h1>
+            <div class="extra-meta">
+                <span class="extra-meta-item"><i class="fas fa-eye"></i> {{ page.views }} просмотров</span>
+                {% if page.created_at %}
+                <span class="extra-meta-item"><i class="fas fa-calendar"></i> {{ page.created_at.strftime('%d.%m.%Y') }}</span>
+                {% endif %}
+                {# Кнопка редактирования ТОЛЬКО для редакторов и выше #}
+                {% if current_user.is_authenticated and current_user.role >= 2 %}
+                <a href="{{ url_for('admin_extra_edit', page_id=page.id) }}" class="extra-edit-btn" style="margin-left:auto;">
+                    <i class="fas fa-edit"></i> Редактировать
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Голосование за страницу -->
+        <div class="extra-vote-section">
+            <span class="extra-vote-label">Оценить страницу:</span>
+            {% if current_user.is_authenticated %}
+                <button class="extra-vote-btn like {% if user_page_vote == 1 %}active{% endif %}"
+                        data-page="{{ page.id }}" data-val="1" onclick="voteExtraPage(this)">
+                    <i class="fas fa-thumbs-up"></i> <span id="extraLikes">{{ page_likes }}</span>
+                </button>
+                <button class="extra-vote-btn dislike {% if user_page_vote == -1 %}active{% endif %}"
+                        data-page="{{ page.id }}" data-val="-1" onclick="voteExtraPage(this)">
+                    <i class="fas fa-thumbs-down"></i> <span id="extraDislikes">{{ page_dislikes }}</span>
+                </button>
+            {% else %}
+                <span class="extra-vote-btn like" style="cursor:default;opacity:0.5;">
+                    <i class="fas fa-thumbs-up"></i> {{ page_likes }}
+                </span>
+                <span class="extra-vote-btn dislike" style="cursor:default;opacity:0.5;">
+                    <i class="fas fa-thumbs-down"></i> {{ page_dislikes }}
+                </span>
+                <span style="color:#555;font-size:0.85rem;"><a href="{{ url_for('login') }}" style="color:#e8650a;">Войдите</a>, чтобы оценить</span>
+            {% endif %}
+        </div>
+
+        <div class="extra-body">
+            <div class="extra-content">
+                {{ page.content | safe }}
+            </div>
+
+            {% if page.article %}
+            <a href="{{ url_for('article', article_id=page.article.id) }}" class="extra-back">
+                <i class="fas fa-arrow-left"></i> Вернуться к статье
+            </a>
+            {% else %}
+            <a href="{{ url_for('forum') }}" class="extra-back">
+                <i class="fas fa-arrow-left"></i> На форум
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="extra-comments-section" id="extra-comments">
+            <div class="extra-comments-title">
+                <i class="fas fa-comments"></i>
+                Комментарии
+                <span class="extra-comments-count">{{ extra_comments | length }}</span>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            <div class="extra-comment-form" id="mainCommentForm">
+                <form id="ecMainForm">
+                    <input type="hidden" name="page_id" value="{{ page.id }}">
+                    <div style="position:relative;">
+                        <textarea name="content" id="ecMainTextarea" placeholder="Написать комментарий..." rows="3"></textarea>
+                        <div id="emojiPanel_ecmain" class="ec-emoji-panel" style="display:none;"></div>
+                    </div>
+                    <div id="ecImgPreview_main" class="ec-img-preview" style="display:none;">
+                        <img id="ecImgPreviewImg_main" src="" alt="">
+                        <button type="button" class="ec-img-remove" onclick="removeEcImg('main')" title="Удалить"><i class="fas fa-times"></i></button>
+                    </div>
+                    <input type="file" id="ecImgInput_main" accept="image/*" style="display:none;" onchange="previewEcImg(this,'main')">
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                        <button type="button" class="ec-ct-btn" id="emojiBtn_ecmain" onclick="toggleEcEmoji('ecmain','ecMainTextarea')" title="Эмодзи">😊</button>
+                        <button type="button" class="ec-ct-btn" onclick="document.getElementById('ecImgInput_main').click()" title="Фото / GIF"><i class="fas fa-image"></i></button>
+                        <button type="submit" class="extra-comment-submit">
+                            <i class="fas fa-paper-plane"></i> Отправить
+                        </button>
+                        {% if current_user.role >= 4 or (current_user.permissions and current_user.permissions.can_voice_reply) %}
+                        <button type="button" class="ec-gs-btn" id="ecGsBtn_main"
+                            title="Удерживайте для записи"
+                            onmousedown="ecGsHoldStart(event,{{ page.id }},null,'ecGsBtn_main')"
+                            onmouseup="ecGsHoldEnd(event,'ecGsBtn_main')"
+                            onmouseleave="ecGsHoldCancel('ecGsBtn_main')"
+                            ontouchstart="ecGsHoldStart(event,{{ page.id }},null,'ecGsBtn_main')"
+                            ontouchend="ecGsHoldEnd(event,'ecGsBtn_main')">
+                            <i class="fas fa-microphone"></i> ГС
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="extra-comment-login">
+                <i class="fas fa-lock" style="color:#c8580a;margin-right:6px;"></i>
+                <a href="{{ url_for('login') }}">Войдите</a> или <a href="{{ url_for('register') }}">зарегистрируйтесь</a>, чтобы комментировать
+            </div>
+            {% endif %}
+
+            <div id="ecList">
+            {% if extra_comments %}
+                {% for c in extra_comments %}
+                <div class="ec-comment" id="ec-{{ c.id }}">
+                    <a href="{{ url_for('profile', username=c.author.username) if c.author else '#' }}" class="ec-avatar ec-avatar-link">
+                        {% if c.author and c.author.avatar %}
+                            <img src="{{ c.author.avatar }}" alt="">
+                        {% else %}
+                            {{ (c.author.username[0] if c.author else '?') }}
+                        {% endif %}
+                    </a>
+                    <div class="ec-body">
+                        <div class="ec-head">
+                            <a href="{{ url_for('profile', username=c.author.username) if c.author else '#' }}" class="ec-username">{{ c.author.username if c.author else 'Удалён' }}</a>
+                            <span class="ec-date" data-utc="{{ c.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ c.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                            {% if c.author and c.author.role >= 4 %}<span class="ec-badge admin">ADMIN</span>
+                            {% elif c.author and c.author.role >= 3 %}<span class="ec-badge mod">MOD</span>
+                            {% elif c.author and c.author.role >= 2 %}<span class="ec-badge editor">РЕД.</span>{% endif %}
+                        </div>
+                        <div class="ec-text">{% if c.content.startswith('[VOICE]') and c.content.endswith('[/VOICE]') %}{% set vurl = c.content[7:-8] %}<audio controls src="{{ vurl }}" style="max-width:100%;height:36px;border-radius:20px;accent-color:#e8650a;"></audio>{% else %}{{ c.content }}{% endif %}</div>
+                        <div class="ec-actions">
+                            {% if current_user.is_authenticated %}
+                            <button class="ec-react-btn {% if user_extra_reactions.get(c.id)==1 %}ec-liked{% endif %}"
+                                    data-cid="{{ c.id }}" data-val="1">
+                                <i class="fas fa-thumbs-up"></i> <span class="ec-cnt">{{ c.likes }}</span>
+                            </button>
+                            <button class="ec-react-btn {% if user_extra_reactions.get(c.id)==-1 %}ec-disliked{% endif %}"
+                                    data-cid="{{ c.id }}" data-val="-1">
+                                <i class="fas fa-thumbs-down"></i> <span class="ec-cnt">{{ c.dislikes }}</span>
+                            </button>
+                            <button type="button" class="ec-reply-toggle" data-target="ecReplyForm-{{ c.id }}">
+                                <i class="fas fa-reply"></i> Ответить
+                            </button>
+                            {% if current_user.id == (c.author.id if c.author else -1) or current_user.role >= 2 %}
+                            <form class="ec-del-form" data-cid="{{ c.id }}" style="display:contents;">
+                                <button type="button" class="ec-del-btn" data-cid="{{ c.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% else %}
+                            <span class="ec-react-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> {{ c.likes }}</span>
+                            <span class="ec-react-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i> {{ c.dislikes }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Форма ответа -->
+                        {% if current_user.is_authenticated %}
+                        <div class="ec-reply-form" id="ecReplyForm-{{ c.id }}" style="display:none;">
+                            <form method="POST"
+                                  action="{{ url_for('add_extra_comment', page_id=page.id) }}"
+                                  onsubmit="return ecReplySubmit(this, event, '{{ page.id }}', '{{ c.id }}');">
+                                <input type="hidden" name="parent_id" value="{{ c.id }}">
+                                <div class="ec-reply-inner">
+                                    <div class="ec-avatar ec-avatar-sm">
+                                        {% if current_user.avatar %}<img src="{{ current_user.avatar }}" alt="">
+                                        {% else %}{{ current_user.username[0] }}{% endif %}
+                                    </div>
+                                    <div style="flex:1;position:relative;">
+                                        <textarea name="content" rows="2" id="ecReplyTa_{{ c.id }}" placeholder="Ответить {{ c.author.username }}..."
+                                            class="ec-reply-ta"></textarea>
+                                        <div id="emojiPanel_ecr{{ c.id }}" class="ec-emoji-panel" style="display:none;"></div>
+                                        <div style="display:flex;gap:8px;margin-top:7px;flex-wrap:wrap;">
+                                            <button type="button" class="ec-ct-btn" id="emojiBtn_ecr{{ c.id }}" onclick="toggleEcEmoji('ecr{{ c.id }}','ecReplyTa_{{ c.id }}')" title="Эмодзи">😊</button>
+                                            <button type="submit" class="extra-comment-submit" style="padding:6px 14px;font-size:0.85rem;">
+                                                <i class="fas fa-paper-plane"></i> Отправить
+                                            </button>
+                                            {% if current_user.role >= 4 or (current_user.permissions and current_user.permissions.can_voice_reply) %}
+                                            <button type="button" class="ec-gs-btn" id="ecGsBtn_r{{ c.id }}"
+                                                title="Удерживайте для записи"
+                                                onmousedown="ecGsHoldStart(event,{{ page.id }},{{ c.id }},'ecGsBtn_r{{ c.id }}')"
+                                                onmouseup="ecGsHoldEnd(event,'ecGsBtn_r{{ c.id }}')"
+                                                onmouseleave="ecGsHoldCancel('ecGsBtn_r{{ c.id }}')"
+                                                ontouchstart="ecGsHoldStart(event,{{ page.id }},{{ c.id }},'ecGsBtn_r{{ c.id }}')"
+                                                ontouchend="ecGsHoldEnd(event,'ecGsBtn_r{{ c.id }}')">
+                                                <i class="fas fa-microphone"></i> ГС
+                                            </button>
+                                            {% endif %}
+                                            <button type="button" class="ec-cancel-reply" data-target="ecReplyForm-{{ c.id }}">
+                                                <i class="fas fa-times"></i> Отмена
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <!-- Ветка ответов -->
+                        {% if c.replies %}
+                        <div class="ec-replies-wrap">
+                            <button type="button" class="ec-replies-toggle" data-target="ecReplies-{{ c.id }}">
+                                <i class="fas fa-chevron-down"></i>
+                                {{ c.replies | length }} {{ 'ответ' if c.replies|length==1 else ('ответа' if c.replies|length in [2,3,4] else 'ответов') }}
+                            </button>
+                            <div class="ec-replies" id="ecReplies-{{ c.id }}" style="display:none;">
+                                {% for r in c.replies %}
+                                <div class="ec-comment ec-reply-item" id="ec-{{ r.id }}">
+                                    <a href="{{ url_for('profile', username=r.author.username) if r.author else '#' }}" class="ec-avatar ec-avatar-sm ec-avatar-link">
+                                        {% if r.author and r.author.avatar %}<img src="{{ r.author.avatar }}" alt="">
+                                        {% else %}{{ (r.author.username[0] if r.author else '?') }}{% endif %}
+                                    </a>
+                                    <div class="ec-body">
+                                        <div class="ec-head">
+                                            <a href="{{ url_for('profile', username=r.author.username) if r.author else '#' }}" class="ec-username">{{ r.author.username if r.author else 'Удалён' }}</a>
+                                            <span class="ec-date" data-utc="{{ r.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                                            {% if r.author and r.author.role >= 4 %}<span class="ec-badge admin">ADMIN</span>{% endif %}
+                                        </div>
+                                        <div class="ec-text">{% if r.content.startswith('[VOICE]') and r.content.endswith('[/VOICE]') %}{% set vurl = r.content[7:-8] %}<audio controls src="{{ vurl }}" style="max-width:100%;height:36px;border-radius:20px;accent-color:#e8650a;"></audio>{% else %}{{ r.content }}{% endif %}</div>
+                                        <div class="ec-actions">
+                                            {% if current_user.is_authenticated %}
+                                            <button class="ec-react-btn {% if user_extra_reactions.get(r.id)==1 %}ec-liked{% endif %}"
+                                                    data-cid="{{ r.id }}" data-val="1">
+                                                <i class="fas fa-thumbs-up"></i> <span class="ec-cnt">{{ r.likes }}</span>
+                                            </button>
+                                            <button class="ec-react-btn {% if user_extra_reactions.get(r.id)==-1 %}ec-disliked{% endif %}"
+                                                    data-cid="{{ r.id }}" data-val="-1">
+                                                <i class="fas fa-thumbs-down"></i> <span class="ec-cnt">{{ r.dislikes }}</span>
+                                            </button>
+                                            {% if current_user.id == r.author.id or current_user.role >= 2 %}
+                                            <button type="button" class="ec-del-btn" data-cid="{{ r.id }}"><i class="fas fa-trash"></i></button>
+                                            {% endif %}
+                                            {% else %}
+                                            <span class="ec-react-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> {{ r.likes }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="ec-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>Комментариев пока нет — будь первым!</p>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+// Убираем target=_blank у всех ссылок в контенте
+document.querySelectorAll('.extra-content a, .article-content a').forEach(function(a){
+    a.removeAttribute('target'); a.removeAttribute('rel');
+});
+
+function voteExtraPage(btn) {
+    var pageId = btn.dataset.page, val = btn.dataset.val;
+    fetch('/extra/' + pageId + '/vote', {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},
+        body:'value='+val
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        document.getElementById('extraLikes').textContent = d.likes;
+        document.getElementById('extraDislikes').textContent = d.dislikes;
+        // Подсветка
+        document.querySelectorAll('.extra-vote-btn').forEach(function(b){ b.classList.remove('active'); });
+        // Если нажали ту же кнопку — снимаем, иначе ставим
+        var cur = btn.classList.contains('active');
+        if(!cur) btn.classList.add('active');
+    })
+    .catch(function(){});
+}
+
+function ecTimeAgo(dateStr) {
+    var d = new Date(dateStr + 'Z'), now = new Date();
+    var diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) { var m=Math.floor(diff/60); return m+' '+(m===1?'минуту':m<5?'минуты':'минут')+' назад'; }
+    if (diff < 86400) { var h=Math.floor(diff/3600); return h+' '+(h===1?'час':h<5?'часа':'часов')+' назад'; }
+    var dd=Math.floor(diff/86400); return dd+' '+(dd===1?'день':dd<5?'дня':'дней')+' назад';
+}
+document.querySelectorAll('.ec-date[data-utc]').forEach(function(el){
+    el.textContent = ecTimeAgo(el.getAttribute('data-utc'));
+});
+
+var ecMainForm = document.getElementById('ecMainForm');
+if (ecMainForm) {
+    ecMainForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var ta = document.getElementById('ecMainTextarea');
+        var content = ta ? ta.value.trim() : '';
+        if (!content) return;
+        var pageIdEl = this.querySelector('[name="page_id"]');
+        var pageId = pageIdEl ? pageIdEl.value : '';
+        var btn = this.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        fetch('/extra/' + pageId + '/comment', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},
+            body: 'content=' + encodeURIComponent(content) + '&page_id=' + pageId
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (!data.ok) { if(btn) btn.disabled=false; return; }
+            if (ta) ta.value = '';
+            if (btn) btn.disabled = false;
+            var cnt = document.querySelector('.extra-comments-count');
+            if (cnt) cnt.textContent = parseInt(cnt.textContent||'0')+1;
+            var list = document.getElementById('ecList');
+            if (list) {
+                var empty = list.querySelector('.ec-empty');
+                if (empty) empty.remove();
+                var el = makeEcEl(data);
+                list.insertBefore(el, list.firstChild);
+                el.scrollIntoView({behavior:'smooth', block:'center'});
+            }
+        })
+        .catch(function(){ if(btn) btn.disabled=false; });
+    });
+}
+
+function ecReplySubmit(form, e, pageId, parentId) {
+    e.preventDefault();
+    var ta = form.querySelector('textarea[name="content"]');
+    var content = ta ? ta.value.trim() : '';
+    if (!content) return false;
+
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+
+    fetch('/extra/' + pageId + '/comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'content=' + encodeURIComponent(content)
+            + '&page_id=' + encodeURIComponent(pageId)
+            + '&parent_id=' + encodeURIComponent(parentId)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!data.ok) { if (btn) btn.disabled = false; return; }
+        if (ta) ta.value = '';
+        if (btn) btn.disabled = false;
+
+        // Скрываем форму ответа
+        var rf = document.getElementById('ecReplyForm-' + parentId);
+        if (rf) rf.style.display = 'none';
+
+        // Обновляем счётчик
+        var cnt = document.querySelector('.extra-comments-count');
+        if (cnt) cnt.textContent = parseInt(cnt.textContent || '0') + 1;
+
+        // Ищем родительский комментарий и вставляем ответ в его тред
+        var par = document.getElementById('ec-' + parentId);
+        if (!par) return;
+
+        var repliesWrap = par.querySelector('.ec-replies-wrap');
+        var repliesList = repliesWrap ? repliesWrap.querySelector('.ec-replies') : null;
+        var el = makeEcReplyEl(data);
+
+        if (!repliesWrap) {
+            var listId = 'ecReplies-' + parentId;
+            repliesWrap = document.createElement('div');
+            repliesWrap.className = 'ec-replies-wrap';
+            repliesWrap.innerHTML =
+                '<button class="ec-replies-toggle open" data-target="' + listId + '">'
+                + '<i class="fas fa-chevron-down"></i> 1 ответ</button>'
+                + '<div class="ec-replies" id="' + listId + '" style="display:block;"></div>';
+            repliesWrap.querySelector('.ec-replies-toggle').addEventListener('click', function() {
+                var tgt = document.getElementById(this.dataset.target);
+                if (!tgt) return;
+                var open = tgt.style.display !== 'none';
+                tgt.style.display = open ? 'none' : 'block';
+                this.classList.toggle('open', !open);
+            });
+            var ecBody = par.querySelector('.ec-body');
+            if (ecBody) ecBody.appendChild(repliesWrap);
+            repliesList = repliesWrap.querySelector('.ec-replies');
+        } else {
+            var tog = repliesWrap.querySelector('.ec-replies-toggle');
+            if (tog) {
+                var n = (repliesList ? repliesList.querySelectorAll('.ec-reply-item').length : 0) + 1;
+                tog.innerHTML = '<i class="fas fa-chevron-down"></i> ' + n + ' '
+                    + (n === 1 ? 'ответ' : n < 5 ? 'ответа' : 'ответов');
+                tog.classList.add('open');
+            }
+            if (repliesList) repliesList.style.display = 'block';
+        }
+        if (repliesList) {
+            repliesList.appendChild(el);
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        if (window.bindEcDelBtns) window.bindEcDelBtns(el);
+    })
+    .catch(function() {
+        if (btn) btn.disabled = false;
+    });
+
+    return false;
+}
+
+function makeEcEl(data) {
+    var av = data.avatar ? '<img src="'+data.avatar+'" alt="">' : (data.username||'?').charAt(0).toUpperCase();
+    var role = '';
+    if ((data.role||0)>=4) role='<span class="ec-badge admin">ADMIN</span>';
+    else if ((data.role||0)>=3) role='<span class="ec-badge mod">MOD</span>';
+
+    var delBtn = (data.can_delete || data.is_owner)
+        ? '<button type="button" class="ec-del-btn" data-cid="'+(data.id||0)+'"><i class="fas fa-trash"></i></button>'
+        : '';
+
+    // Форма ответа (создаём прямо внутри элемента)
+    var replyFormHtml = data.page_id ? (
+        '<div class="ec-reply-form" id="ecReplyForm-'+(data.id||0)+'" style="display:none;">'+
+            '<form method="POST" action="/extra/'+data.page_id+'/comment"'+
+                  ' onsubmit="return ecReplySubmit(this, event, \''+data.page_id+'\', \''+(data.id||0)+'\');">'+
+                '<input type="hidden" name="parent_id" value="'+(data.id||0)+'">'+
+                '<div class="ec-reply-inner">'+
+                    '<div style="flex:1;">'+
+                        '<textarea name="content" rows="2" class="ec-reply-ta"'+
+                            ' placeholder="Ответить '+(data.username||'...')+'..."></textarea>'+
+                        '<div style="display:flex;gap:8px;margin-top:7px;">'+
+                            '<button type="submit" class="extra-comment-submit" style="padding:6px 14px;font-size:0.85rem;">'+
+                                '<i class="fas fa-paper-plane"></i> Отправить'+
+                            '</button>'+
+                            '<button type="button" class="ec-cancel-reply" data-target="ecReplyForm-'+(data.id||0)+'">'+
+                                '<i class="fas fa-times"></i> Отмена'+
+                            '</button>'+
+                        '</div>'+
+                    '</div>'+
+                '</div>'+
+            '</form>'+
+        '</div>'
+    ) : '';
+
+    var replyBtn = data.page_id
+        ? '<button type="button" class="ec-reply-toggle" data-target="ecReplyForm-'+(data.id||0)+'"><i class="fas fa-reply"></i> Ответить</button>'
+        : '';
+
+    var div = document.createElement('div');
+    div.className = 'ec-comment';
+    div.id = 'ec-'+(data.id||'new');
+    div.innerHTML =
+        '<div class="ec-avatar">'+av+'</div>'+
+        '<div class="ec-body">'+
+            '<div class="ec-head">'+
+                '<span class="ec-username">'+(data.username||'Пользователь')+'</span>'+
+                '<span class="ec-date">только что</span>'+
+                role+
+            '</div>'+
+            '<div class="ec-text">'+ecEsc(data.content||'')+'</div>'+
+            '<div class="ec-actions">'+
+                '<button type="button" class="ec-react-btn" data-cid="'+(data.id||0)+'" data-val="1"><i class="fas fa-thumbs-up"></i> <span class="ec-cnt">0</span></button>'+
+                '<button type="button" class="ec-react-btn" data-cid="'+(data.id||0)+'" data-val="-1"><i class="fas fa-thumbs-down"></i> <span class="ec-cnt">0</span></button>'+
+                replyBtn+
+                delBtn+
+            '</div>'+
+            replyFormHtml+
+        '</div>';
+
+    // Лайки/дизлайки
+    div.querySelectorAll('.ec-react-btn[data-cid]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var cid=this.dataset.cid, val=this.dataset.val, self=this;
+            fetch('/extra-comment/'+cid+'/react',{
+                method:'POST',
+                headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},
+                body:'value='+val
+            })
+            .then(function(r){return r.json();})
+            .then(function(d){
+                var block=self.closest('.ec-comment');
+                if(!block) return;
+                block.querySelectorAll('.ec-react-btn[data-cid="'+cid+'"]').forEach(function(b){
+                    var cnt=b.querySelector('.ec-cnt');
+                    if(b.dataset.val=='1'){if(cnt)cnt.textContent=d.likes;}
+                    else{if(cnt)cnt.textContent=d.dislikes;}
+                    b.classList.remove('ec-liked','ec-disliked');
+                });
+                if(val=='1') self.classList.add('ec-liked');
+                else self.classList.add('ec-disliked');
+            }).catch(function(){});
+        });
+    });
+
+    // Кнопка «Ответить» — показать/скрыть форму
+    div.querySelectorAll('.ec-reply-toggle').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var target = document.getElementById(this.dataset.target);
+            if(!target) return;
+            var visible = target.style.display !== 'none';
+            target.style.display = visible ? 'none' : 'block';
+            if(!visible){ var ta=target.querySelector('textarea'); if(ta) ta.focus(); }
+        });
+    });
+
+    // Кнопка «Отмена»
+    div.querySelectorAll('.ec-cancel-reply').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var target = document.getElementById(this.dataset.target);
+            if(target) target.style.display = 'none';
+        });
+    });
+
+    // Удаление
+    if(window.bindEcDelBtns) window.bindEcDelBtns(div);
+
+    return div;
+}
+function ecEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Создаёт DOM-элемент для ответа (reply) на комментарий
+function makeEcReplyEl(data) {
+    var av = data.avatar ? '<img src="'+data.avatar+'" alt="">' : (data.username||'?').charAt(0).toUpperCase();
+    var role = '';
+    if ((data.role||0)>=4) role='<span class="ec-badge admin">ADMIN</span>';
+    else if ((data.role||0)>=3) role='<span class="ec-badge mod">MOD</span>';
+
+    var delBtn = (data.can_delete || data.is_owner)
+        ? '<button type="button" class="ec-del-btn" data-cid="'+(data.id||0)+'"><i class="fas fa-trash"></i></button>'
+        : '';
+
+    var div = document.createElement('div');
+    div.className = 'ec-comment ec-reply-item';
+    div.id = 'ec-'+(data.id||'new');
+    div.innerHTML =
+        '<div class="ec-avatar ec-avatar-sm">'+av+'</div>'+
+        '<div class="ec-body">'+
+            '<div class="ec-head">'+
+                '<span class="ec-username">'+(data.username||'Пользователь')+'</span>'+
+                '<span class="ec-date">только что</span>'+
+                role+
+            '</div>'+
+            '<div class="ec-text">'+ecEsc(data.content||'')+'</div>'+
+            '<div class="ec-actions">'+
+                '<button type="button" class="ec-react-btn" data-cid="'+(data.id||0)+'" data-val="1"><i class="fas fa-thumbs-up"></i> <span class="ec-cnt">0</span></button>'+
+                '<button type="button" class="ec-react-btn" data-cid="'+(data.id||0)+'" data-val="-1"><i class="fas fa-thumbs-down"></i> <span class="ec-cnt">0</span></button>'+
+                delBtn+
+            '</div>'+
+        '</div>';
+
+    // Лайки/дизлайки
+    div.querySelectorAll('.ec-react-btn[data-cid]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var cid=this.dataset.cid, val=this.dataset.val, self=this;
+            fetch('/extra-comment/'+cid+'/react',{
+                method:'POST',
+                headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},
+                body:'value='+val
+            })
+            .then(function(r){return r.json();})
+            .then(function(d){
+                var block=self.closest('.ec-comment');
+                if(!block) return;
+                block.querySelectorAll('.ec-react-btn[data-cid="'+cid+'"]').forEach(function(b){
+                    var cnt=b.querySelector('.ec-cnt');
+                    if(b.dataset.val=='1'){if(cnt)cnt.textContent=d.likes;}
+                    else{if(cnt)cnt.textContent=d.dislikes;}
+                    b.classList.remove('ec-liked','ec-disliked');
+                });
+                if(val=='1') self.classList.add('ec-liked');
+                else self.classList.add('ec-disliked');
+            }).catch(function(){});
+        });
+    });
+
+    if(window.bindEcDelBtns) window.bindEcDelBtns(div);
+    return div;
+}
+
+document.querySelectorAll('.ec-react-btn[data-cid]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var cid = this.dataset.cid, val = this.dataset.val;
+        var self = this;
+        fetch('/extra-comment/' + cid + '/react', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded', 'X-Requested-With':'XMLHttpRequest'},
+            body: 'value=' + val
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            // Обновляем счётчики в этом блоке комментария
+            var block = self.closest('.ec-comment');
+            if (!block) return;
+            var btns = block.querySelectorAll('.ec-actions .ec-react-btn[data-cid="' + cid + '"]');
+            btns.forEach(function(b) {
+                var cnt = b.querySelector('.ec-cnt');
+                if (b.dataset.val == '1') { if(cnt) cnt.textContent = data.likes; }
+                else { if(cnt) cnt.textContent = data.dislikes; }
+                b.classList.remove('ec-liked','ec-disliked');
+            });
+            if (val == '1') self.classList.add('ec-liked');
+            else self.classList.add('ec-disliked');
+        })
+        .catch(function(){});
+    });
+});
+
+(function(){
+    var modal = document.getElementById('ecDelModal');
+    var inner = modal ? modal.querySelector('div') : null;
+    var confirmBtn = document.getElementById('ecDelConfirm');
+    var cancelBtn  = document.getElementById('ecDelCancel');
+    var pendingCid = null;
+    var pendingEl  = null;
+
+    function showModal(cid, el) {
+        pendingCid = cid; pendingEl = el;
+        modal.style.display = 'flex';
+        requestAnimationFrame(function(){
+            inner.style.transition = 'transform 0.22s cubic-bezier(.34,1.56,.64,1), opacity 0.18s';
+            inner.style.transform  = 'scale(1)';
+            inner.style.opacity    = '1';
+        });
+    }
+    function hideModal() {
+        if (!inner) return;
+        inner.style.transform = 'scale(0.92)';
+        inner.style.opacity   = '0';
+        setTimeout(function(){ modal.style.display = 'none'; }, 200);
+        pendingCid = null; pendingEl = null;
+    }
+    if (inner) { inner.style.transform = 'scale(0.92)'; inner.style.opacity = '0'; }
+    if (modal) modal.addEventListener('click', function(e){ if(e.target===modal) hideModal(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', hideModal);
+
+    if (confirmBtn) confirmBtn.addEventListener('click', function(){
+        if (!pendingCid) return;
+        var cid = pendingCid, el = pendingEl;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Удаление...';
+        fetch('/extra-comment/' + cid + '/delete', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded', 'X-Requested-With':'XMLHttpRequest'},
+            body: ''
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;font-size:0.8rem;"></i>Удалить';
+            hideModal();
+            if (!data.ok) return;
+            if (el) {
+                el.style.transition = 'opacity 0.3s, transform 0.3s';
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(-12px)';
+                setTimeout(function(){ el.remove(); }, 300);
+                var cnt = document.querySelector('.extra-comments-count');
+                if (cnt) cnt.textContent = Math.max(0, parseInt(cnt.textContent||'0') - 1);
+            }
+        })
+        .catch(function(){
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-trash" style="margin-right:5px;font-size:0.8rem;"></i>Удалить';
+            hideModal();
+        });
+    });
+
+    // Навешиваем на кнопки
+    window.bindEcDelBtns = function(root) {
+        (root||document).querySelectorAll('.ec-del-btn').forEach(function(btn){
+            if (btn._ecDelBound) return; btn._ecDelBound = true;
+            btn.addEventListener('click', function(){
+                var cid = this.dataset.cid;
+                var commentEl = this.closest('.ec-comment');
+                showModal(cid, commentEl);
+            });
+        });
+    };
+    window.bindEcDelBtns(document);
+})();
+
+document.querySelectorAll('.ec-reply-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.dataset.target;
+        var el = document.getElementById(id);
+        if (!el) return;
+        var visible = el.style.display !== 'none';
+        el.style.display = visible ? 'none' : 'block';
+        if (!visible) { var ta = el.querySelector('textarea'); if(ta) ta.focus(); }
+    });
+});
+document.querySelectorAll('.ec-cancel-reply').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.dataset.target;
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+});
+
+document.querySelectorAll('.ec-replies-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var id = this.dataset.target;
+        var el = document.getElementById(id);
+        if (!el) return;
+        var open = el.style.display !== 'none';
+        el.style.display = open ? 'none' : 'block';
+        this.classList.toggle('open', !open);
+    });
+});
+</script>
+
+<!-- ══ ГОЛОСОВЫЕ СООБЩЕНИЯ (extra) ══ -->
+<div id="ecVoiceModal" style="display:none;position:fixed;inset:0;z-index:60000;
+     background:rgba(0,0,0,0.82);backdrop-filter:blur(8px);
+     align-items:center;justify-content:center;">
+<div class="vm-card" style="background:linear-gradient(145deg,#141210,#0e0c0a);
+    border:1px solid rgba(232,101,10,0.3);border-radius:24px;
+    padding:28px 32px;max-width:400px;width:90%;
+    box-shadow:0 0 60px rgba(232,101,10,0.15),0 30px 80px rgba(0,0,0,0.8);">
+    <div style="color:#e8650a;font-size:1rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-microphone"></i> Голосовое сообщение
+    </div>
+    <canvas id="ecVmCanvas" style="width:100%;height:52px;background:#0a0a0c;border-radius:12px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.05);display:block;"></canvas>
+    <div id="ecVmTimer" style="text-align:center;font-size:1.4rem;font-weight:800;color:#e8650a;margin-bottom:16px;letter-spacing:2px;">0:00</div>
+    <div id="ecVmStatus" style="text-align:center;font-size:0.8rem;color:#555;margin-bottom:18px;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e84040;margin-right:6px;animation:vmBlink 1s infinite;"></span>Идёт запись...
+    </div>
+    <audio id="ecVmPreview" controls style="width:100%;margin-bottom:14px;border-radius:20px;accent-color:#e8650a;height:36px;display:none;"></audio>
+    <div style="display:flex;gap:10px;">
+        <button id="ecVmStopBtn" onclick="ecVoiceStop()"
+            style="flex:1;padding:10px;border-radius:18px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;background:#e84040;color:#fff;border:none;transition:all 0.2s;">
+            <i class="fas fa-stop"></i> Стоп
+        </button>
+        <button id="ecVmSendBtn" onclick="ecVoiceSend()" disabled
+            style="flex:1;padding:10px;border-radius:18px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;
+                   background:rgba(232,101,10,0.15);color:#e8650a;border:1px solid rgba(232,101,10,0.3);transition:all 0.2s;opacity:0.35;">
+            <i class="fas fa-paper-plane"></i> Отправить
+        </button>
+        <button onclick="ecVoiceCancel()"
+            style="padding:10px 14px;border-radius:18px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;
+                   background:rgba(255,255,255,0.04);color:#555;border:1px solid rgba(255,255,255,0.08);transition:all 0.2s;">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+</div>
+
+<script>
+(function(){
+    var ecVmPageId=null, ecVmParentId=null;
+    var ecMediaRec=null, ecAudioChunks=[], ecAudioBlob=null;
+    var ecVmTimerInt=null, ecVmSec=0;
+    var ecVmAnimFrame=null, ecVmAnalyser=null, ecVmDataArr=null;
+
+    window.ecStartVoice = function(pageId, parentId){
+        ecVmPageId=pageId; ecVmParentId=parentId;
+        ecAudioChunks=[]; ecAudioBlob=null; ecVmSec=0;
+        document.getElementById('ecVmTimer').textContent='0:00';
+        document.getElementById('ecVmStatus').innerHTML='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e84040;margin-right:6px;animation:vmBlink 1s infinite;"></span>Идёт запись...';
+        document.getElementById('ecVmPreview').style.display='none';
+        document.getElementById('ecVmStopBtn').disabled=false;
+        var sendBtn=document.getElementById('ecVmSendBtn');
+        sendBtn.disabled=true; sendBtn.style.opacity='0.35';
+        document.getElementById('ecVoiceModal').style.display='flex';
+
+        navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+            var ac=new AudioContext();
+            var src=ac.createMediaStreamSource(stream);
+            ecVmAnalyser=ac.createAnalyser(); ecVmAnalyser.fftSize=64;
+            src.connect(ecVmAnalyser);
+            ecVmDataArr=new Uint8Array(ecVmAnalyser.frequencyBinCount);
+            ecDrawViz();
+
+            ecMediaRec=new MediaRecorder(stream);
+            ecMediaRec.ondataavailable=function(e){if(e.data.size>0)ecAudioChunks.push(e.data);};
+            ecMediaRec.onstop=function(){
+                ecAudioBlob=new Blob(ecAudioChunks,{type:'audio/webm'});
+                var url=URL.createObjectURL(ecAudioBlob);
+                var prev=document.getElementById('ecVmPreview');
+                prev.src=url; prev.style.display='block';
+                document.getElementById('ecVmStatus').textContent='Запись завершена.';
+                var sb=document.getElementById('ecVmSendBtn');
+                sb.disabled=false; sb.style.opacity='1';
+                cancelAnimationFrame(ecVmAnimFrame);
+                clearInterval(ecVmTimerInt);
+                stream.getTracks().forEach(function(t){t.stop();});
+            };
+            ecMediaRec.start(100);
+            ecVmTimerInt=setInterval(function(){
+                ecVmSec++;
+                var m=Math.floor(ecVmSec/60),s=ecVmSec%60;
+                document.getElementById('ecVmTimer').textContent=m+':'+(s<10?'0':'')+s;
+                if(ecVmSec>=120) ecVoiceStop();
+            },1000);
+        }).catch(function(err){
+            document.getElementById('ecVmStatus').textContent='Нет доступа к микрофону: '+err.message;
+        });
+    };
+
+    function ecDrawViz(){
+        ecVmAnimFrame=requestAnimationFrame(ecDrawViz);
+        if(!ecVmAnalyser) return;
+        ecVmAnalyser.getByteFrequencyData(ecVmDataArr);
+        var c=document.getElementById('ecVmCanvas');
+        if(!c) return;
+        c.width=c.offsetWidth; c.height=c.offsetHeight;
+        var ctx=c.getContext('2d'),W=c.width,H=c.height;
+        ctx.clearRect(0,0,W,H);
+        ecVmDataArr.forEach(function(v,i){
+            var h=(v/255)*H;
+            ctx.fillStyle='rgba(232,'+(101+Math.round(i/ecVmDataArr.length*50))+',10,0.8)';
+            ctx.beginPath();
+            if(ctx.roundRect) ctx.roundRect(i*(W/ecVmDataArr.length),H-h,(W/ecVmDataArr.length)-2,h,3);
+            else ctx.rect(i*(W/ecVmDataArr.length),H-h,(W/ecVmDataArr.length)-2,h);
+            ctx.fill();
+        });
+    }
+
+    window.ecVoiceStop=function(){
+        if(ecMediaRec&&ecMediaRec.state!=='inactive') ecMediaRec.stop();
+        clearInterval(ecVmTimerInt);
+        document.getElementById('ecVmStopBtn').disabled=true;
+    };
+
+    window.ecVoiceSend=function(){
+        if(!ecAudioBlob) return;
+        var fd=new FormData();
+        fd.append('audio',ecAudioBlob,'voice.webm');
+        fd.append('extra_id',ecVmPageId);
+        if(ecVmParentId) fd.append('parent_id',ecVmParentId);
+        var sb=document.getElementById('ecVmSendBtn');
+        sb.disabled=true; sb.style.opacity='0.35';
+        document.getElementById('ecVmStatus').textContent='Отправка...';
+        fetch('/api/voice-comment/extra',{method:'POST',body:fd})
+        .then(function(r){return r.json();})
+        .then(function(data){
+            if(data.ok){ ecVoiceCancel(); window.location.reload(); }
+            else{
+                document.getElementById('ecVmStatus').textContent='Ошибка: '+(data.error||'неизвестно');
+                sb.disabled=false; sb.style.opacity='1';
+            }
+        }).catch(function(){
+            document.getElementById('ecVmStatus').textContent='Ошибка соединения';
+            sb.disabled=false; sb.style.opacity='1';
+        });
+    };
+
+    window.ecVoiceCancel=function(){
+        if(ecMediaRec&&ecMediaRec.state!=='inactive') ecMediaRec.stop();
+        clearInterval(ecVmTimerInt);
+        cancelAnimationFrame(ecVmAnimFrame);
+        ecAudioChunks=[]; ecAudioBlob=null;
+        document.getElementById('ecVoiceModal').style.display='none';
+    };
+
+    document.getElementById('ecVoiceModal').addEventListener('click',function(e){
+        if(e.target===this) ecVoiceCancel();
+    });
+})();
+</script>
+
+<!-- EC GS Float indicator -->
+<div id="ecGsFloatIndicator" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1a18;border:1px solid rgba(232,40,40,0.4);border-radius:28px;padding:10px 22px;display:none;align-items:center;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,0.8);z-index:99999;opacity:0;transition:opacity 0.2s,transform 0.2s;font-size:0.9rem;color:#ff5555;font-weight:700;font-family:inherit;user-select:none;">
+    <div style="width:10px;height:10px;border-radius:50%;background:#ff5555;animation:ecGsPulse 1s infinite;flex-shrink:0;"></div>
+    <span id="ecGsFloatTimer">0:00</span>
+    <span style="font-size:0.72rem;color:#888;font-weight:400;margin-left:4px;">Отпустите чтобы отправить</span>
+</div>
+
+<style>
+@keyframes ecGsPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,40,40,0.3)}50%{box-shadow:0 0 0 6px rgba(232,40,40,0)}}
+.ec-gs-float-show{display:flex!important;opacity:1!important;transform:translateX(-50%) translateY(0)!important;}
+</style>
+
+<script>
+/* ── EC EMOJI PICKER ── */
+(function(){
+    var emojiData={
+        '😀':['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😈','😉','😊','😋','😌','😍','🥰','😎','😏','😐','😑','😒','😓','😔','😕','😠','😡','😢','😤','😥','😭','😮','😱','😲','😳','😴','😵','😶','😷','🤔','🤗','🤣','🤤','🤥','🤦','🤧','🤨','🤩','🤪','🤫','🤬','🤭','🤯','🤮'],
+        '👍':['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👋','🤚','🖐️','✋','🖖','👏','🙌','👐','🤲','🤝','🙏','✍️','💪','💅','🤳'],
+        '❤️':['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'],
+        '🎮':['🎮','🕹️','🎲','🎯','🎳','🎰','🎵','🎶','🎤','🎧','📻','💻','🖥️','🖱️','📱','🔥','⚡','🌈'],
+        '🍕':['🍕','🍔','🌭','🍟','🌮','🌯','🍣','🍜','🍝','🍦','🎂','🍰','🧁','🍩','🍪','🥤','☕','🍺'],
+    };
+    var cats=Object.keys(emojiData);
+
+    window.toggleEcEmoji=function(panelKey,taId){
+        var panel=document.getElementById('emojiPanel_'+panelKey);
+        var btn=document.getElementById('emojiBtn_'+panelKey);
+        if(!panel) return;
+        var isOpen=panel.style.display!=='none';
+        document.querySelectorAll('.ec-emoji-panel').forEach(function(p){p.style.display='none';});
+        document.querySelectorAll('[id^="emojiBtn_ec"]').forEach(function(b){b.classList.remove('active');});
+        if(isOpen) return;
+        if(!panel._built){
+            panel._built=true; panel._taId=taId;
+            var catBar='<div class="ec-emoji-cats">';
+            cats.forEach(function(c,i){catBar+='<button class="ec-emoji-cat-btn'+(i===0?' eactive':'')+'" onclick="switchEcCat(\''+panelKey+'\','+i+')">'+c+'</button>';});
+            catBar+='</div>';
+            var grid='<div class="ec-emoji-grid" id="ecgrid_'+panelKey+'">';
+            emojiData[cats[0]].forEach(function(em){grid+='<button class="ec-emoji-item" onclick="ecInsertEmoji(\''+panelKey+'\',\''+em.replace(/'/g,"\\'")+'\')">'+em+'</button>';});
+            grid+='</div>';
+            panel.innerHTML=catBar+grid;
+        }
+        panel.style.display='flex';
+        if(btn) btn.classList.add('active');
+    };
+    window.switchEcCat=function(pk,ci){
+        var panel=document.getElementById('emojiPanel_'+pk); if(!panel) return;
+        panel.querySelectorAll('.ec-emoji-cat-btn').forEach(function(b,i){b.classList.toggle('eactive',i===ci);});
+        var grid=document.getElementById('ecgrid_'+pk); if(!grid) return;
+        grid.innerHTML='';
+        emojiData[cats[ci]].forEach(function(em){
+            var b=document.createElement('button'); b.className='ec-emoji-item'; b.textContent=em;
+            b.onclick=function(){ecInsertEmoji(pk,em);}; grid.appendChild(b);
+        });
+    };
+    window.ecInsertEmoji=function(pk,em){
+        var panel=document.getElementById('emojiPanel_'+pk);
+        var ta=panel&&panel._taId?document.getElementById(panel._taId):null;
+        if(!ta) return;
+        var s=ta.selectionStart||0,e=ta.selectionEnd||0;
+        ta.value=ta.value.slice(0,s)+em+ta.value.slice(e);
+        ta.selectionStart=ta.selectionEnd=s+em.length; ta.focus();
+    };
+    document.addEventListener('click',function(e){
+        if(!e.target.closest('.ec-emoji-panel')&&!e.target.closest('[id^="emojiBtn_ec"]')){
+            document.querySelectorAll('.ec-emoji-panel').forEach(function(p){p.style.display='none';});
+            document.querySelectorAll('[id^="emojiBtn_ec"]').forEach(function(b){b.classList.remove('active');});
+        }
+    });
+})();
+
+/* ── EC IMAGE PREVIEW ── */
+window.previewEcImg=function(input,formId){
+    var file=input.files&&input.files[0]; if(!file) return;
+    var wrap=document.getElementById('ecImgPreview_'+formId);
+    var img=document.getElementById('ecImgPreviewImg_'+formId);
+    if(wrap&&img){img.src=URL.createObjectURL(file);wrap.style.display='inline-block';}
+};
+window.removeEcImg=function(formId){
+    var wrap=document.getElementById('ecImgPreview_'+formId);
+    var inp=document.getElementById('ecImgInput_'+formId);
+    if(wrap) wrap.style.display='none';
+    if(inp) inp.value='';
+};
+(function(){
+    var mainForm=document.getElementById('ecMainForm'); if(!mainForm) return;
+    mainForm.addEventListener('submit',function(e){
+        var imgInput=document.getElementById('ecImgInput_main');
+        if(!imgInput||!imgInput.files||!imgInput.files[0]) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        var fd=new FormData(); fd.append('file',imgInput.files[0]);
+        fetch('/api/upload-comment-image',{method:'POST',body:fd})
+        .then(function(r){return r.json();})
+        .then(function(res){
+            var ta=document.getElementById('ecMainTextarea');
+            if(res.url&&ta) ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+'[IMG]'+res.url+'[/IMG]';
+            removeEcImg('main');
+            mainForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+        }).catch(function(){});
+    },true);
+})();
+
+/* ── EC GS HOLD TO RECORD ── */
+(function(){
+    var gsRec=null,gsChunks=[],gsBlob=null;
+    var gsTimerInt=null,gsSec=0;
+    var gsPageId=null,gsParentId=null,gsStream=null,gsActive=false;
+
+    function showInd(){var i=document.getElementById('ecGsFloatIndicator');if(i){i.style.display='flex';requestAnimationFrame(function(){i.classList.add('ec-gs-float-show');});}}
+    function hideInd(){var i=document.getElementById('ecGsFloatIndicator');if(i){i.classList.remove('ec-gs-float-show');setTimeout(function(){i.style.display='none';},220);}}
+    function updTimer(){var el=document.getElementById('ecGsFloatTimer');if(!el) return;var m=Math.floor(gsSec/60),s=gsSec%60;el.textContent=m+':'+(s<10?'0':'')+s;}
+
+    window.ecGsHoldStart=function(e,pageId,parentId,btnId){
+        e.preventDefault(); if(gsActive) return;
+        gsActive=true; gsPageId=pageId; gsParentId=parentId;
+        gsChunks=[];gsBlob=null;gsSec=0;
+        var btn=document.getElementById(btnId); if(btn) btn.classList.add('recording');
+        showInd();
+        navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+            gsStream=stream;
+            gsRec=new MediaRecorder(stream);
+            gsRec.ondataavailable=function(ev){if(ev.data.size>0)gsChunks.push(ev.data);};
+            gsRec.onstop=function(){gsBlob=new Blob(gsChunks,{type:'audio/webm'});stream.getTracks().forEach(function(t){t.stop();});};
+            gsRec.start(100);
+            gsTimerInt=setInterval(function(){gsSec++;updTimer();if(gsSec>=120)ecGsHoldEnd(null,btnId);},1000);
+        }).catch(function(err){
+            gsActive=false;hideInd();
+            var b=document.getElementById(btnId);if(b) b.classList.remove('recording');
+            alert('Нет доступа к микрофону: '+err.message);
+        });
+    };
+    window.ecGsHoldEnd=function(e,btnId){
+        if(!gsActive) return;
+        gsActive=false;clearInterval(gsTimerInt);
+        var btn=document.getElementById(btnId);if(btn) btn.classList.remove('recording');
+        hideInd();
+        if(!gsRec||gsRec.state==='inactive') return;
+        gsRec.onstop=function(){
+            gsBlob=new Blob(gsChunks,{type:'audio/webm'});
+            if(gsStream) gsStream.getTracks().forEach(function(t){t.stop();});
+            if(gsSec<1) return;
+            var fd=new FormData();
+            fd.append('audio',gsBlob,'voice.webm');
+            fd.append('extra_id',gsPageId);
+            if(gsParentId) fd.append('parent_id',gsParentId);
+            fetch('/api/voice-comment/extra',{method:'POST',body:fd})
+            .then(function(r){return r.json();})
+            .then(function(data){if(data.ok)window.location.reload();else alert('Ошибка: '+(data.error||'неизвестно'));})
+            .catch(function(){alert('Ошибка соединения');});
+        };
+        gsRec.stop();
+    };
+    window.ecGsHoldCancel=function(btnId){
+        if(!gsActive) return;
+        gsActive=false;clearInterval(gsTimerInt);
+        if(gsRec&&gsRec.state!=='inactive') gsRec.stop();
+        if(gsStream) gsStream.getTracks().forEach(function(t){t.stop();});
+        var btn=document.getElementById(btnId);if(btn) btn.classList.remove('recording');
+        hideInd();
+    };
+})();
+
+/* ── RENDER [IMG] TAGS ── */
+(function(){
+    document.querySelectorAll('.ec-text').forEach(function(el){
+        el.innerHTML=el.innerHTML.replace(/\[IMG\](.*?)\[\/IMG\]/g,
+            '<img src="$1" style="max-width:100%;max-height:220px;border-radius:10px;margin-top:6px;display:block;border:1px solid rgba(255,255,255,0.08);" loading="lazy">');
+    });
+})();
+</script>
+{% endblock %}

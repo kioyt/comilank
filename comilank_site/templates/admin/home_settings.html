@@ -1,0 +1,860 @@
+{% extends "base.html" %}
+{% block title %}Настройки главной | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .hs-outer { min-height:100vh; background:#0a0a0b; padding:40px 16px 80px; box-sizing:border-box; }
+    .hs-wrap { max-width:900px; margin:0 auto; }
+
+    .hs-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:10px; }
+    .hs-title { font-size:1.5rem; font-weight:800; color:#e8650a; display:flex; align-items:center; gap:9px; margin:0; }
+    .hs-title i { opacity:0.7; font-size:1.2rem; }
+
+    .hs-section { background:#141416; border-radius:20px; border:1px solid rgba(255,255,255,0.06); padding:24px 26px; margin-bottom:22px; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+    .hs-section-title { font-size:0.9rem; font-weight:800; color:#e8650a; letter-spacing:1.4px; text-transform:uppercase; margin-bottom:18px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .hs-section-title i { opacity:0.65; font-size:0.85rem; }
+
+    .form-row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; }
+    .form-field { display:flex; flex-direction:column; gap:5px; flex:1; min-width:140px; }
+    .form-field label { font-size:0.73rem; color:#888; font-weight:600; letter-spacing:0.4px; text-transform:uppercase; }
+    .form-field input[type="text"], .form-field input[type="url"], .form-field input[type="number"] {
+        background:#0f0f12; border:1px solid rgba(255,255,255,0.08); border-radius:10px;
+        color:#e0e0e0; padding:9px 13px; font-size:0.85rem; font-family:inherit;
+        transition:border-color 0.2s; outline:none;
+    }
+    .form-field input:focus { border-color:rgba(232,101,10,0.5); }
+    .form-field .toggle-wrap { display:flex; align-items:center; gap:8px; padding-top:4px; }
+    .toggle-wrap input[type="checkbox"] { width:16px; height:16px; accent-color:#e8650a; cursor:pointer; }
+    .toggle-wrap span { font-size:0.82rem; color:#aaa; }
+
+    .btn-sm { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border-radius:10px; font-size:0.78rem; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:all 0.2s; text-decoration:none; }
+    .btn-primary-sm { background:rgba(232,101,10,0.15); color:#e8650a; border:1px solid rgba(232,101,10,0.35); }
+    .btn-primary-sm:hover { background:rgba(232,101,10,0.28); border-color:rgba(232,101,10,0.6); }
+    .btn-danger-sm { background:rgba(220,50,50,0.1); color:#e05050; border:1px solid rgba(220,50,50,0.3); }
+    .btn-danger-sm:hover { background:rgba(220,50,50,0.2); }
+    .btn-secondary-sm { background:rgba(255,255,255,0.03); color:#888; border:1px solid rgba(255,255,255,0.08); }
+    .btn-secondary-sm:hover { background:rgba(255,255,255,0.07); color:#bbb; }
+    .btn-green-sm { background:rgba(50,180,80,0.12); color:#40c060; border:1px solid rgba(50,180,80,0.3); }
+    .btn-green-sm:hover { background:rgba(50,180,80,0.22); }
+
+    /* Элементы списков (зрители, донатеры, моменты, игры) */
+    .list-item { display:flex; align-items:center; gap:10px; background:#0f0f12; border-radius:12px; padding:10px 14px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; }
+    .list-item-drag { cursor:grab; color:#444; font-size:0.9rem; flex-shrink:0; }
+    .list-item-pos { width:22px; height:22px; border-radius:50%; background:rgba(232,101,10,0.12); color:#e8650a; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .li-name { flex:1; font-size:0.85rem; color:#d0d0d0; font-weight:600; min-width:80px; }
+    .li-sub { font-size:0.75rem; color:#666; }
+    .li-amount { font-size:0.85rem; color:#e8650a; font-weight:700; }
+    .move-btns { display:flex; flex-direction:column; gap:2px; }
+    .move-btn { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); color:#666; width:22px; height:20px; border-radius:5px; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; transition:all 0.15s; font-family:inherit; }
+    .move-btn:hover { background:rgba(232,101,10,0.12); color:#e8650a; border-color:rgba(232,101,10,0.3); }
+
+    /* Платформы */
+    .platform-row { display:grid; grid-template-columns:140px 1fr 1fr auto; gap:10px; align-items:center; background:#0f0f12; border-radius:12px; padding:12px 14px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.05); }
+    @media(max-width:640px){ .platform-row { grid-template-columns:1fr 1fr; } }
+    .platform-label { display:flex; align-items:center; gap:7px; font-size:0.88rem; font-weight:700; color:#d0d0d0; }
+    .platform-label i { font-size:1rem; }
+    .platform-live-toggle { display:flex; align-items:center; gap:7px; font-size:0.78rem; color:#aaa; }
+    .platform-live-toggle input { width:16px; height:16px; accent-color:#ff6600; cursor:pointer; }
+
+    /* Превью момента/игры */
+    .thumb-preview { width:64px; height:40px; object-fit:cover; border-radius:7px; border:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+    .thumb-ph-sm { width:64px; height:40px; border-radius:7px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; color:#e8650a; opacity:0.3; font-size:1rem; flex-shrink:0; }
+
+    /* Голосование — текущие результаты */
+    .poll-bar-wrap { margin-bottom:14px; }
+    .poll-bar-label { display:flex; justify-content:space-between; font-size:0.78rem; color:#aaa; margin-bottom:4px; }
+    .poll-bar-label strong { color:#e8650a; }
+    .poll-bar-bg { background:#1a1a1a; border-radius:20px; height:8px; overflow:hidden; }
+    .poll-bar-fill { height:100%; background:linear-gradient(90deg,#ff6600,#ffaa33); border-radius:20px; transition:width 0.4s; }
+
+    .divider { border:none; border-top:1px solid rgba(255,255,255,0.05); margin:18px 0; }
+    .note { font-size:0.75rem; color:#555; font-style:italic; }
+    .form-field input[type="url"] {
+        background:#0f0f12 !important;
+        color:#e0e0e0 !important;
+    }
+    /* Фикс белого фона от браузерного автозаполнения */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 1000px #0f0f12 inset !important;
+        -webkit-text-fill-color: #e0e0e0 !important;
+        caret-color: #e0e0e0 !important;
+        transition: background-color 99999s ease-in-out 0s;
+    }
+</style>
+
+<div class="hs-outer">
+<div class="hs-wrap">
+
+    <div class="hs-header">
+        <h1 class="hs-title"><i class="fas fa-home"></i> Настройки главной страницы</h1>
+        <a href="{{ url_for('admin_panel') }}" class="btn-sm btn-secondary-sm"><i class="fas fa-arrow-left"></i> Назад</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}
+        <div style="background:{% if cat=='success' %}rgba(50,200,80,0.1){% else %}rgba(220,50,50,0.1){% endif %};border:1px solid {% if cat=='success' %}rgba(50,200,80,0.3){% else %}rgba(220,50,50,0.3){% endif %};color:{% if cat=='success' %}#50d060{% else %}#e05050{% endif %};padding:11px 16px;border-radius:12px;margin-bottom:14px;font-size:0.85rem;font-weight:600;">
+            <i class="fas fa-{% if cat=='success' %}check-circle{% else %}exclamation-triangle{% endif %}" style="margin-right:7px;"></i>{{ msg }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- ════════ 1. ПЛАТФОРМЫ СТРИМА ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-satellite-dish"></i> Платформы стрима</div>
+        <form method="POST" action="{{ url_for('admin_home_platforms') }}">
+            {% for p in stream_platforms %}
+            <div class="platform-row">
+                <div class="platform-label">
+                    <i class="{{ p.icon_class }}" style="color:{{ p.color }};"></i>
+                    <span>{{ p.name }}</span>
+                </div>
+                <div>
+                    <div style="font-size:0.68rem;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.4px;">URL стрима (если live)</div>
+                    <input type="url" name="stream_url_{{ p.key }}" value="{{ p.stream_url or '' }}" placeholder="https://..." style="background:#0f0f12;border:1px solid rgba(255,255,255,0.07);border-radius:8px;color:#d0d0d0;padding:6px 10px;font-size:0.8rem;width:100%;outline:none;">
+                </div>
+                <div>
+                    <div style="font-size:0.68rem;color:#666;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.4px;">URL канала (всегда)</div>
+                    <input type="url" name="channel_url_{{ p.key }}" value="{{ p.channel_url or '' }}" placeholder="https://..." style="background:#0f0f12;border:1px solid rgba(255,255,255,0.07);border-radius:8px;color:#d0d0d0;padding:6px 10px;font-size:0.8rem;width:100%;outline:none;">
+                </div>
+                {% if p.key != 'telegram' %}
+                <div class="platform-live-toggle">
+                    <input type="checkbox" name="is_live_{{ p.key }}" id="live_{{ p.key }}" {{ 'checked' if p.is_live else '' }}>
+                    <label for="live_{{ p.key }}">Сейчас live</label>
+                </div>
+                {% else %}
+                <div></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Сохранить платформы</button>
+                <button type="button" class="btn-sm" onclick="setAllLive(true)"
+                    style="background:rgba(50,200,80,0.12);color:#40c060;border:1px solid rgba(50,200,80,0.3);display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(50,200,80,0.22)'" onmouseout="this.style.background='rgba(50,200,80,0.12)'">
+                    <i class="fas fa-broadcast-tower"></i> Все LIVE (YT + Twitch + TikTok)
+                </button>
+                <button type="button" class="btn-sm" onclick="setAllLive(false)"
+                    style="background:rgba(255,255,255,0.04);color:#888;border:1px solid rgba(255,255,255,0.1);display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                    <i class="fas fa-stop-circle"></i> Снять все live
+                </button>
+            </div>
+        </form>
+        <script>
+        function setAllLive(val) {
+            ['youtube','twitch','tiktok'].forEach(function(k){
+                var cb = document.getElementById('live_'+k);
+                if(cb) cb.checked = val;
+            });
+        }
+        </script>
+    </div>
+
+    <!-- ════════ 2. ТОП АКТИВНЫХ ЗРИТЕЛЕЙ ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-users"></i> Топ активных зрителей</div>
+        <p class="note" style="margin-bottom:14px;">Вручную до 3 позиций. Уровень 4 — до 4 позиций. Кнопки ▲▼ меняют порядок.</p>
+
+        {% for v in top_viewers %}
+        <div class="list-item" id="viewer_{{ v.id }}">
+            <div class="list-item-pos">{{ loop.index }}</div>
+            <div class="li-name">{{ v.name }}</div>
+            {% if v.show_messages %}<div class="li-sub">{{ v.messages }} сообщ.</div>{% endif %}
+            <div class="move-btns">
+                <form method="POST" action="{{ url_for('admin_home_viewer_move', vid=v.id, direction='up') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▲</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin_home_viewer_move', vid=v.id, direction='down') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▼</button>
+                </form>
+            </div>
+            <form method="POST" action="{{ url_for('admin_home_viewer_delete', vid=v.id) }}" style="margin:0;" data-confirm="Удалить?">
+                <button type="submit" class="btn-sm btn-danger-sm"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <hr class="divider">
+        <form method="POST" action="{{ url_for('admin_home_viewer_add') }}">
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Никнейм</label>
+                    <input type="text" name="name" placeholder="CoolViewer" required>
+                </div>
+                <div class="form-field" style="max-width:120px;">
+                    <label>Сообщений</label>
+                    <input type="number" name="messages" value="0" min="0">
+                </div>
+                <div class="form-field" style="max-width:160px;">
+                    <label style="display:flex;align-items:center;gap:0;">&nbsp;</label>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" name="show_messages" id="show_msg_new" checked>
+                        <span>Показывать кол-во</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm" style="flex-shrink:0;"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ════════ 3. ТОП ДОНАТЕРОВ ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-coins"></i> Топ донатеров</div>
+
+        {% for d in top_donators %}
+        <div class="list-item">
+            <div class="list-item-pos">{{ loop.index }}</div>
+            <div class="li-name">{{ d.name }}</div>
+            <div class="li-amount">{{ d.amount }} ₽</div>
+            <div class="move-btns">
+                <form method="POST" action="{{ url_for('admin_home_donator_move', did=d.id, direction='up') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▲</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin_home_donator_move', did=d.id, direction='down') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▼</button>
+                </form>
+            </div>
+            <form method="POST" action="{{ url_for('admin_home_donator_delete', did=d.id) }}" style="margin:0;" data-confirm="Удалить?">
+                <button type="submit" class="btn-sm btn-danger-sm"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        {% endfor %}
+
+        <hr class="divider">
+        <form method="POST" action="{{ url_for('admin_home_donator_add') }}">
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Никнейм</label>
+                    <input type="text" name="name" placeholder="BigDonator" required>
+                </div>
+                <div class="form-field" style="max-width:130px;">
+                    <label>Сумма (₽)</label>
+                    <input type="number" name="amount" value="0" min="0" required>
+                </div>
+                <button type="submit" class="btn-sm btn-primary-sm" style="flex-shrink:0;"><i class="fas fa-plus"></i> Добавить</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ════════ 4. ПОСЛЕДНИЙ СТРИМ ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-video"></i> Последний стрим</div>
+        <form method="POST" action="{{ url_for('admin_home_last_stream') }}" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Заголовок стрима</label>
+                    <input type="text" name="title" value="{{ last_stream.title if last_stream else '' }}" placeholder="Мафия. Полное прохождение [Часть 1]">
+                </div>
+                <div class="form-field" style="max-width:160px;">
+                    <label>Просмотров</label>
+                    <input type="text" name="views" value="{{ last_stream.views if last_stream else '' }}" placeholder="105">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Основная ссылка (кликабельная карточка)</label>
+                    <input type="url" name="url" value="{{ last_stream.url if last_stream else '' }}" placeholder="https://youtube.com/shorts/...">
+                </div>
+            </div>
+            <!-- Превью: файл или URL -->
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.73rem;color:#888;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:6px;">Превью</div>
+                <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:180px;">
+                        <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">Загрузить файл</div>
+                        <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.3);border-radius:10px;padding:8px 12px;cursor:pointer;overflow:hidden;">
+                            <input type="file" name="thumbnail_file" accept="image/*"
+                                style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                                onchange="lsThumbPreview(this)">
+                            <span style="font-size:0.78rem;color:#666;"><i class="fas fa-upload" style="color:#e8650a;margin-right:5px;"></i>Выбрать картинку</span>
+                        </div>
+                        <img id="lsThumbImg" src="" style="display:none;max-height:52px;border-radius:6px;margin-top:6px;border:1px solid rgba(232,101,10,0.2);">
+                    </div>
+                    <div style="flex:1;min-width:180px;">
+                        <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">или URL картинки</div>
+                        <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-link" style="color:#e8650a;opacity:0.5;font-size:0.78rem;flex-shrink:0;"></i>
+                            <input type="url" name="thumbnail_url" value="{{ last_stream.thumbnail_url if last_stream else '' }}" placeholder="https://..."
+                                style="background:transparent;border:none;outline:none;color:#d0d0d0;font-size:0.78rem;width:100%;font-family:inherit;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label><i class="fab fa-youtube" style="color:#ff0000;"></i> YouTube URL (иконка в углу)</label>
+                    <input type="url" name="yt_url" value="{{ last_stream.yt_url if last_stream else '' }}" placeholder="https://youtube.com/...">
+                </div>
+                <div class="form-field">
+                    <label><i class="fab fa-twitch" style="color:#9146ff;"></i> Twitch URL (иконка в углу)</label>
+                    <input type="url" name="twitch_url" value="{{ last_stream.twitch_url if last_stream else '' }}" placeholder="https://twitch.tv/...">
+                </div>
+                <div class="form-field">
+                    <label><i class="fab fa-tiktok"></i> TikTok URL (иконка в углу)</label>
+                    <input type="url" name="tiktok_url" value="{{ last_stream.tiktok_url if last_stream else '' }}" placeholder="https://tiktok.com/...">
+                </div>
+            </div>
+            <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Сохранить стрим</button>
+        </form>
+        <script>
+        function lsThumbPreview(input){
+            var img=document.getElementById('lsThumbImg');
+            if(input.files&&input.files[0]){
+                var r=new FileReader();
+                r.onload=function(e){img.src=e.target.result;img.style.display='block';};
+                r.readAsDataURL(input.files[0]);
+            }
+        }
+        </script>
+    </div>
+
+    <!-- ════════ 5. ЛУЧШИЕ МОМЕНТЫ СТРИМА ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-film"></i> Лучшие моменты стрима</div>
+        <p class="note" style="margin-bottom:14px;">Все моменты показываются на главной в виде мини-карточек. Добавляй по одному — укажи название, ссылку на видео и URL превью.</p>
+
+        {% for m in stream_moments %}
+        <div class="list-item" id="moment_item_{{ m.id }}">
+            <div class="list-item-pos">{{ loop.index }}</div>
+            {% if m.thumbnail_url %}
+            <img src="{{ m.thumbnail_url }}" class="thumb-preview" alt="">
+            {% else %}
+            <div class="thumb-ph-sm"><i class="fas fa-play"></i></div>
+            {% endif %}
+            <div style="flex:1;min-width:0;">
+                <div class="li-name">{{ m.title }}</div>
+                {% if m.game %}<div class="li-sub">{{ m.game }}</div>{% endif %}
+                <div class="li-sub" style="color:#444;">{{ m.url | truncate(50) }}</div>
+            </div>
+            {% if m.views %}<div class="li-sub" style="flex-shrink:0;">{{ m.views }}</div>{% endif %}
+            <div class="move-btns">
+                <form method="POST" action="{{ url_for('admin_home_moment_move', mid=m.id, direction='up') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▲</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin_home_moment_move', mid=m.id, direction='down') }}" style="margin:0;">
+                    <button type="submit" class="move-btn">▼</button>
+                </form>
+            </div>
+            <button type="button" class="btn-sm btn-secondary-sm" onclick="toggleMomentEdit({{ m.id }})">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
+            <form method="POST" action="{{ url_for('admin_home_moment_delete', mid=m.id) }}" style="margin:0;" data-confirm="Удалить?">
+                <button type="submit" class="btn-sm btn-danger-sm"><i class="fas fa-trash"></i></button>
+            </form>
+        </div>
+        <!-- Форма редактирования момента (скрыта по умолчанию) -->
+        <div id="moment_edit_{{ m.id }}" style="display:none;background:#0d0d10;border:1px solid rgba(232,101,10,0.2);border-radius:12px;padding:14px 16px;margin-bottom:10px;margin-top:-4px;">
+            <form method="POST" action="{{ url_for('admin_home_moment_edit', mid=m.id) }}" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Название</label>
+                        <input type="text" name="title" value="{{ m.title }}" required>
+                    </div>
+                    <div class="form-field" style="max-width:120px;">
+                        <label>Игра</label>
+                        <input type="text" name="game" value="{{ m.game or '' }}">
+                    </div>
+                    <div class="form-field" style="max-width:80px;">
+                        <label>Просмотров</label>
+                        <input type="text" name="views" value="{{ m.views or '' }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Ссылка на видео</label>
+                        <input type="url" name="url" value="{{ m.url }}" required>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:0.73rem;color:#888;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:6px;">Превью</div>
+                    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:160px;">
+                            <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">Загрузить новый файл</div>
+                            <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.3);border-radius:10px;padding:8px 12px;cursor:pointer;overflow:hidden;">
+                                <input type="file" name="thumbnail_file" accept="image/*"
+                                    style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                                    onchange="meThumbPreview(this, {{ m.id }})">
+                                <span style="font-size:0.78rem;color:#666;"><i class="fas fa-upload" style="color:#e8650a;margin-right:5px;"></i>Выбрать картинку</span>
+                            </div>
+                            <img id="meThumbImg_{{ m.id }}" src="" style="display:none;max-height:48px;border-radius:6px;margin-top:6px;border:1px solid rgba(232,101,10,0.2);">
+                        </div>
+                        <div style="flex:1;min-width:160px;">
+                            <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">или URL картинки</div>
+                            <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                                <i class="fas fa-link" style="color:#e8650a;opacity:0.5;font-size:0.78rem;flex-shrink:0;"></i>
+                                <input type="url" name="thumbnail_url" value="{{ m.thumbnail_url or '' }}" placeholder="https://..."
+                                    style="background:transparent;border:none;outline:none;color:#d0d0d0;font-size:0.78rem;width:100%;font-family:inherit;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Сохранить</button>
+                    <button type="button" class="btn-sm btn-secondary-sm" onclick="toggleMomentEdit({{ m.id }})"><i class="fas fa-times"></i> Отмена</button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+
+        <hr class="divider">
+        <!-- ДОБАВИТЬ МОМЕНТ -->
+        <div style="font-size:0.82rem;font-weight:700;color:#8a909e;margin-bottom:10px;">Добавить момент</div>
+        <form method="POST" action="{{ url_for('admin_home_moment_add') }}" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Название нарезки</label>
+                    <input type="text" name="title" placeholder="Эпик момент в GTA V" required>
+                </div>
+                <div class="form-field" style="max-width:120px;">
+                    <label>Игра</label>
+                    <input type="text" name="game" placeholder="GTA V">
+                </div>
+                <div class="form-field" style="max-width:80px;">
+                    <label>Просмотров</label>
+                    <input type="text" name="views" placeholder="3K">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Ссылка на видео (YouTube / TikTok / Twitch)</label>
+                    <input type="url" name="url" placeholder="https://..." required>
+                </div>
+            </div>
+            <!-- Превью: файл или URL -->
+            <div style="margin-bottom:12px;">
+                <div style="font-size:0.73rem;color:#888;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:6px;">Превью</div>
+                <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:160px;">
+                        <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">Загрузить файл</div>
+                        <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.3);border-radius:10px;padding:8px 12px;cursor:pointer;overflow:hidden;">
+                            <input type="file" name="thumbnail_file" accept="image/*"
+                                style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                                onchange="mThumbPreview(this)">
+                            <span style="font-size:0.78rem;color:#666;"><i class="fas fa-upload" style="color:#e8650a;margin-right:5px;"></i>Выбрать картинку</span>
+                        </div>
+                        <img id="mThumbImg" src="" style="display:none;max-height:48px;border-radius:6px;margin-top:6px;border:1px solid rgba(232,101,10,0.2);">
+                    </div>
+                    <div style="flex:1;min-width:160px;">
+                        <div style="font-size:0.68rem;color:#555;margin-bottom:4px;">или URL картинки</div>
+                        <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-link" style="color:#e8650a;opacity:0.5;font-size:0.78rem;flex-shrink:0;"></i>
+                            <input type="url" name="thumbnail_url" placeholder="https://..."
+                                style="background:transparent;border:none;outline:none;color:#d0d0d0;font-size:0.78rem;width:100%;font-family:inherit;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-plus"></i> Добавить момент</button>
+        </form>
+        <script>
+        function mThumbPreview(input){
+            var img=document.getElementById('mThumbImg');
+            if(input.files&&input.files[0]){
+                var r=new FileReader();
+                r.onload=function(e){img.src=e.target.result;img.style.display='block';};
+                r.readAsDataURL(input.files[0]);
+            }
+        }
+        </script>
+    </div>
+
+    <!-- ════════ 6. СЛЕДУЮЩИЙ СТРИМ ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-satellite-dish"></i> Следующий стрим (таймер)</div>
+        <p class="note" style="margin-bottom:14px;">Виджет с обратным отсчётом появляется на главной только если включён и указана дата/время.</p>
+        <form method="POST" action="{{ url_for('admin_home_next_stream') }}" enctype="multipart/form-data">
+            <!-- Дата и время — полная ширина сверху -->
+            <div class="form-row" style="margin-bottom:0;">
+                <div class="form-field" style="flex:1;">
+                    <label>Дата и время стрима</label>
+                    <input type="datetime-local" name="stream_dt"
+                        value="{{ next_stream_widget.stream_dt if next_stream_widget and next_stream_widget.stream_dt else '' }}"
+                        style="width:100%;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#e0e0e0;padding:9px 13px;font-size:0.85rem;font-family:inherit;outline:none;color-scheme:dark;box-sizing:border-box;">
+                </div>
+            </div>
+            <!-- Показывать виджет — под датой, аккуратный чекбокс -->
+            <div style="display:flex;align-items:center;gap:10px;margin:10px 0 14px;padding:10px 14px;background:#0f0f12;border:1px solid rgba(255,255,255,0.06);border-radius:10px;cursor:pointer;" onclick="document.getElementById('nsw_enabled').click()">
+                <input type="checkbox" name="enabled" id="nsw_enabled" value="1"
+                    {{ 'checked' if next_stream_widget and next_stream_widget.enabled else '' }}
+                    style="width:18px;height:18px;min-width:18px;accent-color:#e8650a;cursor:pointer;margin:0;"
+                    onclick="event.stopPropagation()">
+                <label for="nsw_enabled" style="font-size:0.85rem;font-weight:600;color:#ccc;cursor:pointer;line-height:1;margin:0;">Показывать виджет на главной</label>
+            </div>
+            <div class="form-row" style="margin-bottom:12px;">
+                <div class="form-field">
+                    <label>Заголовок</label>
+                    <input type="text" name="title" placeholder="Следующий стрим"
+                        value="{{ next_stream_widget.title if next_stream_widget and next_stream_widget.title else '' }}">
+                </div>
+                <div class="form-field">
+                    <label>Описание (необязательно)</label>
+                    <input type="text" name="description" placeholder="GTA V, начало в 19:00"
+                        value="{{ next_stream_widget.description if next_stream_widget and next_stream_widget.description else '' }}">
+                </div>
+            </div>
+            <div class="form-row" style="margin-bottom:16px;align-items:flex-start;">
+                <div class="form-field">
+                    <label>Превью — URL картинки <span style="color:#555;font-weight:400;">(необязательно)</span></label>
+                    <input type="text" name="preview_url" id="nswUrlInput" placeholder="https://..."
+                        value="{{ next_stream_widget.preview_url if next_stream_widget and next_stream_widget.preview_url else '' }}"
+                        oninput="nswUrlChanged(this.value)">
+                </div>
+                <div class="form-field">
+                    <label>Или загрузить файл (PNG/JPG/WEBP)</label>
+                    <label style="display:flex;align-items:center;gap:9px;padding:9px 13px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:pointer;transition:border-color .2s;"
+                           onmouseover="this.style.borderColor='rgba(232,101,10,0.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <i class="fas fa-upload" style="color:#e8650a;font-size:0.85rem;flex-shrink:0;"></i>
+                        <span id="nswFileLabel" style="color:#6a7080;font-size:0.82rem;">Выбрать файл...</span>
+                        <input type="file" name="preview_file" id="nswFile" accept="image/*" style="display:none;" onchange="nswFileChosen(this)">
+                    </label>
+                </div>
+            </div>
+            <div id="nswThumbWrap" style="margin-bottom:14px;display:{% if next_stream_widget and next_stream_widget.preview_url %}block{% else %}none{% endif %};">
+                <img id="nswThumb" src="{{ next_stream_widget.preview_url if next_stream_widget and next_stream_widget.preview_url else '' }}"
+                     style="max-height:100px;max-width:100%;border-radius:8px;border:1px solid rgba(232,101,10,0.2);object-fit:cover;"
+                     onerror="document.getElementById('nswThumbWrap').style.display='none'">
+                <button type="button" onclick="nswClearPreview()" style="margin-left:8px;background:none;border:1px solid rgba(255,255,255,0.1);color:#555;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:0.75rem;">✕ убрать</button>
+            </div>
+            <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Сохранить</button>
+        </form>
+        <script>
+        function nswUrlChanged(v){
+            var w=document.getElementById('nswThumbWrap'),i=document.getElementById('nswThumb');
+            if(v&&v.startsWith('http')){i.src=v;w.style.display='block';document.getElementById('nswFile').value='';document.getElementById('nswFileLabel').textContent='Выбрать файл...';}
+            else if(!document.getElementById('nswFile').value){w.style.display='none';}
+        }
+        function nswFileChosen(inp){
+            if(!inp.files||!inp.files[0])return;
+            document.getElementById('nswFileLabel').textContent=inp.files[0].name;
+            document.getElementById('nswUrlInput').value='';
+            var r=new FileReader();
+            r.onload=function(e){
+                document.getElementById('nswThumb').src=e.target.result;
+                document.getElementById('nswThumbWrap').style.display='block';
+            };
+            r.readAsDataURL(inp.files[0]);
+        }
+        function nswClearPreview(){
+            document.getElementById('nswThumbWrap').style.display='none';
+            document.getElementById('nswUrlInput').value='';
+            document.getElementById('nswFile').value='';
+            document.getElementById('nswFileLabel').textContent='Выбрать файл...';
+        }
+        </script>
+    </div>
+
+    <!-- ════════ 7. ГОЛОСОВАНИЕ "ВО ЧТО ИГРАЕМ?" ════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-poll"></i> Голосование «Во что играем?»</div>
+
+        {% if next_poll %}
+        <!-- Текущий статус опроса -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:0.85rem;">
+                <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;
+                    {% if next_poll.active %}background:#40c060;box-shadow:0 0 8px rgba(64,192,96,0.7);
+                    {% else %}background:#555;{% endif %}"></span>
+                <span style="color:{% if next_poll.active %}#40c060{% else %}#888{% endif %};font-weight:700;">
+                    {% if next_poll.active %}Голосование активно{% else %}Голосование завершено{% endif %}
+                </span>
+            </div>
+            {% if current_user.role >= 4 %}
+                {% if next_poll.active %}
+                <form method="POST" action="{{ url_for('admin_home_poll_end') }}" style="margin:0;" data-confirm="Завершить голосование?">
+                    <button type="submit" class="btn-sm btn-danger-sm"><i class="fas fa-flag-checkered"></i> Завершить опрос</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('admin_home_poll_reset') }}" style="margin:0;" data-confirm="Сбросить все голоса и начать заново?">
+                    <button type="submit" class="btn-sm btn-secondary-sm"><i class="fas fa-redo"></i> Сбросить и начать новый</button>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Результаты -->
+        {% if next_poll.games %}
+            {% set total_v = namespace(n=0) %}
+            {% for g in next_poll.games %}{% set total_v.n = total_v.n + g.votes %}{% endfor %}
+            {% for g in next_poll.games | sort(attribute='votes', reverse=True) %}
+            <div class="poll-bar-wrap">
+                <div class="poll-bar-label">
+                    <span>{{ g.name }}</span>
+                    <strong>{{ g.votes }} голос. {% if total_v.n > 0 %}({{ ((g.votes / total_v.n)*100) | round(1) }}%){% endif %}</strong>
+                </div>
+                <div class="poll-bar-bg">
+                    <div class="poll-bar-fill" style="width:{{ ((g.votes / total_v.n)*100) if total_v.n > 0 else 0 }}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Список игр -->
+        {% for g in next_poll.games %}
+        <div class="list-item">
+            {% if g.image_url %}<img src="{{ g.image_url }}" class="thumb-preview" alt="">
+            {% else %}<div class="thumb-ph-sm"><i class="fas fa-gamepad"></i></div>{% endif %}
+            <div class="li-name">{{ g.name }}</div>
+            <div class="li-sub">{{ g.votes }} голос.</div>
+            {% if current_user.role >= 4 %}
+            <form method="POST" action="{{ url_for('admin_home_poll_game_delete', gid=g.id) }}" style="margin:0;" data-confirm="Удалить игру из опроса?">
+                <button type="submit" class="btn-sm btn-danger-sm"><i class="fas fa-trash"></i></button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <p style="color:#555;font-size:0.85rem;margin-bottom:14px;">Опрос ещё не создан.</p>
+        {% endif %}
+
+        <!-- Добавить игру в текущий/новый опрос -->
+        <hr class="divider">
+        <div style="font-size:0.8rem;color:#777;margin-bottom:10px;">Добавить игру в опрос (создаёт новый если нет активного):</div>
+        <form method="POST" action="{{ url_for('admin_home_poll_game_add') }}" enctype="multipart/form-data">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:start;">
+                <div class="form-field" style="margin:0;">
+                    <label>Название игры</label>
+                    <input type="text" name="game_name" placeholder="The Witcher 3" required style="width:100%;box-sizing:border-box;">
+                </div>
+                <div class="form-field" style="margin:0;">
+                    <label>URL обложки (картинка)</label>
+                    <input type="url" name="game_image" id="pollImgUrl" placeholder="https://..." oninput="pollUrlChanged(this.value)" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <span style="font-size:0.73rem;color:#888;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;">Или загрузить файл</span>
+                    <label style="display:flex;align-items:center;gap:6px;padding:9px 13px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:pointer;transition:border-color .2s;box-sizing:border-box;"
+                           onmouseover="this.style.borderColor='rgba(232,101,10,0.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <i class="fas fa-upload" style="color:#e8650a;font-size:0.8rem;flex-shrink:0;"></i>
+                        <span id="pollFileLabel" style="color:#6a7080;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Выбрать...</span>
+                        <input type="file" name="game_image_file" id="pollFile" accept="image/*" style="display:none;" onchange="pollFileChosen(this)">
+                    </label>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <span style="font-size:0.73rem;color:transparent;user-select:none;">_</span>
+                    <button type="submit" class="btn-sm btn-primary-sm" style="white-space:nowrap;"><i class="fas fa-plus"></i> Добавить игру</button>
+                </div>
+            </div>
+            <!-- мини-превью выбранного изображения -->
+            <div id="pollThumbWrap" style="margin-top:8px;display:none;">
+                <img id="pollThumb" src="" style="max-height:60px;border-radius:6px;border:1px solid rgba(232,101,10,0.2);object-fit:cover;" onerror="document.getElementById('pollThumbWrap').style.display='none'">
+                <button type="button" onclick="pollClearImg()" style="margin-left:8px;background:none;border:1px solid rgba(255,255,255,0.1);color:#555;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:0.72rem;">✕</button>
+            </div>
+        </form>
+        <script>
+        function pollUrlChanged(v){var w=document.getElementById('pollThumbWrap'),i=document.getElementById('pollThumb');if(v&&v.startsWith('http')){i.src=v;w.style.display='block';document.getElementById('pollFile').value='';document.getElementById('pollFileLabel').textContent='Выбрать...';}else if(!document.getElementById('pollFile').value){w.style.display='none';}}
+        function pollFileChosen(inp){if(!inp.files||!inp.files[0])return;document.getElementById('pollFileLabel').textContent=inp.files[0].name;document.getElementById('pollImgUrl').value='';var r=new FileReader();r.onload=function(e){var i=document.getElementById('pollThumb');document.getElementById('pollThumbWrap').style.display='block';i.src=e.target.result;};r.readAsDataURL(inp.files[0]);}
+        function pollClearImg(){document.getElementById('pollThumbWrap').style.display='none';document.getElementById('pollImgUrl').value='';document.getElementById('pollFile').value='';document.getElementById('pollFileLabel').textContent='Выбрать...';}
+        </script>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- СЕКЦИЯ: НАСТРОЙКА МИНИ-ИГРЫ (ШЕФ-БОЕЦ)           -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div class="hs-section">
+        <div class="hs-section-title"><i class="fas fa-gamepad"></i> ВСТРОЕННАЯ ИГРА — НАСТРОЙКИ</div>
+        <div style="font-size:0.8rem;color:#666;margin-bottom:18px;">
+            Название и аватарка отображаются во вкладке «Игры» на главной. Игра запускается из <code style="background:#0f0f12;padding:2px 6px;border-radius:5px;color:#e8650a;font-size:0.78rem;">static/game/index.html</code>
+        </div>
+
+        <!-- Превью -->
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:22px;padding:16px 18px;background:#0f0f12;border-radius:14px;border:1px solid rgba(255,255,255,0.05);">
+            <div id="mgAvatarPreview" style="width:72px;height:72px;border-radius:50%;background:rgba(255,102,0,0.12);border:2px solid rgba(255,102,0,0.3);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden;flex-shrink:0;">🎮</div>
+            <div>
+                <div id="mgNamePreview" style="font-size:1.15rem;font-weight:800;color:#ff6600;line-height:1.2;">ШЕФ-БОЕЦ</div>
+                <div style="font-size:0.72rem;color:#444;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Предпросмотр карточки игры</div>
+            </div>
+        </div>
+
+        <form id="mgConfigForm" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-field" style="max-width:380px;">
+                    <label>Название игры</label>
+                    <input type="text" id="mgName" name="name" value="ШЕФ-БОЕЦ" placeholder="ШЕФ-БОЕЦ" maxlength="100">
+                </div>
+            </div>
+            <div class="form-row" style="align-items:flex-start;">
+                <div class="form-field">
+                    <label>Аватарка — URL картинки</label>
+                    <input type="url" id="mgAvatarUrl" name="avatar_url" placeholder="https://example.com/image.png">
+                </div>
+                <div class="form-field">
+                    <label>Или загрузить файл (png/jpg/gif/webp)</label>
+                    <div style="position:relative;background:#0f0f12;border:1px dashed rgba(232,101,10,0.3);border-radius:10px;padding:8px 12px;cursor:pointer;overflow:hidden;">
+                        <input type="file" name="avatar_file" id="mgAvatarFile" accept="image/png,image/jpeg,image/gif,image/webp"
+                            style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+                            onchange="mgFilePreview(this)">
+                        <span id="mgFileLabel" style="font-size:0.78rem;color:#666;pointer-events:none;"><i class="fas fa-upload" style="color:#e8650a;margin-right:5px;"></i>Выбрать картинку</span>
+                    </div>
+                    <img id="mgFileThumb" src="" style="display:none;max-height:52px;border-radius:6px;margin-top:6px;border:1px solid rgba(232,101,10,0.2);">
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+                <button type="submit" class="btn-sm btn-primary-sm"><i class="fas fa-save"></i> Сохранить</button>
+                <span id="mgSaveStatus" style="font-size:0.8rem;color:#666;"></span>
+            </div>
+        </form>
+    </div>
+
+</div>
+</div>
+<script>
+function toggleMomentEdit(id) {
+    var el = document.getElementById('moment_edit_' + id);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function meThumbPreview(input, id) {
+    var img = document.getElementById('meThumbImg_' + id);
+    if (!img) return;
+    if (input.files && input.files[0]) {
+        var r = new FileReader();
+        r.onload = function(e) { img.src = e.target.result; img.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
+    }
+}
+
+// ═══ МИНИ-ИГРА: загрузка текущих настроек и сохранение ═══
+(function(){
+    fetch('/api/mini-game-config')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.name){
+            document.getElementById('mgName').value = d.name;
+            document.getElementById('mgNamePreview').textContent = d.name;
+        }
+        if(d.avatar_url){
+            document.getElementById('mgAvatarUrl').value = d.avatar_url;
+            document.getElementById('mgAvatarPreview').innerHTML =
+                '<img src="'+d.avatar_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">';
+        }
+    }).catch(function(){});
+
+    // Превью названия
+    document.getElementById('mgName').addEventListener('input', function(){
+        document.getElementById('mgNamePreview').textContent = this.value || 'ШЕФ-БОЕЦ';
+    });
+
+    // Превью аватарки из файла
+    function mgFilePreview(input){
+        var label = document.getElementById('mgFileLabel');
+        var thumb = document.getElementById('mgFileThumb');
+        if(input.files && input.files[0]){
+            var fname = input.files[0].name;
+            if(label) label.innerHTML = '<i class="fas fa-check" style="color:#e8650a;margin-right:5px;"></i>' + fname;
+            var rdr = new FileReader();
+            rdr.onload = function(e){
+                if(thumb){ thumb.src = e.target.result; thumb.style.display = 'block'; }
+                document.getElementById('mgAvatarPreview').innerHTML =
+                    '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">';
+            };
+            rdr.readAsDataURL(input.files[0]);
+        }
+    }
+    document.getElementById('mgAvatarFile').addEventListener('change', function(){ mgFilePreview(this); });
+
+    // Превью аватарки из URL
+    document.getElementById('mgAvatarUrl').addEventListener('input', function(){
+        var url = this.value.trim();
+        if(url){
+            document.getElementById('mgAvatarPreview').innerHTML =
+                '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="" onerror="this.parentNode.innerHTML=\'🎮\'">';
+        } else {
+            document.getElementById('mgAvatarPreview').innerHTML = '🎮';
+        }
+    });
+
+    // Сохранение
+    document.getElementById('mgConfigForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        var fd = new FormData(this);
+        var st = document.getElementById('mgSaveStatus');
+        st.style.color = '#888';
+        st.textContent = 'Сохраняю...';
+        fetch('/api/mini-game-config/update', {method:'POST', body:fd})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if(d.ok){
+                st.style.color = '#40c060';
+                st.textContent = '✓ Сохранено!';
+                setTimeout(function(){ st.textContent = ''; }, 3000);
+            } else {
+                st.style.color = '#e05050';
+                st.textContent = 'Ошибка: ' + (d.error || '?');
+            }
+        }).catch(function(){
+            st.style.color = '#e05050';
+            st.textContent = 'Ошибка сети';
+        });
+    });
+})();
+// ── AJAX без перезагрузки страницы ──
+(function(){
+  document.addEventListener('submit', function(e){
+    var form = e.target;
+    var btn = form.querySelector('button[type="submit"]');
+    if(!btn) return;
+    var action = form.action || '';
+    var isAjax = action.indexOf('/delete') !== -1 ||
+                 action.indexOf('/move') !== -1 ||
+                 action.indexOf('/poll/game/add') !== -1;
+    if(!isAjax) return;
+    e.preventDefault();
+
+    var msg = form.getAttribute('data-confirm') || null;
+    if(msg && !confirm(msg)) return;
+
+    var origText = btn.textContent;
+    btn.disabled = true;
+
+    fetch(action, {
+      method: 'POST',
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+      body: new FormData(form)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ btn.disabled = false; btn.textContent = origText; return; }
+
+      if(action.indexOf('/delete') !== -1){
+        var row = form.closest('.list-item') || form.closest('tr') || form.closest('[data-row]');
+        if(row) row.remove();
+        else btn.closest('div')?.remove();
+      } else {
+        // move или add — перезагружаем, но фиксируем скролл
+        sessionStorage.setItem('_hs_scroll', String(Math.round(window.scrollY)));
+        history.scrollRestoration = 'manual';
+        window.location.reload();
+      }
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.textContent = origText;
+    });
+  });
+
+  // Восстанавливаем скролл — synchronously before paint
+  var _sv = sessionStorage.getItem('_hs_scroll');
+  if(_sv){
+    sessionStorage.removeItem('_hs_scroll');
+    history.scrollRestoration = 'manual';
+    var _svn = parseInt(_sv);
+    // Устанавливаем немедленно
+    document.documentElement.scrollTop = _svn;
+    document.body.scrollTop = _svn;
+    // И после рендера
+    document.addEventListener('DOMContentLoaded', function(){
+      document.documentElement.scrollTop = _svn;
+      document.body.scrollTop = _svn;
+    });
+    window.addEventListener('load', function(){
+      window.scrollTo(0, _svn);
+    });
+  }
+})();
+</script>
+{% endblock %}

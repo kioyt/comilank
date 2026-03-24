@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+{% block title %}Панель управления | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .admin-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; justify-content:center; align-items:flex-start;
+        padding:44px 20px 72px; box-sizing:border-box;
+    }
+    .admin-card {
+        width:100%; max-width:860px;
+        background:#141416; border-radius:26px;
+        border:1px solid rgba(255,255,255,0.055);
+        padding:30px 32px 36px; box-sizing:border-box;
+        position:relative;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.04), 0 40px 80px rgba(0,0,0,0.55);
+    }
+    .admin-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse, rgba(232,101,10,0.28) 0%, transparent 70%);
+        filter:blur(14px); pointer-events:none; border-radius:50%;
+    }
+
+    .admin-header {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:28px; flex-wrap:wrap; gap:12px;
+    }
+    .admin-title {
+        font-size:1.6rem; font-weight:700; color:#e8650a;
+        letter-spacing:-0.3px; margin:0;
+        display:flex; align-items:center; gap:9px;
+    }
+    .admin-title i { opacity:0.7; font-size:1.25rem; }
+
+    .btn {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:7px 16px; border-radius:20px; font-size:0.83rem;
+        font-weight:600; text-decoration:none; transition:all 0.2s;
+        cursor:pointer; border:none; position:relative; overflow:hidden;
+        font-family:inherit;
+    }
+    .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.22s; pointer-events:none; }
+    .btn-secondary { background:rgba(255,255,255,0.03); color:#4e5460; border:1px solid rgba(255,255,255,0.07); }
+    .btn-secondary::before { background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); }
+    .btn-secondary:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
+    .btn-secondary:hover::before { opacity:1; }
+
+    .dash-grid {
+        display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+        gap:16px; margin-bottom:24px;
+    }
+    .dash-tile {
+        background:#0f0f12; border-radius:18px;
+        border:1px solid rgba(232,101,10,0.18);
+        padding:32px 20px; text-align:center;
+        text-decoration:none; color:#c9cdd6;
+        transition:all 0.22s; position:relative; overflow:hidden;
+    }
+    .dash-tile::before {
+        content:''; position:absolute; inset:0; border-radius:18px;
+        background:radial-gradient(circle at 50% 0%, rgba(232,101,10,0.12) 0%, transparent 65%);
+        opacity:0; transition:opacity 0.25s; pointer-events:none;
+    }
+    .dash-tile:hover { transform:translateY(-3px); border-color:rgba(232,101,10,0.4); box-shadow:0 10px 32px rgba(0,0,0,0.5); }
+    .dash-tile:hover::before { opacity:1; }
+    .dash-tile i { display:block; font-size:2.6rem; color:#e8650a; opacity:0.75; margin-bottom:14px; }
+    .dash-tile-label { font-size:1rem; font-weight:700; color:#c9cdd6; line-height:1.3; }
+
+    .welcome-box {
+        background:#0f0f12; border-radius:16px;
+        border:1px solid rgba(232,101,10,0.15);
+        padding:16px 20px;
+        color:#a05030; font-size:0.88rem;
+    }
+    .welcome-box strong { color:#e8650a; }
+</style>
+
+<div class="admin-outer">
+<div class="admin-card">
+
+    <div class="admin-header">
+        <h2 class="admin-title"><i class="fas fa-shield-alt"></i> Панель управления</h2>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary"><i class="fas fa-home"></i> На главную</a>
+    </div>
+
+    <div class="dash-grid">
+        <a href="{{ url_for('admin_users') }}" class="dash-tile">
+            <i class="fas fa-users"></i>
+            <div class="dash-tile-label">Пользователи</div>
+        </a>
+        <a href="{{ url_for('admin_articles') }}" class="dash-tile">
+            <i class="fas fa-newspaper"></i>
+            <div class="dash-tile-label">Статьи и страницы</div>
+        </a>
+        <a href="{{ url_for('admin_home_settings') }}" class="dash-tile">
+            <i class="fas fa-home"></i>
+            <div class="dash-tile-label">Главная страница</div>
+        </a>
+        {% set _perm = current_user.permissions if current_user.permissions else none %}
+        {% if current_user.role >= 4 or (_perm and _perm.can_see_stats) %}
+        <a href="{{ url_for('admin_stats') }}" class="dash-tile">
+            <i class="fas fa-chart-bar"></i>
+            <div class="dash-tile-label">Статистика</div>
+        </a>
+        {% endif %}
+        {% if current_user.can_ip_ban() or (_perm and _perm.can_ip_ban) %}
+        <a href="{{ url_for('ip_ban_list') }}" class="dash-tile">
+            <i class="fas fa-ban"></i>
+            <div class="dash-tile-label">IP-баны</div>
+        </a>
+        {% endif %}
+
+        {% if current_user.role >= 4 or (_perm and _perm.can_edit_home) %}
+        <a href="{{ url_for('admin_home_settings') }}" class="dash-tile">
+            <i class="fas fa-photo-film" style="color:#e8650a;"></i>
+            <div class="dash-tile-label">Моменты стрима</div>
+            <div style="margin-top:6px;font-size:0.72rem;color:#3d4350;">Загрузить несколько сразу</div>
+        </a>
+        {% endif %}
+
+        {% if current_user.role >= 4 or (_perm and _perm.can_vpn_detect) %}
+        <div class="dash-tile" id="vpnTile" style="cursor:pointer;" onclick="loadVpnLogs()">
+            <i class="fas fa-shield-alt" style="color:#e8650a;"></i>
+            <div class="dash-tile-label">VPN-детектор</div>
+            <div id="vpnCount" style="margin-top:6px;font-size:0.75rem;color:#3d4350;">Нажмите для загрузки</div>
+        </div>
+        {% endif %}
+
+        {% if current_user.role >= 4 or (_perm and _perm.can_next_stream) %}
+        <div class="dash-tile" style="cursor:pointer;position:relative;overflow:hidden;" onclick="document.getElementById('nswModal').style.display='flex'">
+            <i class="fas fa-satellite-dish" style="color:#e8650a;"></i>
+            <div class="dash-tile-label">Следующий стрим</div>
+            {% if next_stream_widget and next_stream_widget.enabled and next_stream_widget.stream_dt %}
+            <div style="margin-top:8px;font-size:0.72rem;font-weight:600;color:#e8650a;display:flex;align-items:center;gap:5px;justify-content:center;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#e8650a;box-shadow:0 0 6px #e8650a;animation:chaosInd 1.2s ease infinite;"></span>
+                {% if next_stream_widget.title %}{{ next_stream_widget.title[:20] }}{% else %}Настроен{% endif %}
+            </div>
+            <div id="dashNswTimer" style="margin-top:6px;font-size:0.7rem;color:#3d4350;font-variant-numeric:tabular-nums;"></div>
+            <script>
+            (function(){
+                var raw="{{next_stream_widget.stream_dt}}";
+                if(raw.length===16)raw+=':00';
+                var p=raw.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+                var target=p?new Date(+p[1],+p[2]-1,+p[3],+p[4],+p[5],+p[6]):new Date(raw);
+                var el=document.getElementById('dashNswTimer');
+                function tick(){
+                    var diff=target-new Date();
+                    if(!el)return;
+                    if(diff<=0){el.textContent='🔴 Стрим идёт!';el.style.color='#30c060';return;}
+                    var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000);
+                    el.textContent=d+'д '+String(h).padStart(2,'0')+'ч '+String(m).padStart(2,'0')+'м';
+                }
+                tick();setInterval(tick,30000);
+            })();
+            </script>
+            {% else %}
+            <div style="margin-top:6px;font-size:0.72rem;color:#2a2d35;">Нажмите для настройки</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if current_user.role >= 4 or (_perm and _perm.can_toggle_chaos) or (_perm and _perm.can_broadcast) %}
+
+        {% if current_user.role >= 4 or (_perm and _perm.can_toggle_chaos) %}
+        <!-- Кнопка «Не нажимай» -->
+        <div class="dash-tile" style="cursor:default;">
+            <i class="fas fa-bomb" style="
+                color:{% if chaos_button_enabled %}#e84040{% else %}#e8650a{% endif %};
+                filter:{% if chaos_button_enabled %}drop-shadow(0 0 14px rgba(232,64,64,0.7)){% else %}none{% endif %};
+                transition:all 0.3s;
+            "></i>
+            <div class="dash-tile-label">Кнопка «Не нажимай»</div>
+            <div style="margin-top:9px;font-size:0.8rem;font-weight:700;
+                display:inline-flex;align-items:center;gap:6px;
+                color:{% if chaos_button_enabled %}#e84040{% else %}#3d4350{% endif %};">
+                <span style="width:8px;height:8px;border-radius:50%;display:inline-block;
+                    {% if chaos_button_enabled %}background:#e84040;box-shadow:0 0 0 3px rgba(232,64,64,0.2),0 0 10px rgba(232,64,64,0.6);animation:chaosInd 1s ease-in-out infinite;
+                    {% else %}background:#252529;border:1px solid #333;{% endif %}"></span>
+                {% if chaos_button_enabled %}Включена{% else %}Выключена{% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('toggle_chaos_button') }}" style="margin-top:14px;">
+                <button type="submit" style="padding:9px 24px;border-radius:20px;font-size:0.84rem;font-weight:700;
+                    cursor:pointer;font-family:inherit;transition:all 0.22s;
+                    {% if chaos_button_enabled %}
+                    background:linear-gradient(135deg,rgba(180,20,20,0.2),rgba(232,64,64,0.1));
+                    border:1px solid rgba(200,30,30,0.45);color:#e84040;
+                    {% else %}
+                    background:linear-gradient(135deg,rgba(232,101,10,0.15),rgba(232,101,10,0.06));
+                    border:1px solid rgba(232,101,10,0.38);color:#e8650a;
+                    {% endif %}">
+                    {% if chaos_button_enabled %}Выключить{% else %}Включить{% endif %}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- 🔥 НОВОЕ: Онлайн-лента — кто сейчас на сайте -->
+        <div class="dash-tile" style="cursor:default;text-align:left;padding:20px 22px;">
+            <div style="color:#e8650a;font-size:0.88rem;font-weight:800;letter-spacing:0.3px;margin-bottom:14px;">
+                <i class="fas fa-satellite-dish" style="margin-right:7px;font-size:0.9rem;"></i>ОНЛАЙН
+            </div>
+            {% if digest_data and digest_data.recent_users %}
+            {% for u in digest_data.recent_users %}
+            <div style="display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+                <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;
+                    {% if u.online %}background:#30c060;box-shadow:0 0 6px rgba(48,192,96,0.7);
+                    {% else %}background:#252530;{% endif %}"></span>
+                <span style="color:{% if u.online %}#c9cdd6{% else %}#3a3a48{% endif %};font-size:0.82rem;font-weight:{% if u.online %}600{% else %}400{% endif %};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ u.username }}</span>
+                <span style="color:#252530;font-size:0.7rem;white-space:nowrap;">{{ u.ago }}</span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="color:#252530;font-size:0.8rem;padding:12px 0;">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <!-- 🔥 НОВОЕ: Быстрые действия — маленькие, компактные -->
+        <div class="dash-tile" style="cursor:default;text-align:left;padding:20px 22px;">
+            <div style="color:#e8650a;font-size:0.88rem;font-weight:800;letter-spacing:0.3px;margin-bottom:14px;">
+                <i class="fas fa-bolt" style="margin-right:7px;font-size:0.9rem;"></i>ДЕЙСТВИЯ
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                {% set actions = [
+                    (url_for('admin_article_create'), 'fas fa-plus-circle', 'Новая статья'),
+                    (url_for('admin_games'),          'fas fa-gamepad',     'Игры'),
+                    (url_for('admin_users'),          'fas fa-user-cog',    'Пользователи'),
+                    (url_for('forum'),                'fas fa-eye',         'Форум'),
+                ] %}
+                {% for href, icon, lbl in actions %}
+                <a href="{{ href }}" style="display:flex;align-items:center;gap:9px;padding:7px 10px;
+                    border-radius:9px;background:rgba(232,101,10,0.04);border:1px solid rgba(232,101,10,0.1);
+                    color:#7a8090;font-size:0.8rem;font-weight:600;text-decoration:none;transition:all 0.18s;"
+                    onmouseover="this.style.background='rgba(232,101,10,0.1)';this.style.color='#e8650a';this.style.borderColor='rgba(232,101,10,0.3)'"
+                    onmouseout="this.style.background='rgba(232,101,10,0.04)';this.style.color='#7a8090';this.style.borderColor='rgba(232,101,10,0.1)'">
+                    <i class="{{ icon }}" style="width:11px;font-size:0.7rem;text-align:center;opacity:0.6;color:#e8650a;flex-shrink:0;"></i> {{ lbl }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 🔥 НОВОЕ: Системный журнал — последние действия -->
+        <div class="dash-tile" style="cursor:default;text-align:left;padding:20px 22px;">
+            <div style="color:#e8650a;font-size:0.88rem;font-weight:800;letter-spacing:0.3px;margin-bottom:14px;">
+                <i class="fas fa-terminal" style="margin-right:7px;font-size:0.9rem;"></i>ЖУРНАЛ
+            </div>
+            {% if digest_data and digest_data.recent_comments %}
+            {% for c in digest_data.recent_comments %}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;
+                border-bottom:1px solid rgba(255,255,255,0.03);">
+                <span style="color:#4a5060;font-size:0.76rem;font-family:monospace;">
+                    <span style="color:#e8650a;opacity:0.7;">›</span> {{ c.author }}
+                </span>
+                <span style="color:#252530;font-size:0.7rem;">{{ c.ago }}</span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="color:#252530;font-size:0.8rem;padding:12px 0;font-family:monospace;">_ нет событий</div>
+            {% endif %}
+        </div>
+
+        <style>
+        @keyframes chaosInd {
+            0%,100%{box-shadow:0 0 0 3px rgba(232,64,64,0.2),0 0 10px rgba(232,64,64,0.6);}
+            50%{box-shadow:0 0 0 6px rgba(232,64,64,0.08),0 0 20px rgba(232,64,64,0.9);}
+        }
+        @keyframes onlinePulse {
+            0%,100%{box-shadow:0 0 6px rgba(48,192,96,0.5);}
+            50%{box-shadow:0 0 14px rgba(48,192,96,0.9);}
+        }
+        .dash-pulse { overflow:visible; }
+        </style>
+
+        {% endif %}{# конец блока role>=4 or toggle_chaos or broadcast #}
+    </div>
+
+    <!-- VPN Modal -->
+    {% if current_user.role >= 4 or (_perm and _perm.can_vpn_detect) %}
+    <div id="vpnModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+        <div style="background:#141416;border-radius:22px;border:1px solid rgba(232,101,10,0.22);padding:28px 30px;max-width:680px;width:95%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,0.7);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                <div style="color:#e8650a;font-size:1rem;font-weight:800;display:flex;align-items:center;gap:9px;">
+                    <i class="fas fa-shield-alt"></i> VPN-детектор
+                    <span id="vpnTotalBadge" style="background:rgba(232,101,10,0.12);border:1px solid rgba(232,101,10,0.25);color:#e8650a;font-size:0.72rem;padding:2px 9px;border-radius:14px;"></span>
+                </div>
+                <button onclick="document.getElementById('vpnModal').style.display='none'" style="background:none;border:none;color:#4e5460;font-size:1.2rem;cursor:pointer;">&times;</button>
+            </div>
+            <div id="vpnTableWrap" style="overflow-y:auto;flex:1;min-height:80px;">
+                <div style="text-align:center;padding:30px;color:#3d4350;font-size:0.88rem;">
+                    <i class="fas fa-spinner fa-spin" style="color:#e8650a;margin-bottom:8px;display:block;font-size:1.5rem;"></i>
+                    Загрузка...</div>
+            </div>
+            <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <span style="color:#3d4350;font-size:0.75rem;">Данные за последние 24 часа (макс. 100 записей)</span>
+                <button onclick="document.getElementById('vpnModal').style.display='none'" style="padding:8px 20px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#4e5460;cursor:pointer;font-family:inherit;font-size:0.85rem;">Закрыть</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    function loadVpnLogs() {
+        document.getElementById('vpnModal').style.display = 'flex';
+        document.getElementById('vpnTableWrap').innerHTML = '<div style="text-align:center;padding:30px;color:#3d4350;"><i class="fas fa-spinner fa-spin" style="color:#e8650a;font-size:1.5rem;"></i></div>';
+        fetch('/admin/vpn-logs')
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                var logs = data.logs || [];
+                document.getElementById('vpnTotalBadge').textContent = logs.length + ' записей';
+                var cnt = document.getElementById('vpnCount');
+                if (cnt) cnt.textContent = logs.length + ' обнаружено';
+                if (!logs.length) {
+                    document.getElementById('vpnTableWrap').innerHTML = '<div style="text-align:center;padding:40px;color:#2a2d35;"><i class="fas fa-check-circle" style="color:#30c060;font-size:2rem;display:block;margin-bottom:8px;opacity:0.5;"></i>Никто не замечен за последние 24ч</div>';
+                    return;
+                }
+                var h = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
+                h += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.06);">';
+                h += '<th style="padding:8px 12px;text-align:left;color:#e8650a;font-size:0.7rem;text-transform:uppercase;opacity:0.7;">Пользователь</th>';
+                h += '<th style="padding:8px 12px;text-align:left;color:#e8650a;font-size:0.7rem;text-transform:uppercase;opacity:0.7;">IP</th>';
+                h += '<th style="padding:8px 12px;text-align:left;color:#e8650a;font-size:0.7rem;text-transform:uppercase;opacity:0.7;">Тип</th>';
+                h += '<th style="padding:8px 12px;text-align:left;color:#e8650a;font-size:0.7rem;text-transform:uppercase;opacity:0.7;">Страна</th>';
+                h += '<th style="padding:8px 12px;text-align:left;color:#e8650a;font-size:0.7rem;text-transform:uppercase;opacity:0.7;">Время</th>';
+                h += '</tr></thead><tbody>';
+                logs.forEach(function(r,i){
+                    var bg=i%2===0?'rgba(255,255,255,0.01)':' transparent';
+                    var dt=new Date(r.detected_at.replace(' ','T')+'Z');
+                    var diff=Math.floor((Date.now()-dt)/1000);
+                    var ago=diff<3600?Math.floor(diff/60)+' мин.':diff<86400?Math.floor(diff/3600)+' ч.':Math.floor(diff/86400)+' дн.';
+                    h+='<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,0.03);">';
+                    h+='<td style="padding:9px 12px;color:#c9cdd6;font-weight:600;">'+( r.username||'\u0413\u043e\u0441\u0442\u044c')+'</td>';
+                    h+='<td style="padding:9px 12px;color:#4e5460;font-family:monospace;font-size:0.78rem;">'+( r.ip||'\u2014')+'</td>';
+                    h+='<td style="padding:9px 12px;"><span style="background:rgba(232,101,10,0.1);color:#e8650a;border:1px solid rgba(232,101,10,0.2);padding:2px 8px;border-radius:8px;font-size:0.7rem;font-weight:700;">'+( r.vpn_type||'VPN')+'</span></td>';
+                    h+='<td style="padding:9px 12px;color:#3d4350;">'+( r.country||'\u2014')+'</td>';
+                    h+='<td style="padding:9px 12px;color:#2a2d35;font-size:0.76rem;">'+ago+'</td>';
+                    h+='</tr>';
+                });
+                h+='</tbody></table>';
+                document.getElementById('vpnTableWrap').innerHTML=h;
+            })
+            .catch(function(){
+                document.getElementById('vpnTableWrap').innerHTML='<div style="text-align:center;padding:30px;color:#cc4444;">Ошибка загрузки</div>';
+            });
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+        var m=document.getElementById('vpnModal');
+        if(m) m.addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+    });
+    </script>
+    {% endif %}{# VPN modal: role>=4 or can_vpn_detect #}
+
+    <div class="welcome-box">
+        Добро пожаловать, <strong>{{ current_user.username }}</strong>. Ваша роль:
+        <strong>
+        {% if current_user.role == 4 %}Главный администратор
+        {% elif current_user.role == 3 %}Старший модератор
+        {% elif current_user.role == 2 %}Редактор
+        {% elif current_user.role == 1 %}Модератор чата
+        {% else %}Обычный пользователь{% endif %}
+        </strong>
+    </div>
+
+</div>
+</div>
+
+{% if current_user.role >= 4 or (_perm and _perm.can_next_stream) %}
+<div id="nswModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#141416;border-radius:22px;border:1px solid rgba(232,101,10,0.22);padding:28px 32px;max-width:520px;width:95%;box-shadow:0 0 60px rgba(0,0,0,0.7);max-height:90vh;overflow-y:auto;">
+        <!-- Заголовок -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;">
+            <div style="color:#e8650a;font-size:1rem;font-weight:800;display:flex;align-items:center;gap:9px;">
+                <i class="fas fa-clock"></i> Виджет следующего стрима
+            </div>
+            <button onclick="document.getElementById('nswModal').style.display='none'" style="background:none;border:none;color:#4e5460;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin_home_next_stream') }}" enctype="multipart/form-data">
+
+            <!-- Показывать виджет — центр -->
+            <div style="display:flex;justify-content:center;margin-bottom:18px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:#c9cdd6;font-size:0.88rem;font-weight:600;background:rgba(232,101,10,0.06);border:1px solid rgba(232,101,10,0.18);border-radius:12px;padding:10px 20px;">
+                    <input type="checkbox" name="enabled" value="1"
+                        {% if next_stream_widget and next_stream_widget.enabled %}checked{% endif %}
+                        style="width:16px;height:16px;accent-color:#e8650a;">
+                    Показывать виджет на главной
+                </label>
+            </div>
+
+            <!-- Две колонки: Название + Дата -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;color:#6a7080;font-size:0.78rem;margin-bottom:5px;font-weight:600;">Название стрима</label>
+                    <input type="text" name="title" maxlength="200"
+                        value="{{ next_stream_widget.title if next_stream_widget else '' }}"
+                        placeholder="Resident Evil 9"
+                        style="width:100%;padding:10px 14px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e0e0e0;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block;color:#6a7080;font-size:0.78rem;margin-bottom:5px;font-weight:600;">Дата и время</label>
+                    <input type="datetime-local" name="stream_dt"
+                        value="{{ next_stream_widget.stream_dt if next_stream_widget else '' }}"
+                        id="nswDateInput"
+                        style="width:100%;padding:10px 14px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e0e0e0;font-size:0.88rem;font-family:inherit;box-sizing:border-box;color-scheme:dark;">
+                    <style>
+                    #nswDateInput::-webkit-calendar-picker-indicator{filter:invert(62%) sepia(90%) saturate(800%) hue-rotate(345deg) brightness(105%);opacity:0.7;cursor:pointer;}
+                    #nswDateInput::-webkit-calendar-picker-indicator:hover{opacity:1;}
+                    </style>
+                </div>
+            </div>
+
+            <!-- Подпись — полная ширина -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block;color:#6a7080;font-size:0.78rem;margin-bottom:5px;font-weight:600;">Подпись <span style="color:#3d4350;font-weight:400;">(необязательно)</span></label>
+                <input type="text" name="description" maxlength="300"
+                    value="{{ next_stream_widget.description if next_stream_widget else '' }}"
+                    placeholder="В 20:00 по МСК"
+                    style="width:100%;padding:10px 14px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e0e0e0;font-size:0.88rem;font-family:inherit;box-sizing:border-box;">
+            </div>
+
+            <!-- Превью: URL или файл -->
+            <div style="margin-bottom:20px;">
+                <label style="display:block;color:#6a7080;font-size:0.78rem;margin-bottom:8px;font-weight:600;">Превью-картинка <span style="color:#3d4350;font-weight:400;">(необязательно)</span></label>
+
+                <!-- URL строка -->
+                <div style="position:relative;margin-bottom:8px;">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#4e5460;font-size:0.8rem;pointer-events:none;">🔗</span>
+                    <input type="text" name="preview_url" id="nswPreviewUrl" maxlength="500"
+                        value="{{ next_stream_widget.preview_url if next_stream_widget and next_stream_widget.preview_url else '' }}"
+                        placeholder="https://... (ссылка на картинку)"
+                        style="width:100%;padding:10px 14px 10px 34px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e0e0e0;font-size:0.88rem;font-family:inherit;box-sizing:border-box;"
+                        oninput="nswPreviewCheck(this.value)">
+                </div>
+
+                <!-- Разделитель ИЛИ -->
+                <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
+                    <div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div>
+                    <span style="color:#3d4350;font-size:0.72rem;letter-spacing:1px;">ИЛИ</span>
+                    <div style="flex:1;height:1px;background:rgba(255,255,255,0.06);"></div>
+                </div>
+
+                <!-- Загрузить файл -->
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#0f0f12;border:1px solid rgba(255,255,255,0.08);border-radius:12px;cursor:pointer;transition:border-color 0.2s;"
+                       onmouseover="this.style.borderColor='rgba(232,101,10,0.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+                    <i class="fas fa-upload" style="color:#e8650a;font-size:0.9rem;flex-shrink:0;"></i>
+                    <span id="nswFileLabel" style="color:#6a7080;font-size:0.82rem;flex:1;">Выбрать файл с компьютера...</span>
+                    <input type="file" name="preview_file" id="nswPreviewFile" accept="image/*"
+                           style="display:none;"
+                           onchange="nswFileChosen(this)">
+                </label>
+
+                <!-- Превью изображения -->
+                <div id="nswPreviewThumb" style="margin-top:10px;display:none;position:relative;">
+                    <img id="nswPreviewImg" src="" alt="превью"
+                         style="width:100%;max-height:130px;object-fit:cover;border-radius:10px;border:1px solid rgba(232,101,10,0.2);"
+                         onerror="document.getElementById('nswPreviewThumb').style.display='none'">
+                    <button type="button" onclick="nswClearPreview()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);border:none;color:#aaa;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">&times;</button>
+                </div>
+            </div>
+
+            <!-- Кнопки симметрично -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <button type="button" onclick="document.getElementById('nswModal').style.display='none'"
+                    style="padding:11px 20px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#4e5460;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600;transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                    Отмена
+                </button>
+                <button type="submit"
+                    style="padding:11px 22px;border-radius:14px;background:linear-gradient(135deg,rgba(232,101,10,0.25),rgba(232,101,10,0.12));border:1px solid rgba(232,101,10,0.45);color:#e8650a;font-weight:700;cursor:pointer;font-family:inherit;font-size:0.85rem;transition:all 0.2s;"
+                    onmouseover="this.style.background='linear-gradient(135deg,rgba(232,101,10,0.38),rgba(232,101,10,0.2))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(232,101,10,0.25),rgba(232,101,10,0.12))'">
+                    <i class="fas fa-save" style="margin-right:6px;font-size:0.8rem;"></i>Сохранить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function nswPreviewCheck(url){
+    var wrap=document.getElementById('nswPreviewThumb');
+    var img=document.getElementById('nswPreviewImg');
+    if(url && url.startsWith('http')){
+        img.src=url; wrap.style.display='block';
+        document.getElementById('nswPreviewFile').value='';
+        document.getElementById('nswFileLabel').textContent='Выбрать файл с компьютера...';
+    } else { if(!document.getElementById('nswPreviewFile').value) wrap.style.display='none'; }
+}
+function nswFileChosen(input){
+    if(!input.files||!input.files[0]) return;
+    document.getElementById('nswFileLabel').textContent=input.files[0].name;
+    document.getElementById('nswPreviewUrl').value='';
+    var reader=new FileReader();
+    reader.onload=function(e){
+        var img=document.getElementById('nswPreviewImg');
+        var wrap=document.getElementById('nswPreviewThumb');
+        img.src=e.target.result; wrap.style.display='block';
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+function nswClearPreview(){
+    document.getElementById('nswPreviewThumb').style.display='none';
+    document.getElementById('nswPreviewUrl').value='';
+    document.getElementById('nswPreviewFile').value='';
+    document.getElementById('nswFileLabel').textContent='Выбрать файл с компьютера...';
+}
+(function(){
+    var cur="{{ next_stream_widget.preview_url if next_stream_widget and next_stream_widget.preview_url else '' }}";
+    if(cur) nswPreviewCheck(cur);
+})();
+document.addEventListener('DOMContentLoaded',function(){
+    var m=document.getElementById('nswModal');
+    if(m) m.addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -179,8 +179,8 @@
             <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-outline" target="_blank">
                 <i class="fas fa-eye"></i> На сайте
             </a>
-            <a href="{{ url_for('admin_users') }}" class="btn btn-outline">
-                <i class="fas fa-arrow-left"></i> Пользователи
+            <a href="javascript:void(0)" onclick="history.length>1?history.back():window.location.href='{{ url_for('admin_users') }}'" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Назад
             </a>
         </div>
     </div>

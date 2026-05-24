@@ -4,6 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comilank - {% block title %}{% endblock %}</title>
+
+    <!-- SEO: Google, Яндекс, Bing/Edge -->
+    <meta name="description" content="{% block meta_description %}Comilank (Комиланк) — сайт стримера. Статьи об играх, форум, онлайн-игры и стримы.{% endblock %}">
+    <meta name="keywords" content="Comilank, Комиланк, комиланк, стример, геймер, игры, форум, стримы">
+    <meta name="author" content="Comilank">
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    <meta name="yandex" content="index, follow">
+    <meta name="bingbot" content="index, follow">
+    <link rel="canonical" href="https://comilank.net{{ request.path }}">
+
+    <!-- Open Graph (Facebook, VK, Telegram предпросмотр) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Comilank">
+    <meta property="og:title" content="{% block og_title %}Comilank — стример и геймер{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Comilank (Комиланк) — стримы, статьи об играх, форум и онлайн-игры.{% endblock %}">
+    <meta property="og:url" content="https://comilank.net{{ request.path }}">
+    <meta property="og:image" content="{% block og_image %}https://comilank.net/static/comilank.jpg{% endblock %}">
+    <meta property="og:locale" content="ru_RU">
+
+    <!-- Twitter / X Card — тоже через блоки чтобы статьи переопределяли -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block tw_title %}Comilank — стример{% endblock %}">
+    <meta name="twitter:description" content="{% block tw_description %}Comilank (Комиланк) — стримы, игры, форум.{% endblock %}">
+    <meta name="twitter:image" content="{% block tw_image %}https://comilank.net/static/comilank.jpg{% endblock %}">
+
+    <!-- Яндекс Вебмастер — подтверждение (замени на свой код после регистрации) -->
+    <!-- <meta name="yandex-verification" content="ВАШ_КОД_ЯНДЕКС"> -->
+    <!-- Bing Webmaster Tools (замени на свой код) -->
+    <!-- <meta name="msvalidate.01" content="ВАШ_КОД_BING"> -->
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
     <!-- Font Awesome 6 -->
@@ -71,6 +101,11 @@
         }
         /* Скрываем глобальную кнопку на страницах где есть своя */
         body.has-own-fs #_fs_btn { display: none !important; }
+        /* Мобилка — кнопка FS чуть меньше и не перекрывает контент */
+        @media (max-width: 600px) {
+            #_fs_btn { top: 10px; right: 10px; width: 30px; height: 30px; }
+            #_fs_btn svg { width: 13px; height: 13px; }
+        }
         /* Глобальный фикс белого фона от браузерного автозаполнения */
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
@@ -84,19 +119,32 @@
     </style>
 <script>
 (function() {
-    // НЕ маскируем URL на страницах с формами — иначе POST ломается (Method Not Allowed)
+    // НЕ маскируем URL на страницах где это мешает (формы, статьи, форум)
     var noMask = ['/login', '/register', '/verify', '/recover', '/forgot-password',
-                  '/reset-password', '/delete-account', '/report', '/admin'];
+                  '/reset-password', '/delete-account', '/report', '/admin', '/profile',
+                  '/extra', '/forum', '/article'];
     var real = window.location.pathname + window.location.search;
     var skip = noMask.some(function(p){ return real.indexOf(p) === 0; });
     if (!skip && real && real !== '/' && real !== '') {
-        document.cookie = '_rp=' + real + ';path=/;max-age=30;SameSite=Lax';
+        document.cookie = '_rp=' + real + ';path=/;max-age=300;SameSite=Lax';
         history.replaceState(null, '', '/');
     }
+    // Сохраняем текущий реальный URL для кнопки «Назад» в профиле
+    // Когда пользователь кликает на ссылку профиля — запоминаем откуда он пришёл
     document.addEventListener('click', function(e) {
         var a = e.target.closest('a');
-        if (a && (a.getAttribute('href') === '/' || a.href === window.location.origin + '/')) {
+        if (!a) return;
+        var href = a.getAttribute('href') || '';
+        // Сброс cookie для главной
+        if (href === '/' || a.href === window.location.origin + '/') {
             document.cookie = '_rp=;path=/;max-age=0';
+        }
+        // Если переходим на профиль — сохраняем текущий реальный URL
+        if (href && href.indexOf('/profile/') === 0) {
+            var fromUrl = real || window.location.pathname + window.location.search;
+            if (fromUrl && fromUrl !== '/' && fromUrl.indexOf('/profile') !== 0) {
+                sessionStorage.setItem('profileBackUrl', fromUrl);
+            }
         }
     });
 })();
@@ -114,18 +162,29 @@
 var _fsExpand   = '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
 var _fsCompress = '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>';
 function _fsToggle(){
+    var el = document.documentElement;
     var ic = document.getElementById('_fs_icon');
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    var ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        fn && fn.call(el);
         if (ic) ic.innerHTML = _fsCompress;
     } else {
-        document.exitFullscreen && document.exitFullscreen();
+        ex && ex.call(document);
         if (ic) ic.innerHTML = _fsExpand;
     }
 }
 document.addEventListener('fullscreenchange', function(){
     var ic = document.getElementById('_fs_icon');
-    if (ic) ic.innerHTML = document.fullscreenElement ? _fsCompress : _fsExpand;
+    if (ic) ic.innerHTML = (document.fullscreenElement||document.webkitFullscreenElement) ? _fsCompress : _fsExpand;
+});
+document.addEventListener('webkitfullscreenchange', function(){
+    var ic = document.getElementById('_fs_icon');
+    if (ic) ic.innerHTML = (document.fullscreenElement||document.webkitFullscreenElement) ? _fsCompress : _fsExpand;
+});
+// Обработчик запроса полного экрана от iframe игры
+window.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'game_fullscreen_toggle') _fsToggle();
 });
 </script>
 <script>
@@ -375,42 +434,249 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeRepo
     var _toastShown = false;
     var _lastKnown = parseInt(localStorage.getItem(_TOAST_KEY) || '0', 10);
 
-    function _closeNotiToast(){
+    window._closeNotiToast = function(){
         var t = document.getElementById('_notiToast');
         if(!t) return;
         t.style.animation = '_toastOut .25s ease both';
         setTimeout(function(){ t.style.display='none'; t.style.animation=''; }, 250);
-    }
+    };
+    // обратная совместимость
+    function _closeNotiToast(){ window._closeNotiToast(); }
 
     function _checkNotis(){
-        fetch('/api/notifications?limit=1&offset=0')
+        fetch('/api/notifications?limit=15&offset=0')
         .then(function(r){ return r.json(); })
         .then(function(d){
-            if(!d.notifications || !d.notifications.length) return;
-            var unread = (d.notifications || []).filter(function(n){ return !n.is_read; });
+            var unreadCount = d.unread || 0;
+            if(unreadCount <= 0) return;
+            var notifs = d.notifications || [];
+            var unread = notifs.filter(function(n){ return !n.is_read; });
             if(!unread.length) return;
-            // Есть непрочитанные — проверяем по id последнего
             var newestId = unread[0].id;
             if(newestId <= _lastKnown) return;
-            // Новые уведомления появились
             if(_toastShown) return;
             _toastShown = true;
             localStorage.setItem(_TOAST_KEY, String(newestId));
-            var cnt = unread.length;
             var t = document.getElementById('_notiToast');
             var msg = document.getElementById('_notiToastMsg');
             var ttl = document.getElementById('_notiToastTitle');
-            if(ttl) ttl.textContent = cnt > 1 ? 'Новые уведомления ('+cnt+')' : 'Новое уведомление';
-            if(msg && unread[0].preview) msg.textContent = unread[0].preview.slice(0,60);
+            if(ttl) ttl.textContent = unreadCount > 1 ? 'Новые уведомления (' + unreadCount + ')' : 'Новое уведомление';
+            if(msg && unread[0].preview) msg.textContent = unread[0].preview.slice(0, 60);
+            else if(msg) msg.textContent = 'Перейдите в профиль, чтобы посмотреть';
             if(t){ t.style.animation='_toastIn .35s cubic-bezier(.34,1.56,.64,1) both'; t.style.display='block'; }
-            // Автоскрытие через 7 сек
-            setTimeout(_closeNotiToast, 7000);
+            setTimeout(function(){ window._closeNotiToast(); }, 7000);
         }).catch(function(){});
     }
 
-    // Проверяем через 3 секунды после загрузки и потом каждые 60 секунд
     setTimeout(_checkNotis, 3000);
     setInterval(_checkNotis, 60000);
+})();
+</script>
+{% endif %}
+
+<!-- ═══ ПЛАВАЮЩИЙ ЧАТ-ПУЗЫРЬ ═══ -->
+<style>
+#_chatBubble {
+    position: fixed; bottom: 28px; left: 28px; z-index: 88888;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #ff6600; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,102,0,0.55), 0 2px 8px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; outline: none; padding: 0;
+    transition: background 0.25s ease, box-shadow 0.2s ease;
+}
+#_chatBubble:hover { box-shadow: 0 6px 28px rgba(255,102,0,0.7); }
+#_chatBubble._open { background: #313131; box-shadow: 0 4px 20px rgba(0,0,0,0.55); }
+#_chatBubbleIcon {
+    pointer-events: none; font-size: 1.22rem;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+}
+#_chatBadge {
+    position: absolute; top: -3px; right: -3px;
+    background: #ff3b3b; color: #fff; border-radius: 50%;
+    width: 20px; height: 20px; font-size: 0.62rem; font-weight: 800;
+    display: none; align-items: center; justify-content: center;
+    border: 2px solid #0a0a0a; pointer-events: none;
+}
+#_chatWindow {
+    position: fixed; bottom: 96px; left: 28px; z-index: 88887;
+    width: 880px; height: 580px;
+    background: #0a0a0a;
+    border: 1px solid rgba(255,102,0,0.28); border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,102,0,0.06);
+    display: none; flex-direction: column; overflow: hidden;
+}
+#_chatWindow._visible { display: flex; animation: _cIn 0.28s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes _cIn  { from{opacity:0;transform:translateY(18px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes _cOut { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(12px) scale(.97)} }
+#_chatMiniHead {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; background: #111111;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0; min-height: 46px;
+}
+.cw-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(255,102,0,0.08); border: 1px solid rgba(255,102,0,0.2);
+    color: #ff6600; border-radius: 9px; padding: 5px 11px;
+    font-size: 0.71rem; font-weight: 700; cursor: pointer;
+    text-decoration: none; transition: background 0.15s;
+    white-space: nowrap; font-family: 'Inter','Segoe UI',sans-serif; flex-shrink: 0;
+}
+.cw-btn:hover { background: rgba(255,102,0,0.18); }
+#_chatIframeLoader {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; background: #0a0a0a;
+    color: #313131; font-size: 0.8rem; font-family: 'Inter','Segoe UI',sans-serif;
+}
+#_chatIframeLoader i { font-size: 1.4rem; color: #282828; }
+#_chatFrame { flex: 1; border: none; width: 100%; display: none; background: #0a0a0a; }
+#_chatFrame.loaded { display: block; }
+@media (max-width: 900px) {
+    #_chatWindow { width: calc(100vw - 16px); left: 8px; bottom: 84px; height: 480px; }
+}
+@media (max-width: 480px) {
+    #_chatWindow { width: calc(100vw - 8px); left: 4px; bottom: 78px; height: 440px; }
+    #_chatBubble { bottom: 16px; left: 16px; width: 50px; height: 50px; font-size: 1.05rem; }
+}
+</style>
+
+<button id="_chatBubble" title="Открыть чат" onclick="_toggleChatBubble()">
+    <span id="_chatBubbleIcon"><i class="fas fa-comments"></i></span>
+    <span id="_chatBadge"></span>
+</button>
+
+<div id="_chatWindow">
+    <div id="_chatMiniHead">
+        <i class="fas fa-comments" style="color:#ff6600;font-size:0.9rem;flex-shrink:0;"></i>
+        <a class="cw-btn" href="/chat" style="margin-left:auto;" title="На весь экран">
+            <i class="fas fa-expand-alt" style="font-size:0.65rem;"></i>На весь экран
+        </a>
+    </div>
+    <div id="_chatIframeLoader">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Загрузка чата…</span>
+    </div>
+    <iframe id="_chatFrame" src="" allow="clipboard-write" title="Чат Comilank"></iframe>
+</div>
+
+<script>
+(function(){
+    var _open = false;
+    var _loaded = false;
+    var _spinTimer = null;
+
+    window._toggleChatBubble = function(){
+        var win    = document.getElementById('_chatWindow');
+        var bubble = document.getElementById('_chatBubble');
+        var badge  = document.getElementById('_chatBadge');
+        var icon   = document.getElementById('_chatBubbleIcon');
+
+        if(icon){
+            icon.style.transition = 'transform 0.55s cubic-bezier(0.4,0,0.2,1)';
+            icon.style.transform  = 'rotate(360deg)';
+        }
+        clearTimeout(_spinTimer);
+        _spinTimer = setTimeout(function(){
+            if(icon){ icon.style.transition='none'; icon.style.transform='rotate(0deg)';
+                setTimeout(function(){ if(icon) icon.style.transition=''; }, 30); }
+        }, 570);
+
+        if(!_open){
+            win.style.animation = '_cIn 0.28s cubic-bezier(.34,1.56,.64,1) both';
+            win.classList.add('_visible');
+            bubble.classList.add('_open');
+            _open = true;
+            if(badge){ badge.style.display='none'; badge.textContent=''; }
+            if(!_loaded){
+                _loaded = true;
+                var frame  = document.getElementById('_chatFrame');
+                var loader = document.getElementById('_chatIframeLoader');
+                frame.src = '/chat';
+                frame.onload = function(){
+                    loader.style.display = 'none';
+                    frame.classList.add('loaded');
+                };
+            }
+        } else {
+            win.style.animation = '_cOut 0.2s ease both';
+            setTimeout(function(){ win.classList.remove('_visible'); win.style.animation=''; }, 190);
+            bubble.classList.remove('_open');
+            _open = false;
+        }
+    };
+})();
+</script>
+
+<!-- ═══ WEB PUSH — инициализация ═══ -->
+{% if current_user.is_authenticated %}
+<script>
+(function(){
+    // Регистрируем Service Worker и Web Push
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+        window._swReg = reg;
+        // Проверяем текущую подписку
+        return reg.pushManager.getSubscription();
+    }).then(function(sub){
+        if(sub){
+            // Уже подписаны — синхронизируем с сервером
+            _syncPushSub(sub);
+        }
+        // Не показываем запрос автоматически — ждём клика на кнопку
+    }).catch(function(){});
+
+    window._requestPushPermission = function(onGranted){
+        if(!window._swReg){ if(onGranted) onGranted(false); return; }
+        window._swReg.pushManager.getSubscription().then(function(existing){
+            if(existing){ if(onGranted) onGranted(true); return; }
+            // Запрашиваем разрешение
+            Notification.requestPermission().then(function(perm){
+                if(perm !== 'granted'){ if(onGranted) onGranted(false); return; }
+                // Получаем VAPID ключ
+                fetch('/api/push/vapid-public-key')
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if(!d.key){ if(onGranted) onGranted(false); return; }
+                    var appKey = _urlB64ToUint8(d.key);
+                    return window._swReg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: appKey
+                    });
+                }).then(function(sub){
+                    if(!sub){ if(onGranted) onGranted(false); return; }
+                    _syncPushSub(sub);
+                    if(onGranted) onGranted(true);
+                }).catch(function(){ if(onGranted) onGranted(false); });
+            });
+        });
+    };
+
+    function _syncPushSub(sub){
+        var key = sub.getKey ? sub.getKey('p256dh') : null;
+        var auth = sub.getKey ? sub.getKey('auth') : null;
+        if(!key || !auth) return;
+        fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                endpoint: sub.endpoint,
+                p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(key))),
+                auth:   btoa(String.fromCharCode.apply(null, new Uint8Array(auth)))
+            })
+        }).catch(function(){});
+    }
+
+    function _urlB64ToUint8(base64String){
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+        var rawData = window.atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+        for(var i=0;i<rawData.length;++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+    }
 })();
 </script>
 {% endif %}

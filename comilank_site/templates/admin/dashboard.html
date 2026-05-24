@@ -115,6 +115,20 @@
         </a>
         {% endif %}
 
+        {% if current_user.role >= 3 or (_perm and _perm.can_view_reports) %}
+        <a href="{{ url_for('admin_reports') }}" class="dash-tile" style="position:relative;">
+            <i class="fas fa-flag"></i>
+            <div class="dash-tile-label">Репорты</div>
+            {% if open_reports_count and open_reports_count > 0 %}
+            <span style="position:absolute;top:12px;right:12px;background:#e84040;color:#fff;
+                font-size:0.68rem;font-weight:800;min-width:20px;height:20px;border-radius:10px;
+                display:flex;align-items:center;justify-content:center;padding:0 4px;">
+                {{ open_reports_count }}
+            </span>
+            {% endif %}
+        </a>
+        {% endif %}
+
         {% if current_user.role >= 4 or (_perm and _perm.can_edit_home) %}
         <a href="{{ url_for('admin_home_settings') }}" class="dash-tile">
             <i class="fas fa-photo-film" style="color:#e8650a;"></i>

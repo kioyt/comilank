@@ -826,6 +826,97 @@
     .action-btn.delete:hover { background:rgba(180,30,30,0.15); border-color:rgba(180,30,30,0.4); color:#cc4444; }
     .action-btn.manage-drops { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:#3d4350; }
     .action-btn.manage-drops:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
+
+    /* Кнопка отслеживания статьи */
+    .subscribe-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 9px 20px; border-radius: 50px;
+        font-size: 0.82rem; font-weight: 700; cursor: pointer;
+        border: 1px solid rgba(232,101,10,0.3);
+        background: rgba(232,101,10,0.08);
+        color: #a05010;
+        transition: all 0.2s; font-family: inherit;
+        white-space: nowrap;
+    }
+    .subscribe-btn:hover {
+        background: rgba(232,101,10,0.18); color: #e8650a;
+        border-color: rgba(232,101,10,0.55);
+        box-shadow: 0 0 12px rgba(232,101,10,0.15);
+    }
+    .subscribe-btn.subscribed {
+        background: rgba(232,101,10,0.18);
+        border-color: rgba(232,101,10,0.55); color: #e8650a;
+    }
+    .subscribe-btn.subscribed:hover {
+        background: rgba(180,30,30,0.1);
+        border-color: rgba(180,30,30,0.35); color: #cc5555;
+    }
+    /* Тост уведомление */
+    #_subToast {
+        position: fixed;
+        top: 24px; left: 50%;
+        transform: translateX(-50%) translateY(-12px);
+        z-index: 99995;
+        background: #1a1a1d;
+        border: 1px solid rgba(232,101,10,0.4);
+        border-radius: 14px;
+        padding: 11px 18px 11px 14px;
+        font-size: 0.84rem; color: #f0f0f0; font-weight: 500;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+        display: flex; align-items: center; gap: 10px;
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.28s cubic-bezier(.34,1.56,.64,1);
+        white-space: nowrap; max-width: calc(100vw - 40px);
+    }
+    #_subToast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+        pointer-events: all;
+    }
+    #_subToast .st-close {
+        background: none; border: none; color: #555;
+        cursor: pointer; font-size: 0.85rem; padding: 0 0 0 4px;
+        transition: color 0.15s; flex-shrink: 0; line-height: 1;
+    }
+    #_subToast .st-close:hover { color: #e8650a; }
+
+    .cmt-menu-wrap{position:relative;margin-left:auto;}
+    .cmt-dots-btn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#3d4350;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;transition:all 0.15s;flex-shrink:0;font-family:inherit;}
+    .cmt-dots-btn:hover{background:rgba(255,255,255,0.06);color:#aaa;}
+    .cmt-dots-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:192px;background:#1a1a1e;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;z-index:600;box-shadow:0 12px 36px rgba(0,0,0,0.75),0 0 0 1px rgba(232,101,10,0.06);display:none;}
+    .cmt-dots-menu.open{display:block;}
+    .cmt-dots-menu button{width:100%;padding:10px 14px;border:none;background:transparent;color:#b0b6c2;font-size:0.84rem;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px;transition:all 0.15s;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .cmt-dots-menu button:last-child{border-bottom:none;}
+    .cmt-dots-menu button:hover{background:rgba(232,101,10,0.09);color:#e8650a;}
+    .cmt-dots-menu button i{width:14px;color:#c8580a;opacity:0.7;font-size:0.78rem;}
+    #reportModal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.76);backdrop-filter:blur(5px);align-items:center;justify-content:center;}
+    #reportModal.open{display:flex;}
+    .report-modal-inner{background:#141416;border:1px solid rgba(232,101,10,0.28);border-radius:22px;padding:28px 30px 24px;max-width:400px;width:calc(100% - 32px);box-shadow:0 0 0 1px rgba(232,101,10,0.07),0 32px 70px rgba(0,0,0,0.85);position:relative;overflow:hidden;}
+    .report-modal-inner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#e8650a,transparent);opacity:0.55;}
+    .report-modal-title{font-size:1rem;font-weight:800;color:#e0e4ec;margin-bottom:4px;}
+    .report-modal-sub{font-size:0.8rem;color:#454b58;margin-bottom:18px;}
+    .report-reason-btn{width:100%;padding:9px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:#0f0f12;color:#9aa0ae;font-size:0.85rem;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px;transition:all 0.15s;margin-bottom:6px;}
+    .report-reason-btn:hover,.report-reason-btn.selected{border-color:rgba(232,101,10,0.45);background:rgba(232,101,10,0.08);color:#e8650a;}
+    .report-reason-btn i{color:#c8580a;opacity:0.6;width:14px;font-size:0.78rem;}
+    .report-other-wrap{display:none;margin-top:6px;margin-bottom:8px;}
+    .report-other-wrap textarea{width:100%;background:#0f0f12;border:1px solid rgba(255,255,255,0.07);border-radius:10px;color:#c9cdd6;font-size:0.84rem;padding:10px 13px;resize:none;font-family:inherit;box-sizing:border-box;outline:none;min-height:72px;transition:border-color 0.2s;}
+    .report-other-wrap textarea:focus{border-color:rgba(232,101,10,0.4);box-shadow:0 0 0 3px rgba(232,101,10,0.06);}
+    .report-submit-btn{width:100%;padding:10px;border-radius:14px;margin-top:10px;background:rgba(232,101,10,0.14);color:#d0600c;border:1px solid rgba(232,101,10,0.32);font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+    .report-submit-btn:hover{background:rgba(232,101,10,0.22);color:#e8650a;}
+    .report-cancel-btn{width:100%;padding:9px;border-radius:14px;margin-top:6px;background:transparent;color:#454b58;border:1px solid rgba(255,255,255,0.07);font-size:0.84rem;cursor:pointer;font-family:inherit;transition:all 0.18s;}
+    .report-cancel-btn:hover{color:#777;border-color:rgba(255,255,255,0.15);}
+
+    /* Кнопка Поделиться — стиль как на доп.страницах */
+    .article-share-btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 16px; border-radius: 10px;
+        background: rgba(232,101,10,0.08); border: 1px solid rgba(232,101,10,0.25);
+        color: #c8580a; font-size: 0.85rem; font-weight: 600;
+        cursor: pointer; font-family: inherit; transition: all 0.18s;
+        text-decoration: none; white-space: nowrap;
+    }
+    .article-share-btn:hover { background: rgba(232,101,10,0.16); color: #e8650a; border-color: rgba(232,101,10,0.5); }
+    .article-share-btn i { font-size: 0.8rem; }
 </style>
 
 <div class="article-page-outer">
@@ -895,7 +986,7 @@
         <div class="article-content-body">
 
         {% if article.get_image_url() %}
-            <img src="{{ article.get_image_url() }}" alt="{{ article.title }}" class="article-cover" onclick="(function(s){var ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(6px);';ov.innerHTML='<img src=\''+s+'\' style=\"max-width:96vw;max-height:95vh;border-radius:14px;box-shadow:0 0 80px rgba(0,0,0,0.9);object-fit:contain;\"><button style=\"position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer;\" onclick=\"this.parentNode.remove()\">✕</button>';ov.onclick=function(e){if(e.target===ov)ov.remove();};document.body.appendChild(ov);})(this.src)">
+            <img src="{{ article.get_image_url() }}" alt="{{ article.title }}" class="article-cover" onclick="openArticleCoverLightbox(this.src)">
         {% endif %}
 
         {% if article.video_file %}
@@ -960,6 +1051,30 @@
             {% endif %}
         </div>
 
+        <!-- КНОПКА ОТСЛЕЖИВАНИЯ СТАТЬИ -->
+        {% if current_user.is_authenticated %}
+        <div style="margin: 14px 0 4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button id="_subBtn" class="subscribe-btn" onclick="_toggleSubscribe({{ article.id }})">
+                <i class="fas fa-bell" id="_subIcon"></i>
+                <span id="_subLabel">Отслеживать статью</span>
+            </button>
+            <span style="font-size:0.72rem; color:#3d4350;" id="_subCount"></span>
+        </div>
+        {% else %}
+        <div style="margin: 14px 0 4px;">
+            <a href="{{ url_for('login') }}" class="subscribe-btn" style="text-decoration:none;">
+                <i class="fas fa-bell"></i> Войдите, чтобы отслеживать
+            </a>
+        </div>
+        {% endif %}
+        <div id="_subToast">
+            <span id="_subToastIcon"></span>
+            <span id="_subToastText"></span>
+            <button class="st-close" onclick="this.closest('#_subToast').classList.remove('show')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
         {% if current_user.is_authenticated and current_user.role >= 2 %}
         <div class="article-actions-bar">
             <a href="{{ url_for('admin_article_edit', article_id=article.id) }}" class="action-btn edit">
@@ -968,12 +1083,21 @@
             <a href="{{ url_for('admin_dropdown_list', article_id=article.id) }}" class="action-btn manage-drops">
                 <i class="fas fa-list"></i> Разделы
             </a>
+            <button onclick="shareArticle()" id="articleShareBtn" class="article-share-btn">
+                <i class="fas fa-share-alt"></i> Поделиться
+            </button>
             <form method="POST" action="{{ url_for('admin_article_delete', article_id=article.id) }}"
                   onsubmit="return confirm('Удалить статью?');" style="display:inline;">
                 <button type="submit" class="action-btn delete">
                     <i class="fas fa-trash"></i> Удалить
                 </button>
             </form>
+        </div>
+        {% else %}
+        <div style="margin:10px 0 4px;">
+            <button onclick="shareArticle()" id="articleShareBtn" class="article-share-btn">
+                <i class="fas fa-share-alt"></i> Поделиться
+            </button>
         </div>
         {% endif %}
 
@@ -1042,6 +1166,17 @@
                             {% elif comment.author.role >= 3 %}<span class="role-badge mod">MOD</span>
                             {% elif comment.author.role >= 2 %}<span class="role-badge editor">РЕД.</span>
                             {% endif %}
+                            {% if current_user.is_authenticated %}
+                            <div class="cmt-menu-wrap">
+                                <button type="button" class="cmt-dots-btn" onclick="toggleCmtMenu(this)">•••</button>
+                                <div class="cmt-dots-menu">
+                                    <button type="button" onclick="openReportModal({{ comment.id }});closeCmtMenus();"><i class="fas fa-flag"></i> Пожаловаться</button>
+                                    {% if current_user.id == comment.author_id or current_user.role >= 2 %}
+                                    <button type="button" class="comment-del-btn" data-del-url="{{ url_for('delete_comment', comment_id=comment.id) }}" onclick="closeCmtMenus();" style="color:#cc4444;"><i class="fas fa-trash"></i> Удалить</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="comment-text">{% if comment.content.startswith('[VOICE]') and comment.content.endswith('[/VOICE]') %}{% set vurl = comment.content[7:-8] %}<audio controls src="{{ vurl }}" style="max-width:100%;height:36px;border-radius:20px;accent-color:#e8650a;"></audio>{% else %}{{ comment.content }}{% endif %}</div>
 
@@ -1069,13 +1204,7 @@
                                 <button type="button" class="reply-toggle-btn" onclick="toggleReplyForm('reply-form-{{ comment.id }}', this)">
                                     <i class="fas fa-reply"></i> Ответить
                                 </button>
-                                {% if current_user.id == comment.author_id or current_user.role >= 2 %}
-                                <button type="button" class="reply-toggle-btn comment-del-btn"
-                                        data-del-url="{{ url_for('delete_comment', comment_id=comment.id) }}"
-                                        style="color:#cc3333; border-color:#551111;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                {% endif %}
+
                             {% else %}
                                 <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> <span>{{ comment.likes }}</span></span>
                                 <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i> <span>{{ comment.dislikes }}</span></span>
@@ -1146,6 +1275,17 @@
                                             {% if reply.author.role >= 4 %}<span class="role-badge admin">ADMIN</span>
                                             {% elif reply.author.role >= 3 %}<span class="role-badge mod">MOD</span>
                                             {% elif reply.author.role >= 2 %}<span class="role-badge editor">РЕД.</span>{% endif %}
+                                            {% if current_user.is_authenticated %}
+                                            <div class="cmt-menu-wrap">
+                                                <button type="button" class="cmt-dots-btn" onclick="toggleCmtMenu(this)">•••</button>
+                                                <div class="cmt-dots-menu">
+                                                    <button type="button" onclick="openReportModal({{ reply.id }});closeCmtMenus();"><i class="fas fa-flag"></i> Пожаловаться</button>
+                                                    {% if current_user.id == reply.author_id or current_user.role >= 2 %}
+                                                    <button type="button" class="comment-del-btn" data-del-url="{{ url_for('delete_comment', comment_id=reply.id) }}" onclick="closeCmtMenus();" style="color:#cc4444;"><i class="fas fa-trash"></i> Удалить</button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="comment-text">{% if reply.content.startswith('[VOICE]') and reply.content.endswith('[/VOICE]') %}{% set vurl = reply.content[7:-8] %}<audio controls src="{{ vurl }}" style="max-width:100%;height:36px;border-radius:20px;accent-color:#e8650a;"></audio>{% else %}{{ reply.content }}{% endif %}</div>
                                         <div class="comment-reactions">
@@ -1165,13 +1305,7 @@
                                                 <button type="button" class="reply-toggle-btn" onclick="toggleReplyForm('reply-form-sub-{{ reply.id }}', this)">
                                                     <i class="fas fa-reply"></i> Ответить
                                                 </button>
-                                                {% if current_user.id == reply.author_id or current_user.role >= 2 %}
-                                                <button type="button" class="reply-toggle-btn comment-del-btn"
-                                                        data-del-url="{{ url_for('delete_comment', comment_id=reply.id) }}"
-                                                        style="color:#cc3333;border-color:#551111;">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                {% endif %}
+
                                             {% else %}
                                                 <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i> {{ reply.likes }}</span>
                                                 <span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i> {{ reply.dislikes }}</span>
@@ -1647,11 +1781,12 @@ document.querySelectorAll('.react-form').forEach(function(form) {
 
             bindReplies(el);
             if (window.bindDelBtns) window.bindDelBtns(el);
+            el.querySelectorAll('.comment-text').forEach(function(t){ if(window._renderImgInEl) window._renderImgInEl(t); });
         })
         .catch(function(err) {
             if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-            // Тихий фейл — форма не перезагружает страницу
             console.warn('Comment submit error:', err);
+            alert('Ошибка при отправке комментария. Попробуйте обновить страницу.');
         });
     });
 })();
@@ -1733,10 +1868,12 @@ function makeCommentEl(d, isReply){
     else if(d.role>=2) role='<span class="role-badge editor">РЕД.</span>';
     var av = d.avatar ? '<img src="'+d.avatar+'" alt="">' : d.username.charAt(0).toUpperCase();
     var sz = isReply ? 'width:34px;height:34px;font-size:0.88rem;' : '';
-    var delBtn = '';
+    var menuItems = '<button type="button" onclick="openReportModal('+d.id+');closeCmtMenus();"><i class=\"fas fa-flag\"></i> Пожаловаться</button>';
     if (d.can_delete && d.del_url) {
-        delBtn = '<button type="button" class="reply-toggle-btn comment-del-btn" data-del-url="'+d.del_url+'" style="color:#cc3333;border-color:#551111;"><i class="fas fa-trash"></i></button>';
+        menuItems += '<button type="button" class="comment-del-btn" data-del-url="'+d.del_url+'" onclick="closeCmtMenus();" style="color:#cc4444;"><i class=\"fas fa-trash\"></i> Удалить</button>';
     }
+    var menuHtml = '<div class=\"cmt-menu-wrap\"><button type=\"button\" class=\"cmt-dots-btn\" onclick=\"toggleCmtMenu(this)\">•••</button><div class=\"cmt-dots-menu\">'+menuItems+'</div></div>';
+    var delBtn = '';
     var replyFormId = isReply ? 'reply-form-sub-'+d.id : 'reply-form-'+d.id;
     var taId = 'dyta_'+d.id;
     var ePanelId = 'emojiPanel_dy'+d.id;
@@ -1770,21 +1907,59 @@ function makeCommentEl(d, isReply){
         '<div class="comment-body">'+
             '<div class="comment-head" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">'+
                 '<a href="/profile/'+d.username+'" class="comment-username">'+d.username+'</a>'+
-                '<span class="comment-date">только что</span>'+
+                '<span class="comment-date" data-utc="'+new Date().toISOString().slice(0,19)+'">только что</span>'+
                 role+
+                menuHtml+
             '</div>'+
-            '<div class="comment-text">'+escHtml(d.content)+'</div>'+
+            '<div class="comment-text">'+renderImgTags(escHtml(d.content))+'</div>'+
             '<div class="comment-reactions">'+
                 '<span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-up"></i><span class="reaction-count">0</span></span>'+
                 '<span class="reaction-btn" style="cursor:default;"><i class="fas fa-thumbs-down"></i><span class="reaction-count">0</span></span>'+
                 replyBtn+
-                delBtn+
             '</div>'+
             replyFormHtml+
         '</div></div>';
+    window.bindDelBtns(div);
     return div;
 }
 function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* Лайтбокс для обложки статьи */
+function openArticleCoverLightbox(src) {
+    var ov = document.getElementById('_coverLightbox');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = '_coverLightbox';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(6px);animation:_lbFadeIn 0.2s ease;';
+        document.body.appendChild(ov);
+    }
+    ov.innerHTML = '<img src="'+src+'" style="max-width:96vw;max-height:95vh;border-radius:14px;box-shadow:0 0 80px rgba(0,0,0,0.9);object-fit:contain;">'
+        + '<button style="position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="document.getElementById(\'_coverLightbox\').remove()">✕</button>';
+    ov.style.display = 'flex';
+    ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var o=document.getElementById('_coverLightbox'); if(o) o.remove(); } }, {once:true});
+}
+
+/* ── ЗАЩИТА F5: сохраняем реальный URL, сбрасываем _rp cookie ── */
+(function(){
+    var realUrl = '/article/{{ article.id }}';
+    document.cookie = '_rp=;path=/;max-age=0;SameSite=Lax';
+    if (window.location.pathname !== realUrl) {
+        try { window.history.replaceState(null, '', realUrl); } catch(e) {}
+    }
+})();
+
+/* Рендеринг [IMG]url[/IMG] в тег <img> — используется при AJAX-добавлении комментария */
+function renderImgTags(s){
+    return s.replace(/\[IMG\](.*?)\[\/IMG\]/g, function(_, src){
+        var safeSrc = src.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+        safeSrc = safeSrc.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        return '<img src="'+safeSrc+'" data-lightbox-src="'+safeSrc+'" class="comment-img-thumb" '
+             + 'style="max-width:220px;max-height:160px;border-radius:10px;margin-top:6px;display:inline-block;'
+             + 'border:1px solid rgba(255,255,255,0.1);cursor:zoom-in;object-fit:cover;vertical-align:top;" '
+             + 'loading="lazy" alt="">';
+    });
+}
 
 document.querySelectorAll('.vote-section form').forEach(function(form) {
     form.addEventListener('submit', function(e) {
@@ -1829,12 +2004,12 @@ document.querySelectorAll('.vote-section form').forEach(function(form) {
 ═══════════════════════════════════════════════ */
 (function(){
     var emojiData = {
-        '😀': ['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😈','😉','😊','😋','😌','😍','🥰','😎','😏','😐','😑','😒','😓','😔','😕','😖','😗','😘','😙','😚','😛','😜','😝','😞','😟','😠','😡','😢','😣','😤','😥','😦','😧','😨','😩','😪','😫','😬','😭','😮','😯','😰','😱','😲','😳','😴','😵','😶','😷','🤔','🤗','🤐','🤑','🤒','🤓','🤕','🤠','🤡','🤢','🤣','🤤','🤥','🤦','🤧','🤨','🤩','🤪','🤫','🤬','🤭','🤯','🤮'],
-        '👍': ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👋','🤚','🖐️','✋','🖖','👏','🙌','👐','🤲','🤝','🙏','✍️','💪','🦵','🦶','👁️','👀','💋','👄','🦷','👅','💅','🤳','💪'],
-        '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☯️','✡️','🔯','🕎','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'],
-        '🎮': ['🎮','🕹️','🎲','🎯','🎳','🎰','🎻','🎺','🎸','🥁','🎹','🎷','🎵','🎶','🎤','🎧','📻','🎼','🎭','🎬','🎥','📽️','🎞️','📺','📷','📸','🔭','🔬','💻','🖥️','🖨️','⌨️','🖱️','💾','💿','📀','📱','☎️','📞','📟','📠'],
-        '🔥': ['🔥','💥','❄️','🌊','⚡','🌈','☀️','🌤️','⛅','🌥️','☁️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','🌪️','🌫️','🌬️','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','🔥','💧','🌊','🍀','🌿','🍃','🌱','🪴','🌾','🌵','🎋','🎍'],
-        '🍕': ['🍕','🍔','🌭','🍟','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧'],
+        '😀': ['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😈','😉','😊','😋','😌','😍','🥰','😎',   '😏','😐','😑','😒','😓','😔','😕','😖','😗','😘','😙','😚','😛','😜','😝','😞','😟','😠','😡','😢','😣','😤','😥','😦','😧','😨','😩','😪','😫','😬','😭','😮','😯','😰','😱','😲','😳','😴','😵','😶','😷','🤔','🤗','🤐','🤑','🤒','🤓','🤕','🤠','🤡','🤢','🤣','🤤','🤥','🤦','🤧','🤨','🤩','🤪','🤫','🤬','🤭','🤯','🤮'],
+        '👍': ['👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👋','🤚','🖐️','✋',   '🖖','👏','🙌','👐','🤲','🤝','🙏','✍️','💪','🦵','🦶','👁️','👀','💋','👄','🦷','👅','💅','🤳','�         '    ],
+        '❤️': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘',      '💝','💟','☮️','✝️','☪️','🕉️','☯️','✡️','🔯','🕎','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏' ,' ♐' ,'♑','♒','♓'],
+        '🎮': ['🎮','🕹️','🎲','🎯','🎳','🎰','🎻','🎺','🎸','🥁','🎹','🎷','🎵','🎶','🎤','🎧','📻'   ,'🎼','🎭','🎬','🎥','📽️','🎞️','📺','📷','📸','🔭','🔬','💻','🖥️','🖨️','⌨️','🖱️','💾','💿','�           '     ,'📱','☎️','📞','📟','📠'],
+        '🔥': ['🔥','💥','❄️','🌊','⚡','🌈','☀️','🌤️','⛅','🌥️','☁️','🌦️','🌧️','⛈️','🌩️','🌨️','                  ❄️','🌪️','🌫️','🌬️','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','🔥','💧','🌊','🍀','🌿','🍃   ','🌱'   ,'🪴',    '🌾','🌵','🎋','🎍'],
+        '🍕': ['🍕','🍔','🌭','🍟','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿',         '🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠'   ,'🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧'],
     };
     var cats = Object.keys(emojiData);
 
@@ -2082,12 +2257,26 @@ window.removeCmtImg = function(formId) {
         ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
         document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var o=document.getElementById('_imgLightbox'); if(o) o.remove(); } }, {once:true});
     }
-    document.querySelectorAll('.comment-text').forEach(function(el){
-        el.innerHTML = el.innerHTML.replace(/\[IMG\](.*?)\[\/IMG\]/g, function(_, src){
-            var safeSrc = src.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-            return '<img src="'+safeSrc+'" data-lightbox-src="'+safeSrc+'" class="comment-img-thumb" style="max-width:220px;max-height:160px;border-radius:10px;margin-top:6px;display:inline-block;border:1px solid rgba(255,255,255,0.1);cursor:zoom-in;object-fit:cover;vertical-align:top;" loading="lazy" alt="">';
-        });
-    });
+    function _renderImgInEl(el) {
+        var raw = el.textContent || '';
+        if (raw.indexOf('[IMG]') === -1) return;
+        var parts = raw.split(/\[IMG\](.*?)\[\/IMG\]/g);
+        var html = '';
+        for (var i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                html += parts[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            } else {
+                var s = parts[i].replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                html += '<img src="'+s+'" data-lightbox-src="'+s+'" class="comment-img-thumb"'
+                      + ' style="max-width:220px;max-height:160px;border-radius:10px;margin-top:6px;'
+                      + 'display:inline-block;border:1px solid rgba(255,255,255,0.1);cursor:zoom-in;'
+                      + 'object-fit:cover;vertical-align:top;" loading="lazy" alt="">';
+            }
+        }
+        el.innerHTML = html;
+    }
+    document.querySelectorAll('.comment-text').forEach(_renderImgInEl);
+    window._renderImgInEl = _renderImgInEl;
     // Делегированный обработчик lightbox
     document.addEventListener('click', function(e){
         var img = e.target.closest('[data-lightbox-src]');
@@ -2479,4 +2668,233 @@ document.querySelectorAll('.article-content a').forEach(function(a){
     });
 })();
 </script>
+<div id="reportModal">
+    <div class="report-modal-inner">
+        <div class="report-modal-title"><i class="fas fa-flag" style="color:#c8580a;margin-right:7px;font-size:0.9rem;"></i>Пожаловаться на комментарий</div>
+        <div class="report-modal-sub">Выберите причину. Модераторы рассмотрят её в ближайшее время.</div>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Спам')"><i class="fas fa-ban"></i> Спам</button>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Оскорбления / агрессия')"><i class="fas fa-angry"></i> Оскорбления / агрессия</button>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Мат и нецензурная лексика')"><i class="fas fa-comment-slash"></i> Мат и нецензурная лексика</button>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Провокация / троллинг')"><i class="fas fa-theater-masks"></i> Провокация / троллинг</button>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Нарушение правил сайта')"><i class="fas fa-gavel"></i> Нарушение правил сайта</button>
+        <button class="report-reason-btn" onclick="_artSelectReason(this,'Другое')"><i class="fas fa-ellipsis-h"></i> Другое</button>
+        <div class="report-other-wrap" id="reportOtherWrap">
+            <textarea id="reportOtherText" placeholder="Опишите подробнее..."></textarea>
+        </div>
+        <div id="reportMsg" style="font-size:0.82rem;color:#40b860;display:none;margin-top:8px;"></div>
+        <button class="report-submit-btn" id="reportSubmitBtn" onclick="_artSubmitReport()"><i class="fas fa-paper-plane" style="margin-right:6px;font-size:0.8rem;"></i>Отправить жалобу</button>
+        <button class="report-cancel-btn" onclick="closeReportModal()">Отмена</button>
+    </div>
+</div>
+<script>
+(function(){
+    var _artId = null, _artReason = '';
+    window._articleId = '{{ article.id }}';
+
+    window.openReportModal = function(id) {
+        _artId = id;
+        _artReason = '';
+        document.querySelectorAll('.report-reason-btn').forEach(function(b){b.classList.remove('selected');});
+        document.getElementById('reportOtherWrap').style.display = 'none';
+        document.getElementById('reportOtherText').value = '';
+        document.getElementById('reportMsg').style.display = 'none';
+        var sb = document.getElementById('reportSubmitBtn');
+        sb.disabled = false; sb.style.display = '';
+        sb.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;font-size:0.8rem;"></i>Отправить жалобу';
+        document.getElementById('reportModal').classList.add('open');
+    };
+    window.closeReportModal = function() { document.getElementById('reportModal').classList.remove('open'); };
+    document.getElementById('reportModal').addEventListener('click', function(e){ if(e.target===this) window.closeReportModal(); });
+
+    window._artSelectReason = function(btn, reason) {
+        _artReason = reason;
+        document.querySelectorAll('.report-reason-btn').forEach(function(b){b.classList.remove('selected');});
+        btn.classList.add('selected');
+        document.getElementById('reportOtherWrap').style.display = reason === 'Другое' ? 'block' : 'none';
+        if(reason === 'Другое') document.getElementById('reportOtherText').focus();
+    };
+
+    window._artSubmitReport = function() {
+        var reason = _artReason;
+        if(!reason) { alert('Выберите причину жалобы'); return; }
+        if(reason === 'Другое') {
+            var txt = document.getElementById('reportOtherText').value.trim();
+            if(!txt) { document.getElementById('reportOtherText').focus(); return; }
+            reason = 'Другое: ' + txt;
+        }
+        var sb = document.getElementById('reportSubmitBtn');
+        var msg = document.getElementById('reportMsg');
+        sb.disabled = true;
+        sb.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;font-size:0.8rem;"></i>Отправка...';
+        var fd = new FormData();
+        fd.append('target_type', 'comment');
+        fd.append('target_id', _artId);
+        fd.append('reason', reason);
+        fd.append('article_id', window._articleId || '');
+        fetch('/report', {method:'POST', body:fd})
+        .then(function(r){
+            if(!r.ok && r.status !== 400) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data){
+            msg.style.display = 'block';
+            if(data.ok) {
+                msg.style.color = '#40b860';
+                msg.textContent = '✓ Жалоба отправлена. Спасибо!';
+                sb.style.display = 'none';
+                setTimeout(window.closeReportModal, 1800);
+            } else {
+                msg.style.color = '#cc4444';
+                msg.textContent = data.error || 'Ошибка при отправке';
+                sb.disabled = false;
+                sb.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;font-size:0.8rem;"></i>Отправить жалобу';
+            }
+        })
+        .catch(function(){
+            msg.style.display = 'block';
+            msg.style.color = '#cc4444';
+            msg.textContent = 'Ошибка соединения. Попробуйте ещё раз.';
+            sb.disabled = false;
+            sb.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:6px;font-size:0.8rem;"></i>Отправить жалобу';
+        });
+    };
+})()
+function shareArticle() {
+    var url = window.location.origin + '/article/{{ article.id }}';
+    var btn = document.getElementById('articleShareBtn');
+    function _done() {
+        if (btn) {
+            var orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
+            btn.style.color = '#40b860';
+            btn.style.borderColor = 'rgba(64,184,96,0.4)';
+            setTimeout(function(){
+                btn.innerHTML = '<i class="fas fa-share-alt"></i> Поделиться';
+                btn.style.color = '';
+                btn.style.borderColor = '';
+            }, 2000);
+        }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(_done).catch(function(){
+            var ta = document.createElement('textarea');
+            ta.value = url; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); _done(); } catch(e){}
+            document.body.removeChild(ta);
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); _done(); } catch(e){}
+        document.body.removeChild(ta);
+    }
+}
+function toggleCmtMenu(btn) {
+    var menu = btn.nextElementSibling;
+    var isOpen = menu.classList.contains('open');
+    closeCmtMenus();
+    if(!isOpen) menu.classList.add('open');
+}
+function closeCmtMenus() {
+    document.querySelectorAll('.cmt-dots-menu.open').forEach(function(m){m.classList.remove('open');});
+}
+document.addEventListener('click', function(e){
+    if(!e.target.closest || !e.target.closest('.cmt-menu-wrap')) closeCmtMenus();
+});
+</script>
+
+<script>
+// ═══ ОТСЛЕЖИВАНИЕ СТАТЬИ ═══
+(function(){
+    var _articleId  = {{ article.id }};
+    var _subscribed = false;
+    var _toastTimer = null;
+
+    // Проверяем статус при загрузке страницы
+    fetch('/api/article/' + _articleId + '/subscribe/status')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ _subscribed = d.subscribed; _updateSubBtn(); })
+    .catch(function(){});
+
+    /* Обновить вид кнопки */
+    function _updateSubBtn(){
+        var btn  = document.getElementById('_subBtn');
+        var icon = document.getElementById('_subIcon');
+        var lbl  = document.getElementById('_subLabel');
+        if(!btn) return;
+        if(_subscribed){
+            btn.classList.add('subscribed');
+            if(icon) icon.className = 'fas fa-bell-slash';
+            if(lbl)  lbl.textContent = 'Не отслеживать';
+        } else {
+            btn.classList.remove('subscribed');
+            if(icon) icon.className = 'fas fa-bell';
+            if(lbl)  lbl.textContent = 'Отслеживать статью';
+        }
+    }
+
+    /* Клик по кнопке */
+    window._toggleSubscribe = function(articleId){
+        var btn = document.getElementById('_subBtn');
+        if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; }
+
+        fetch('/api/article/' + articleId + '/subscribe', { method: 'POST' })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            _subscribed = d.subscribed;
+            _updateSubBtn();
+            if(btn){ btn.disabled = false; btn.style.opacity = ''; }
+
+            if(_subscribed){
+                _showToast('🔔', 'Вы начали отслеживать статью', '#e8650a');
+                // Запрашиваем Web Push разрешение
+                if(window._requestPushPermission){
+                    window._requestPushPermission(function(ok){
+                        if(!ok){
+                            setTimeout(function(){
+                                _showToast('💡', 'Разрешите уведомления в браузере, чтобы получать их на устройство', '#f5a623');
+                            }, 1800);
+                        }
+                    });
+                }
+            } else {
+                _showToast('🔕', 'Вы перестали отслеживать статью', '#555');
+            }
+        })
+        .catch(function(){
+            if(btn){ btn.disabled = false; btn.style.opacity = ''; }
+            _showToast('⚠️', 'Ошибка. Попробуйте ещё раз.', '#e84545');
+        });
+    };
+
+    /* Показать тост */
+    function _showToast(iconText, text, color){
+        var t    = document.getElementById('_subToast');
+        var icon = document.getElementById('_subToastIcon');
+        var txt  = document.getElementById('_subToastText');
+        if(!t) return;
+
+        if(icon) icon.textContent = iconText;
+        if(txt){
+            txt.textContent = text;
+            txt.style.color = color || '#f0f0f0';
+        }
+
+        // Сбрасываем если уже показан
+        t.classList.remove('show');
+        clearTimeout(_toastTimer);
+
+        // Показываем с небольшой задержкой (чтобы transition сработал)
+        setTimeout(function(){ t.classList.add('show'); }, 20);
+
+        // Скрываем через 4 сек
+        _toastTimer = setTimeout(function(){
+            t.classList.remove('show');
+        }, 4000);
+    }
+})();
+</script>
+
 {% endblock %}

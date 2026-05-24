@@ -166,6 +166,7 @@
             <div class="list-item-pos">{{ loop.index }}</div>
             <div class="li-name">{{ v.name }}</div>
             {% if v.show_messages %}<div class="li-sub">{{ v.messages }} сообщ.</div>{% endif %}
+            {% if v.xp %}<div class="li-sub" style="color:#e8650a;font-weight:700;">{{ v.xp }} XP</div>{% endif %}
             <div class="move-btns">
                 <form method="POST" action="{{ url_for('admin_home_viewer_move', vid=v.id, direction='up') }}" style="margin:0;">
                     <button type="submit" class="move-btn">▲</button>
@@ -190,6 +191,10 @@
                 <div class="form-field" style="max-width:120px;">
                     <label>Сообщений</label>
                     <input type="number" name="messages" value="0" min="0">
+                </div>
+                <div class="form-field" style="max-width:100px;">
+                    <label>XP</label>
+                    <input type="number" name="xp" value="0" min="0" placeholder="0">
                 </div>
                 <div class="form-field" style="max-width:160px;">
                     <label style="display:flex;align-items:center;gap:0;">&nbsp;</label>

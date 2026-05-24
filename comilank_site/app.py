@@ -14,7 +14,7 @@ import requests
 from sqlalchemy import func
 from flask_mail import Mail, Message
 
-load_dotenv()
+load_dotenv(encoding="utf-8")
 
 # ── Простой in-memory кеш для тяжёлых запросов главной страницы ──────────────
 import threading, time as _time
@@ -46,7 +46,11 @@ from models import (db, User, Game, Article, Comment, Vote, DropdownItem,
                     StreamMoment, NextGamePoll, PollGame, PollVote,
                     NextStream,
                     WeatherCity, UserCityShare,
-                    Report, PasswordResetToken, AccountDeletion)
+                    Report, PasswordResetToken, AccountDeletion,
+                    MessengerChat, ChatMember, ChatMessage, MsgReaction, TypingStatus,
+                    Room, RoomMember, RoomMessage, RoomReaction, RoomApplication,
+                    RoomTypingStatus, RoomJoinRequest,
+                    ArticleSubscription, PushSubscription)
 
 app = Flask(__name__)
 
@@ -58,12 +62,20 @@ if _db_url.startswith('postgres://'):
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle':  280,
-    'pool_size':     10,
-    'max_overflow':  20,
-}
+# SQLite не поддерживает connection pooling — определяем тип БД
+_is_sqlite = _db_url.startswith('sqlite')
+if _is_sqlite:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'connect_args': {'check_same_thread': False},
+    }
+else:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle':  280,
+        'pool_size':     10,
+        'max_overflow':  20,
+    }
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 год кэш для статики
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB
@@ -72,6 +84,7 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['REMEMBER_COOKIE_SECURE']   = False   # True если HTTPS
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE']  = 'Lax'
+app.config['PREFERRED_URL_SCHEME'] = os.environ.get('PREFERRED_URL_SCHEME', 'https')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -82,6 +95,94 @@ def allowed_file(filename):
 
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+
+
+# ═══════════════════════════════════════════════
+#  PUSH HELPER FUNCTIONS
+# ═══════════════════════════════════════════════
+
+def _do_send_push(user_id, title, body, url='/forum'):
+    """Отправить Web Push одному пользователю на все его устройства."""
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        return   # pywebpush не установлен — тихо пропускаем
+
+    vapid_private = os.environ.get('VAPID_PRIVATE_KEY', '')
+    vapid_email   = os.environ.get('VAPID_CLAIMS_EMAIL', 'webmaster@comilank.net')
+    if not vapid_private:
+        return
+
+    import json
+    subs = PushSubscription.query.filter_by(user_id=user_id).all()
+    bad  = []
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={'endpoint': sub.endpoint, 'keys': {'p256dh': sub.p256dh, 'auth': sub.auth}},
+                data=json.dumps({'title': title, 'body': body, 'url': url}),
+                vapid_private_key=vapid_private,
+                vapid_claims={'sub': f'mailto:{vapid_email}'}
+            )
+        except Exception as e:
+            if '410' in str(e) or '404' in str(e):
+                bad.append(sub.endpoint)
+    for ep in bad:
+        PushSubscription.query.filter_by(endpoint=ep).delete()
+    if bad:
+        db.session.commit()
+
+
+def _push_article_update(article, event_type='update', extra_title=None):
+    """Push всем подписчикам конкретной статьи."""
+    subs = ArticleSubscription.query.filter_by(article_id=article.id).all()
+    actor_id = current_user.id if current_user.is_authenticated else None
+    for sub in subs:
+        if sub.user_id == actor_id:
+            continue   # себе не шлём
+        if event_type == 'extra':
+            title = f'📄 Новая доп. статья: «{article.title[:35]}»'
+            body  = extra_title or 'Появилась новая дополнительная статья'
+        else:
+            title = f'✏️ Обновлена: «{article.title[:40]}»'
+            body  = 'Статья была изменена — заходи посмотреть'
+        _do_send_push(sub.user_id, title, body, f'/article/{article.id}')
+
+
+def _push_new_forum_article(article):
+    """Push всем у кого есть push-подписка — о новой статье на форуме."""
+    all_user_ids = db.session.query(PushSubscription.user_id).distinct().all()
+    actor_id = current_user.id if current_user.is_authenticated else None
+    title = '🔥 Новая статья на Comilank!'
+    body  = f'«{article.title[:60]}» — читай прямо сейчас'
+    for (uid,) in all_user_ids:
+        if uid == actor_id:
+            continue
+        _do_send_push(uid, title, body, f'/article/{article.id}')
+
+def safe_filename(filename):
+    """
+    Безопасное имя файла с поддержкой кириллицы и любых Unicode-имён.
+    secure_filename() на Linux отбрасывает кириллицу → пустая строка → файл не сохраняется.
+    Решение: транслитерируем кириллицу → латиницу, затем применяем secure_filename().
+    """
+    _TRANSLIT = {
+        'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
+        'и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+        'с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh',
+        'щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+        'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ё':'Yo','Ж':'Zh','З':'Z',
+        'И':'I','Й':'J','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R',
+        'С':'S','Т':'T','У':'U','Ф':'F','Х':'Kh','Ц':'Ts','Ч':'Ch','Ш':'Sh',
+        'Щ':'Sch','Ъ':'','Ы':'Y','Ь':'','Э':'E','Ю':'Yu','Я':'Ya',
+    }
+    transliterated = ''.join(_TRANSLIT.get(c, c) for c in filename)
+    result = secure_filename(transliterated)
+    if not result:
+        # Если всё равно пусто (очень необычные символы) — генерируем имя из расширения
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin'
+        result = f'file_{secrets.token_hex(6)}.{ext}'
+    return result
 
 app.config['MAIL_SERVER']         = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT']           = int(os.environ.get('MAIL_PORT', 587))
@@ -111,7 +212,21 @@ def load_user(user_id):
 def _startup():
     try:
         db.create_all()
+        # Safe column migrations
+        _safe_cols = [
+            "ALTER TABLE rooms ADD COLUMN is_featured BOOLEAN DEFAULT 0",
+            "ALTER TABLE room_messages ADD COLUMN is_pinned BOOLEAN DEFAULT 0",
+            "CREATE TABLE IF NOT EXISTS room_message_reads (id INTEGER PRIMARY KEY AUTOINCREMENT, msg_id INTEGER NOT NULL REFERENCES room_messages(id) ON DELETE CASCADE, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(msg_id, user_id))",
+        ]
+        for _sql in _safe_cols:
+            try:
+                db.session.execute(db.text(_sql));
+                db.session.commit()
+            except:
+                db.session.rollback()
+        
         _run_migration()
+    
     except Exception as _e:
         print(f"[STARTUP MIGRATION ERROR] {_e}")
 
@@ -281,52 +396,82 @@ def normalize_username(username):
     letters_only = re.sub(r'[^a-zA-Zа-яёА-ЯЁ]', '', username).lower()
     return letters_only
 
-def record_article_view(article):
+def _is_vpn_ip(ip):
+    """Проверяет IP по кэшу сессии и таблице vpn_logs. Без внешних запросов."""
+    try:
+        cached = session.get('_vpn_cache')
+        if cached is not None:
+            return bool(cached)
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        row = db.session.execute(
+            db.text("SELECT id FROM vpn_logs WHERE ip_address=:ip AND detected_at > :d LIMIT 1"),
+            {'ip': ip, 'd': week_ago}
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
 
+def record_article_view(article):
     ip = get_client_ip()
-    if current_user.is_authenticated:
-        # Уже смотрел залогиненным?
-        if ArticleView.query.filter_by(article_id=article.id, user_id=current_user.id).first():
-            return
-        # Смотрел гостем с этого IP?
-        existing_ip = ArticleView.query.filter_by(article_id=article.id, ip_address=ip).first()
-        if existing_ip:
-            if existing_ip.user_id is None:
-                existing_ip.user_id = current_user.id  # привязываем, счётчик не трогаем
-                db.session.commit()
-            return
-        db.session.add(ArticleView(article_id=article.id, user_id=current_user.id, ip_address=ip))
-        article.views += 1
-        db.session.commit()
-    else:
-        # Гость: уже смотрел с этого IP (залогиненным или гостем)?
-        if ArticleView.query.filter_by(article_id=article.id, ip_address=ip).first():
-            return
-        db.session.add(ArticleView(article_id=article.id, ip_address=ip, user_id=None))
-        article.views += 1
-        db.session.commit()
+    try:
+        if current_user.is_authenticated:
+            # Уже смотрел залогиненным?
+            if ArticleView.query.filter_by(article_id=article.id, user_id=current_user.id).first():
+                return
+            # Смотрел гостем с этого IP?
+            existing_ip = ArticleView.query.filter_by(article_id=article.id, ip_address=ip).first()
+            if existing_ip:
+                if existing_ip.user_id is None:
+                    existing_ip.user_id = current_user.id
+                    db.session.commit()
+                return
+            # VPN — не считаем
+            if _is_vpn_ip(ip):
+                return
+            db.session.add(ArticleView(article_id=article.id, user_id=current_user.id, ip_address=ip))
+            article.views += 1
+            db.session.commit()
+        else:
+            # Гость: уже смотрел с этого IP?
+            if ArticleView.query.filter_by(article_id=article.id, ip_address=ip).first():
+                return
+            if _is_vpn_ip(ip):
+                return
+            db.session.add(ArticleView(article_id=article.id, ip_address=ip, user_id=None))
+            article.views += 1
+            db.session.commit()
+    except Exception as _e:
+        try: db.session.rollback()
+        except Exception: pass
 
 def record_extra_page_view(page):
-
     ip = get_client_ip()
-    if current_user.is_authenticated:
-        if ExtraPageView.query.filter_by(page_id=page.id, user_id=current_user.id).first():
-            return
-        existing_ip = ExtraPageView.query.filter_by(page_id=page.id, ip_address=ip).first()
-        if existing_ip:
-            if existing_ip.user_id is None:
-                existing_ip.user_id = current_user.id
-                db.session.commit()
-            return
-        db.session.add(ExtraPageView(page_id=page.id, user_id=current_user.id, ip_address=ip))
-        page.views += 1
-        db.session.commit()
-    else:
-        if ExtraPageView.query.filter_by(page_id=page.id, ip_address=ip).first():
-            return
-        db.session.add(ExtraPageView(page_id=page.id, ip_address=ip, user_id=None))
-        page.views += 1
-        db.session.commit()
+    try:
+        if current_user.is_authenticated:
+            if ExtraPageView.query.filter_by(page_id=page.id, user_id=current_user.id).first():
+                return
+            existing_ip = ExtraPageView.query.filter_by(page_id=page.id, ip_address=ip).first()
+            if existing_ip:
+                if existing_ip.user_id is None:
+                    existing_ip.user_id = current_user.id
+                    db.session.commit()
+                return
+            if _is_vpn_ip(ip):
+                return
+            db.session.add(ExtraPageView(page_id=page.id, user_id=current_user.id, ip_address=ip))
+            page.views += 1
+            db.session.commit()
+        else:
+            if ExtraPageView.query.filter_by(page_id=page.id, ip_address=ip).first():
+                return
+            if _is_vpn_ip(ip):
+                return
+            db.session.add(ExtraPageView(page_id=page.id, ip_address=ip, user_id=None))
+            page.views += 1
+            db.session.commit()
+    except Exception as _e:
+        try: db.session.rollback()
+        except Exception: pass
 
 @app.cli.command('set-admin')
 @click.argument('username')
@@ -376,8 +521,8 @@ def fetch_youtube_viewers(video_id):
 
 @app.after_request
 def add_security_headers(response):
-    # Для маршрута /game/ снимаем DENY чтобы iframe внутри сайта работал
-    if request.path.startswith('/game'):
+    # SAMEORIGIN для /game/ и /chat — используются в iframe внутри сайта
+    if request.path.startswith('/game') or request.path.startswith('/chat'):
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     else:
         response.headers['X-Frame-Options'] = 'DENY'
@@ -406,11 +551,22 @@ def serve_src(filename): return send_from_directory('src', filename)
 @app.route('/')
 def index():
     # F5-редирект: если есть cookie с реальным путём - возвращаем туда
+    # Но НЕ редиректим на статьи/доп.страницы — у них свои прямые URL
+    _NO_REDIRECT = ('/article/', '/extra/', '/forum', '/admin', '/login',
+                    '/register', '/profile', '/api/', '/static/')
     rp = request.cookies.get('_rp')
     if rp and rp != '/' and not rp.startswith('//'):
-        resp = make_response(redirect(rp))
-        resp.delete_cookie('_rp')
-        return resp
+        # Проверяем что путь не относится к страницам с прямым URL
+        _skip_rp = any(rp.startswith(p) for p in _NO_REDIRECT)
+        if not _skip_rp:
+            resp = make_response(redirect(rp))
+            resp.delete_cookie('_rp')
+            return resp
+        else:
+            # Удаляем некорректную cookie и показываем главную
+            resp = make_response(redirect(url_for('index')))
+            resp.delete_cookie('_rp')
+            return resp
 
     _init_stream_platforms()   # создаём платформы если нет
 
@@ -902,6 +1058,33 @@ def register():
             flash('Этот email уже привязан к существующему аккаунту. Войдите или восстановите пароль.', 'error')
             return redirect(url_for('register'))
 
+        # Валидация формата email
+        import re as _re_email
+        _email_pattern = _re_email.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        if not _email_pattern.match(email):
+            flash('Введите корректный email адрес (например: user@gmail.com)', 'error')
+            return redirect(url_for('register'))
+
+        # DNS-проверка домена почты
+        _email_domain = email.split('@')[1].lower()
+        try:
+            import dns.resolver as _dns_r
+            _valid_domain = False
+            try:
+                _dns_r.resolve(_email_domain, 'MX', lifetime=3)
+                _valid_domain = True
+            except Exception:
+                try:
+                    _dns_r.resolve(_email_domain, 'A', lifetime=3)
+                    _valid_domain = True
+                except Exception:
+                    pass
+            if not _valid_domain:
+                flash('Почта не существует или домен не найден. Введите реальный email.', 'error')
+                return redirect(url_for('register'))
+        except ImportError:
+            pass  # dnspython не установлен — пропускаем DNS-проверку
+
         # Создаём пользователя сразу без шага верификации
         user = User(
             username=username,
@@ -926,7 +1109,7 @@ def register():
                             f'Привет, {_username}!\n\n'
                             f'Ваш аккаунт на Comilank успешно создан.\n'
                             f'Ключ восстановления сохраните в надёжном месте: {_recovery_key or "(не задан)"}\n\n'
-                            f'- Команда Comilank\nhttps://comilank.onrender.com'
+                            f'- Команда Comilank\nhttps://comilank.net'
                         )
                     )
                     mail.send(_msg)
@@ -1018,7 +1201,9 @@ def login():
         session['failed_logins'] = failed
         session['failed_login_user'] = username
         if failed >= 3:
-            flash('Неверный пароль. Вы можете восстановить аккаунт ключом или через email.', 'error')
+            flash('Неверный логин или пароль. Вы можете восстановить аккаунт ключом или через email.', 'error')
+        else:
+            flash('Неверный логин или пароль. Пожалуйста, попробуйте ещё раз.', 'error')
 
     show_recovery = session.get('failed_logins', 0) >= 3
     return render_template('login.html', show_recovery=show_recovery)
@@ -1159,30 +1344,27 @@ def forgot_password():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
-        if user and user.email:
-            ok, code = _send_reset_code(user)
-            session['reset_username'] = user.username
-            session['reset_code_sent_at'] = datetime.utcnow().isoformat()
-            if not ok:
-                # Код сохранён в БД и виден в логах сервера, но письмо не ушло
-                session['reset_mail_failed'] = True
-        else:
-            session['reset_username'] = username
-            session['reset_code_sent_at'] = datetime.utcnow().isoformat()
+        if not user or not user.email:
+            error = 'Пользователь не найден или почта не привязана. Введите реальное имя пользователя.'
+            return render_template('forgot_password.html', error=error)
+        ok, code = _send_reset_code(user)
+        session['reset_username'] = user.username
+        session['reset_code_sent_at'] = datetime.utcnow().isoformat()
+        session.pop('reset_code_verified', None)
+        if not ok:
+            session['reset_mail_failed'] = True
         return redirect(url_for('reset_password_code'))
     return render_template('forgot_password.html', error=error)
 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password_code():
-
+    """Этап 1: ввод кода из письма."""
     username = session.get('reset_username', '')
     error = None
     if not username:
         return redirect(url_for('forgot_password'))
     if request.method == 'POST':
-        code     = request.form.get('code', '').strip()
-        new_pw   = request.form.get('new_password', '')
-        conf_pw  = request.form.get('confirm_password', '')
+        code = request.form.get('code', '').strip()
         user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
         if not user:
             return redirect(url_for('forgot_password'))
@@ -1191,7 +1373,34 @@ def reset_password_code():
         ).order_by(PasswordResetToken.id.desc()).first()
         if not reset or not reset.is_valid():
             error = 'Неверный или устаревший код. Попробуйте получить новый.'
-        elif len(new_pw) < 6:
+        else:
+            # Код верный — сохраняем и переходим к вводу нового пароля
+            session['reset_code_verified'] = code
+            return redirect(url_for('reset_password_new'))
+    return render_template('reset_password_code_only.html', username=username, error=error)
+
+@app.route('/reset-password/new', methods=['GET', 'POST'])
+def reset_password_new():
+    """Этап 2: ввод нового пароля (только после верного кода)."""
+    username = session.get('reset_username', '')
+    code     = session.get('reset_code_verified', '')
+    error    = None
+    if not username or not code:
+        return redirect(url_for('forgot_password'))
+    if request.method == 'POST':
+        new_pw  = request.form.get('new_password', '')
+        conf_pw = request.form.get('confirm_password', '')
+        user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
+        if not user:
+            return redirect(url_for('forgot_password'))
+        reset = PasswordResetToken.query.filter_by(
+            user_id=user.id, token=code, used=False
+        ).order_by(PasswordResetToken.id.desc()).first()
+        if not reset or not reset.is_valid():
+            session.pop('reset_code_verified', None)
+            flash('Код устарел. Пожалуйста, запросите новый.', 'error')
+            return redirect(url_for('forgot_password'))
+        if len(new_pw) < 6:
             error = 'Пароль должен быть не менее 6 символов'
         elif new_pw != conf_pw:
             error = 'Пароли не совпадают'
@@ -1201,9 +1410,27 @@ def reset_password_code():
             db.session.commit()
             session.pop('reset_username', None)
             session.pop('reset_code_sent_at', None)
+            session.pop('reset_code_verified', None)
             flash('Пароль успешно изменён! Войдите с новым паролем.', 'success')
             return redirect(url_for('login'))
     return render_template('reset_password.html', username=username, error=error)
+
+
+@app.route('/verify-reset-code', methods=['POST'])
+def verify_reset_code_ajax():
+    username = session.get('reset_username', '')
+    code = request.form.get('code', '').strip()
+    if not username or not code:
+        return jsonify(ok=False, error='Сессия истекла')
+    user = User.query.filter(func.lower(User.username) == func.lower(username)).first()
+    if not user:
+        return jsonify(ok=False, error='Пользователь не найден')
+    reset = PasswordResetToken.query.filter_by(
+        user_id=user.id, token=code, used=False
+    ).order_by(PasswordResetToken.id.desc()).first()
+    if not reset or not reset.is_valid():
+        return jsonify(ok=False, error='Неверный или устаревший код')
+    return jsonify(ok=True)
 
 @app.route('/forgot-password/resend', methods=['POST'])
 def forgot_password_resend():
@@ -1229,7 +1456,9 @@ def submit_report():
     target_id   = request.form.get('target_id', 0, type=int)
     reason      = request.form.get('reason', '').strip()[:500]
     if target_type not in ('comment', 'user') or not target_id:
-        return jsonify(ok=False, error='Неверные данные'), 400
+        return jsonify(ok=False, error='Неверные данные запроса'), 400
+    if not reason:
+        return jsonify(ok=False, error='Выберите причину жалобы'), 400
 
     evidence_url = None
     ev_file = request.files.get('evidence_file')
@@ -1240,7 +1469,7 @@ def submit_report():
             data = ev_file.read()
             if len(data) <= 10 * 1024 * 1024:
                 ev_file.seek(0)
-                filename = secure_filename(f"report_{secrets.token_hex(8)}_{ev_file.filename}")
+                filename = f"report_{secrets.token_hex(8)}_{safe_filename(ev_file.filename)}"
                 ev_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 evidence_url = f'/static/uploads/{filename}'
     if not evidence_url:
@@ -1249,11 +1478,69 @@ def submit_report():
             evidence_url = url_inp
 
     reporter_id = current_user.id if current_user.is_authenticated else None
-    report = Report(reporter_id=reporter_id, target_type=target_type,
-                    target_id=target_id, reason=reason, evidence_url=evidence_url)
-    db.session.add(report)
-    db.session.commit()
-    return jsonify(ok=True, message='Репорт отправлен. Спасибо!')
+
+    # Проверка — нельзя жаловаться на свой комментарий
+    if target_type == 'comment' and reporter_id:
+        try:
+            with db.engine.connect() as _c:
+                _r = _c.execute(db.text("SELECT author_id FROM comments WHERE id=:cid"), {'cid': target_id}).fetchone()
+                if _r and _r[0] == reporter_id:
+                    return jsonify(ok=False, error='Нельзя пожаловаться на собственный комментарий'), 400
+        except Exception:
+            pass
+
+    # comment_article_id — берём из формы или из БД
+    comment_article_id = None
+    if target_type == 'comment':
+        direct_aid = request.form.get('article_id', 0, type=int)
+        if direct_aid:
+            comment_article_id = direct_aid
+        else:
+            try:
+                with db.engine.connect() as _c:
+                    _r2 = _c.execute(db.text("SELECT article_id FROM comments WHERE id=:cid"), {'cid': target_id}).fetchone()
+                    if _r2:
+                        comment_article_id = _r2[0]
+            except Exception:
+                pass
+
+    extra_page_id_rep = request.form.get('extra_page_id', 0, type=int) or None
+
+    # Вставляем через raw SQL в отдельном соединении.
+    # Пробуем сначала с extra_page_id, если колонки ещё нет — без неё.
+    def _do_insert(conn, with_extra):
+        if with_extra:
+            conn.execute(db.text(
+                "INSERT INTO reports (reporter_id, target_type, target_id, reason, "
+                "evidence_url, comment_article_id, extra_page_id) "
+                "VALUES (:rid, :tt, :tid, :rs, :ev, :caid, :epid)"
+            ), {'rid': reporter_id, 'tt': target_type, 'tid': target_id,
+                'rs': reason, 'ev': evidence_url,
+                'caid': comment_article_id, 'epid': extra_page_id_rep})
+        else:
+            conn.execute(db.text(
+                "INSERT INTO reports (reporter_id, target_type, target_id, reason, "
+                "evidence_url, comment_article_id) "
+                "VALUES (:rid, :tt, :tid, :rs, :ev, :caid)"
+            ), {'rid': reporter_id, 'tt': target_type, 'tid': target_id,
+                'rs': reason, 'ev': evidence_url, 'caid': comment_article_id})
+        conn.commit()
+
+    try:
+        with db.engine.connect() as _conn:
+            try:
+                _do_insert(_conn, with_extra=True)
+            except Exception as _e1:
+                _m = str(_e1).lower()
+                if 'extra_page_id' in _m or 'column' in _m:
+                    try: _conn.rollback()
+                    except Exception: pass
+                    _do_insert(_conn, with_extra=False)
+                else:
+                    raise
+        return jsonify(ok=True, message='Репорт отправлен. Спасибо!')
+    except Exception:
+        return jsonify(ok=False, error='Ошибка соединения. Попробуйте ещё раз.'), 500
 
 @app.route('/admin/reports')
 @login_required
@@ -1310,92 +1597,72 @@ def delete_account():
         flash('Неверный пароль. Аккаунт не удалён.', 'error')
         return redirect(url_for('profile', username=current_user.username))
     try:
-        user_id = current_user.id
-        email_hash = hashlib.sha256(current_user.email.encode()).hexdigest()[:32]
+        uid          = current_user.id
+        email_hash   = hashlib.sha256(current_user.email.encode()).hexdigest()[:32]
         username_bak = current_user.username
+        t = db.text
+        _sp_idx = [0]
 
-        # Логируем удаление ДО выхода из аккаунта
+        def _safe(sql, params=None):
+            _sp_idx[0] += 1
+            sp = f"sp_da_{_sp_idx[0]}"
+            try:
+                db.session.execute(t(f"SAVEPOINT {sp}"))
+                db.session.execute(t(sql), params or {'u': uid})
+                db.session.execute(t(f"RELEASE SAVEPOINT {sp}"))
+            except Exception:
+                try: db.session.execute(t(f"ROLLBACK TO SAVEPOINT {sp}"))
+                except Exception: pass
+
+        # Логируем удаление
         log = AccountDeletion(username=username_bak, email_hash=email_hash, reason=reason)
         db.session.add(log)
 
-        # === Удаляем все связанные данные ===
-        # 1. Реакции на комментарии пользователя
-        CommentReaction.query.filter_by(user_id=user_id).delete()
-        # 2. Реакции на ЕГО комментарии + сами комментарии (дочерние → родительские)
-        for reply in Comment.query.filter(
-            Comment.author_id == user_id, Comment.parent_id.isnot(None)
-        ).all():
-            CommentReaction.query.filter_by(comment_id=reply.id).delete()
-            db.session.delete(reply)
-        for c in Comment.query.filter_by(author_id=user_id).all():
-            for sub in Comment.query.filter_by(parent_id=c.id).all():
-                CommentReaction.query.filter_by(comment_id=sub.id).delete()
-                db.session.delete(sub)
-            CommentReaction.query.filter_by(comment_id=c.id).delete()
-            db.session.delete(c)
-        # 3. Голоса
-        Vote.query.filter_by(user_id=user_id).delete()
-        # 4. Просмотры
-        ArticleView.query.filter_by(user_id=user_id).delete()
-        # 5. История наказаний
-        PenaltyHistory.query.filter_by(user_id=user_id).delete()
-        PenaltyHistory.query.filter_by(created_by_id=user_id).delete()
-        # 6. Муты
-        Mute.query.filter_by(user_id=user_id).delete()
-        # 7. Статьи пользователя (лайки, просмотры, комменты к ним)
-        from models import Article as _Art
-        for art in _Art.query.filter_by(author_id=user_id).all():
-            for ac in Comment.query.filter_by(article_id=art.id).all():
-                for acr in Comment.query.filter_by(parent_id=ac.id).all():
-                    CommentReaction.query.filter_by(comment_id=acr.id).delete()
-                    db.session.delete(acr)
-                CommentReaction.query.filter_by(comment_id=ac.id).delete()
-                db.session.delete(ac)
-            ArticleView.query.filter_by(article_id=art.id).delete()
-            Vote.query.filter_by(article_id=art.id).delete()
-            db.session.delete(art)
-        # 8. Extra-page комментарии
-        try:
-            db.session.execute(db.text(
-                "DELETE FROM extra_comment_reactions WHERE comment_id IN "
-                "(SELECT id FROM extra_page_comments WHERE author_id=:uid)"
-            ), {'uid': user_id})
-            db.session.execute(db.text(
-                "DELETE FROM extra_page_comments WHERE author_id=:uid"
-            ), {'uid': user_id})
-        except Exception:
-            pass
-        # 9. Уведомления
-        try:
-            from models import Notification
-            Notification.query.filter(
-                (Notification.user_id==user_id)|(Notification.actor_id==user_id)
-            ).delete(synchronize_session=False)
-        except Exception:
-            pass
-        # 10. UserPermissions
-        try:
-            from models import UserPermission
-            UserPermission.query.filter_by(user_id=user_id).delete()
-        except Exception:
-            pass
-        # 11. Battle invites/results
-        try:
-            db.session.execute(db.text(
-                "DELETE FROM battle_invites WHERE from_id=:uid OR to_id=:uid"
-            ), {'uid': user_id})
-            db.session.execute(db.text(
-                "DELETE FROM battle_results WHERE winner_id=:uid OR loser_id=:uid"
-            ), {'uid': user_id})
-        except Exception:
-            pass
+        # 1. Notifications по comment_id ПЕРЕД удалением комментариев
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT c2.id FROM comments c2 JOIN comments c1 ON c2.parent_id=c1.id WHERE c1.author_id=:u)")
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT id FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u))")
 
-        db.session.flush()  # применяем всё перед удалением User
+        # 2. Реакции
+        _safe("DELETE FROM comment_reactions WHERE user_id=:u")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT c2.id FROM comments c2 JOIN comments c1 ON c2.parent_id=c1.id WHERE c1.author_id=:u)")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT id FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u))")
 
-        # Удаляем самого пользователя
-        user = current_user._get_current_object()
+        # 3. Комментарии
+        _safe("DELETE FROM comments WHERE parent_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM comments WHERE author_id=:u")
+        _safe("DELETE FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+
+        # 4. Статьи
+        _safe("DELETE FROM votes WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+        _safe("DELETE FROM article_views WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+        _safe("DELETE FROM articles WHERE author_id=:u")
+
+        # 5. Прочее
+        _safe("DELETE FROM votes WHERE user_id=:u")
+        _safe("DELETE FROM article_views WHERE user_id=:u")
+        _safe("DELETE FROM penalty_history WHERE user_id=:u OR created_by_id=:u")
+        _safe("DELETE FROM mutes WHERE user_id=:u")
+        _safe("DELETE FROM user_permissions WHERE user_id=:u")
+        _safe("DELETE FROM notifications WHERE user_id=:u")
+        _safe("DELETE FROM notifications WHERE actor_id=:u")
+        _safe("DELETE FROM password_reset_tokens WHERE user_id=:u")
+        _safe("DELETE FROM extra_page_views WHERE user_id=:u")
+        _safe("DELETE FROM extra_comment_reactions WHERE comment_id IN (SELECT id FROM extra_page_comments WHERE author_id=:u)")
+        _safe("DELETE FROM extra_page_comments WHERE author_id=:u")
+        _safe("DELETE FROM battle_invites WHERE from_id=:u OR to_id=:u")
+        _safe("DELETE FROM battle_results WHERE winner_id=:u OR loser_id=:u")
+        _safe("DELETE FROM reports WHERE reporter_id=:u")
+        _safe("DELETE FROM reports WHERE target_type='user' AND target_id=:u")
+        _safe("DELETE FROM vpn_logs WHERE user_id=:u")
+        _safe("DELETE FROM online_bans WHERE user_id=:u")
+        _safe("DELETE FROM poll_votes WHERE user_id=:u")
+        _safe("DELETE FROM user_city_share WHERE user_id=:u")
+
+        # 6. Удаляем пользователя
         logout_user()
-        db.session.delete(user)
+        db.session.execute(t("DELETE FROM users WHERE id=:u"), {'u': uid})
         db.session.commit()
         flash('Ваш аккаунт был успешно удалён.', 'success')
         return redirect(url_for('index'))
@@ -1495,11 +1762,13 @@ def admin_panel():
         recent_comments = Comment.query.order_by(Comment.created_at.desc()).limit(5).all()
         now = datetime.utcnow()
         def ago(dt):
-            d = now - dt
-            if d.seconds < 60: return 'только что'
-            if d.seconds < 3600: return f'{d.seconds//60} мин назад'
-            if d.days == 0: return f'{d.seconds//3600} ч назад'
-            return f'{d.days} д назад'
+            if not dt: return '—'
+            total = (now - dt).total_seconds()
+            if total < 60: return 'только что'
+            if total < 3600: return f'{int(total//60)} мин назад'
+            if total < 86400: return f'{int(total//3600)} ч назад'
+            days = int(total // 86400)
+            return f'{days} д назад'
         digest_data['recent_comments'] = [
             {'author': c.author.username if c.author else '?', 'ago': ago(c.created_at)}
             for c in recent_comments
@@ -1512,7 +1781,9 @@ def admin_panel():
              'online': (now - u.last_seen).total_seconds() < 300}
             for u in recent_users
         ]
-    open_reports_count = Report.query.filter_by(resolved=False).count()
+    open_reports_count = Report.query.filter(
+        (Report.resolved == False) | (Report.resolved == None)
+    ).count()
     return render_template('admin/dashboard.html',
                            chaos_button_enabled=settings.chaos_button_enabled,
                            stats=stats,
@@ -1716,30 +1987,74 @@ def delete_user(user_id):
     if target_user.role == 4:
         flash('Нельзя удалить главного администратора', 'error')
         return redirect(url_for('admin_users'))
-    # Удаляем реакции на комментарии пользователя
-    CommentReaction.query.filter_by(user_id=user_id).delete()
-    # Удаляем реакции на комментарии этого пользователя и сами комментарии
-    comments = Comment.query.filter_by(author_id=user_id).all()
-    for c in comments:
-        # Удаляем ответы на комментарий
-        for reply in Comment.query.filter_by(parent_id=c.id).all():
-            CommentReaction.query.filter_by(comment_id=reply.id).delete()
-            db.session.delete(reply)
-        CommentReaction.query.filter_by(comment_id=c.id).delete()
-        db.session.delete(c)
-    # Удаляем голоса
-    Vote.query.filter_by(user_id=user_id).delete()
-    # Удаляем просмотры
-    ArticleView.query.filter_by(user_id=user_id).delete()
-    # Удаляем историю наказаний
-    PenaltyHistory.query.filter_by(user_id=user_id).delete()
-    PenaltyHistory.query.filter_by(created_by_id=user_id).delete()
-    # Удаляем муты
-    Mute.query.filter_by(user_id=user_id).delete()
-    db.session.flush()
-    db.session.delete(target_user)
-    db.session.commit()
-    flash(f'{target_user.username} удалён', 'success')
+    username_bak = target_user.username
+    try:
+        uid = user_id
+        t = db.text
+        _sp_idx = [0]
+
+        def _safe(sql, params=None):
+            """Выполняет SQL с уникальным SAVEPOINT — если ошибка, откатывает только этот шаг."""
+            _sp_idx[0] += 1
+            sp = f"sp_du_{_sp_idx[0]}"
+            try:
+                db.session.execute(t(f"SAVEPOINT {sp}"))
+                db.session.execute(t(sql), params or {'u': uid})
+                db.session.execute(t(f"RELEASE SAVEPOINT {sp}"))
+            except Exception:
+                try: db.session.execute(t(f"ROLLBACK TO SAVEPOINT {sp}"))
+                except Exception: pass
+
+        # 1. Notifications по comment_id ПЕРЕД удалением комментариев (FK constraint)
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT c2.id FROM comments c2 JOIN comments c1 ON c2.parent_id=c1.id WHERE c1.author_id=:u)")
+        _safe("DELETE FROM notifications WHERE comment_id IN (SELECT id FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u))")
+
+        # 2. Реакции на комментарии
+        _safe("DELETE FROM comment_reactions WHERE user_id=:u")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT c2.id FROM comments c2 JOIN comments c1 ON c2.parent_id=c1.id WHERE c1.author_id=:u)")
+        _safe("DELETE FROM comment_reactions WHERE comment_id IN (SELECT id FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u))")
+
+        # 3. Комментарии
+        _safe("DELETE FROM comments WHERE parent_id IN (SELECT id FROM comments WHERE author_id=:u)")
+        _safe("DELETE FROM comments WHERE author_id=:u")
+        _safe("DELETE FROM comments WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+
+        # 4. Статьи
+        _safe("DELETE FROM votes WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+        _safe("DELETE FROM article_views WHERE article_id IN (SELECT id FROM articles WHERE author_id=:u)")
+        _safe("DELETE FROM articles WHERE author_id=:u")
+
+        # 5. Прочее
+        _safe("DELETE FROM votes WHERE user_id=:u")
+        _safe("DELETE FROM article_views WHERE user_id=:u")
+        _safe("DELETE FROM penalty_history WHERE user_id=:u OR created_by_id=:u")
+        _safe("DELETE FROM mutes WHERE user_id=:u")
+        _safe("DELETE FROM user_permissions WHERE user_id=:u")
+        _safe("DELETE FROM notifications WHERE user_id=:u")
+        _safe("DELETE FROM notifications WHERE actor_id=:u")
+        _safe("DELETE FROM password_reset_tokens WHERE user_id=:u")
+        _safe("DELETE FROM extra_page_views WHERE user_id=:u")
+        _safe("DELETE FROM extra_comment_reactions WHERE comment_id IN (SELECT id FROM extra_page_comments WHERE author_id=:u)")
+        _safe("DELETE FROM extra_page_comments WHERE author_id=:u")
+        _safe("DELETE FROM battle_invites WHERE from_id=:u OR to_id=:u")
+        _safe("DELETE FROM battle_results WHERE winner_id=:u OR loser_id=:u")
+        _safe("DELETE FROM reports WHERE reporter_id=:u")
+        _safe("DELETE FROM reports WHERE target_type='user' AND target_id=:u")
+        _safe("DELETE FROM vpn_logs WHERE user_id=:u")
+        _safe("DELETE FROM online_bans WHERE user_id=:u")
+        _safe("DELETE FROM poll_votes WHERE user_id=:u")
+        _safe("DELETE FROM user_city_share WHERE user_id=:u")
+        _safe("DELETE FROM ip_bans WHERE banned_by_id=:u")
+
+        # 6. Удаляем пользователя
+        db.session.execute(t("DELETE FROM users WHERE id=:u"), {'u': uid})
+        db.session.commit()
+        flash(f'{username_bak} удалён', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка удаления: {e}', 'error')
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/user/<int:user_id>')
@@ -1760,7 +2075,7 @@ def upload_image():
     file = request.files.get('file') or request.files.get('image')
     if not file or not allowed_file(file.filename):
         return jsonify(error='Недопустимый файл'), 400
-    filename = secure_filename(f"content_{secrets.token_hex(8)}_{file.filename}")
+    filename = f"content_{secrets.token_hex(8)}_{safe_filename(file.filename)}"
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return jsonify(url=f'/static/uploads/{filename}')
 
@@ -1770,7 +2085,7 @@ def upload_comment_image():
     file = request.files.get('file')
     if not file or not allowed_file(file.filename):
         return jsonify(error='Недопустимый файл'), 400
-    filename = secure_filename(f"cmt_{secrets.token_hex(8)}_{file.filename}")
+    filename = f"cmt_{secrets.token_hex(8)}_{safe_filename(file.filename)}"
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return jsonify(url=f'/static/uploads/{filename}')
 
@@ -1790,7 +2105,7 @@ def upload_avatar():
         old_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(current_user.avatar))
         try: os.remove(old_path)
         except OSError: pass
-    filename = secure_filename(f"avatar_{current_user.id}_{secrets.token_hex(6)}_{file.filename}")
+    filename = f"avatar_{current_user.id}_{secrets.token_hex(6)}_{safe_filename(file.filename)}"
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     current_user.avatar = f'/static/uploads/{filename}'
     db.session.commit()
@@ -1870,7 +2185,7 @@ def forum():
     if category in ('article', 'news', 'film'):
         q = q.filter_by(category=category)
     articles     = q.order_by(Article.created_at.desc()).all()
-    top_comments = Comment.query.order_by(Comment.likes.desc()).limit(5).all()
+    top_comments = Comment.query.filter(Comment.likes > 0).order_by(Comment.likes.desc()).limit(5).all()
     settings     = SiteSettings.get()
     return render_template('forum.html', articles=articles,
                            category=category, top_comments=top_comments,
@@ -2005,11 +2320,18 @@ def delete_comment(comment_id):
     if current_user.id != comment.author_id and current_user.role < 2:
         abort(403)
     article_id = comment.article_id
-    # Удаляем реакции на комментарий
+    from models import Notification
+    # Собираем id всех затронутых комментариев (сам + ответы)
+    reply_ids = [r.id for r in comment.replies]
+    all_ids = reply_ids + [comment_id]
+    # 1. Удаляем уведомления, ссылающиеся на эти комментарии (FK constraint)
+    Notification.query.filter(Notification.comment_id.in_(all_ids)).delete(synchronize_session=False)
+    # 2. Удаляем реакции
     CommentReaction.query.filter_by(comment_id=comment_id).delete()
-    # Удаляем ответы
-    for reply in comment.replies:
+    for reply in list(comment.replies):
         CommentReaction.query.filter_by(comment_id=reply.id).delete()
+        db.session.delete(reply)
+    db.session.flush()
     db.session.delete(comment)
     db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -2018,8 +2340,22 @@ def delete_comment(comment_id):
 
 @app.route('/extra/<int:page_id>')
 def extra_page(page_id):
+    # Откатываем любую незавершённую транзакцию от предыдущих запросов
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
     page = ExtraPage.query.get_or_404(page_id)
-    record_extra_page_view(page)
+    try:
+        record_extra_page_view(page)
+    except Exception:
+        pass
+    extra_article = None
+    try:
+        if page.article_id:
+            extra_article = Article.query.get(page.article_id)
+    except Exception:
+        pass
     try:
         rows = db.session.execute(
             db.text("SELECT id,content,created_at,author_id,parent_id,likes,dislikes "
@@ -2068,11 +2404,25 @@ def extra_page(page_id):
             user_page_vote = rv[0] if rv else 0
     except Exception:
         pass
+    # Получаем can_voice_reply заранее чтобы избежать lazy load в шаблоне
+    # после возможной сломанной транзакции
+    can_voice_reply = False
+    try:
+        if current_user.is_authenticated:
+            if current_user.role >= 4:
+                can_voice_reply = True
+            else:
+                _perm = UserPermission.query.filter_by(user_id=current_user.id).first()
+                can_voice_reply = bool(_perm and getattr(_perm, 'can_voice_reply', False))
+    except Exception:
+        can_voice_reply = False
     return render_template('extra.html', page=page,
+                           extra_article=extra_article,
                            extra_comments=extra_comments,
                            user_extra_reactions=user_extra_reactions,
                            page_likes=page_likes, page_dislikes=page_dislikes,
-                           user_page_vote=user_page_vote)
+                           user_page_vote=user_page_vote,
+                           can_voice_reply=can_voice_reply)
 
 @app.route('/extra/<int:page_id>/vote', methods=['POST'])
 @login_required
@@ -2103,61 +2453,138 @@ def vote_extra_page(page_id):
 @app.route('/extra/<int:page_id>/comment', methods=['POST'])
 @login_required
 def add_extra_comment(page_id):
-    ExtraPage.query.get_or_404(page_id)
-    content = request.form.get('content', '').strip()
-    if not content:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify(ok=False, error='empty')
+    import traceback as _tb
+    _is_xhr = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Полностью сбрасываем сессию перед работой
+    try: db.session.remove()
+    except Exception: pass
+
+    # Проверка существования страницы
+    try:
+        page = ExtraPage.query.get(page_id)
+    except Exception:
+        try: db.session.rollback()
+        except Exception: pass
+        page = ExtraPage.query.get(page_id)
+
+    if not page:
+        if _is_xhr:
+            return jsonify(ok=False, error='Страница не найдена'), 404
         return redirect(url_for('extra_page', page_id=page_id))
 
-    # Надёжный парсинг parent_id - защита от 'undefined', '', None
-    parent_id_raw = request.form.get('parent_id', '').strip()
+    # Получаем текст
+    content = (request.form.get('content') or '').strip()
+    if not content:
+        if _is_xhr:
+            return jsonify(ok=False, error='empty'), 400
+        return redirect(url_for('extra_page', page_id=page_id))
+
+    # Надёжный парсинг parent_id
+    parent_id_raw = (request.form.get('parent_id') or '').strip()
     parent_id = None
     if parent_id_raw and parent_id_raw.isdigit():
         parent_id = int(parent_id_raw)
 
-    comment_id = 0
+    # Проверка бана
     try:
-        # Простой INSERT без RETURNING - работает на SQLite и PostgreSQL
-        db.session.execute(
-            db.text("INSERT INTO extra_page_comments "
-                    "(content, page_id, author_id, parent_id) "
-                    "VALUES (:c, :pid, :aid, :par)"),
-            {'c': content, 'pid': page_id, 'aid': current_user.id, 'par': parent_id}
-        )
-        db.session.commit()
-        # Получаем ID вставленной записи
-        row = db.session.execute(
-            db.text("SELECT id FROM extra_page_comments "
-                    "WHERE page_id=:pid AND author_id=:aid AND content=:c "
-                    "ORDER BY id DESC LIMIT 1"),
-            {'pid': page_id, 'aid': current_user.id, 'c': content}
-        ).fetchone()
-        comment_id = row[0] if row else 0
+        if current_user.banned_until and current_user.banned_until > datetime.utcnow():
+            if _is_xhr:
+                return jsonify(ok=False, error='Вы заблокированы'), 403
+            return redirect(url_for('extra_page', page_id=page_id))
     except Exception:
-        db.session.rollback()
-        comment_id = 0
+        pass
 
-    # Уведомление: если это ответ на комментарий в extra-странице
-    if parent_id and comment_id:
+    # Проверка мута
+    try:
+        active_mute = Mute.query.filter_by(user_id=current_user.id)\
+            .filter(Mute.muted_until > datetime.utcnow()).first()
+        if active_mute:
+            if _is_xhr:
+                return jsonify(ok=False, error='muted'), 403
+            return redirect(url_for('extra_page', page_id=page_id))
+    except Exception:
+        pass
+
+    # ── СПОСОБ 1: через engine.connect() в отдельном соединении ──────────────
+    comment_id = None
+    _err1 = None
+    _is_pg = 'postgresql' in str(db.engine.url) or 'postgres' in str(db.engine.url)
+    try:
+        with db.engine.connect() as _conn:
+            if _is_pg:
+                _row = _conn.execute(
+                    db.text(
+                        "INSERT INTO extra_page_comments (content, page_id, author_id, parent_id) "
+                        "VALUES (:c, :pid, :aid, :par) RETURNING id"
+                    ),
+                    {'c': content, 'pid': page_id, 'aid': current_user.id, 'par': parent_id}
+                ).fetchone()
+                _conn.commit()
+                comment_id = _row[0] if _row else None
+            else:
+                _conn.execute(
+                    db.text(
+                        "INSERT INTO extra_page_comments (content, page_id, author_id, parent_id) "
+                        "VALUES (:c, :pid, :aid, :par)"
+                    ),
+                    {'c': content, 'pid': page_id, 'aid': current_user.id, 'par': parent_id}
+                )
+                _conn.commit()
+                _row2 = _conn.execute(
+                    db.text(
+                        "SELECT id FROM extra_page_comments WHERE page_id=:pid "
+                        "AND author_id=:aid ORDER BY id DESC LIMIT 1"
+                    ),
+                    {'pid': page_id, 'aid': current_user.id}
+                ).fetchone()
+                comment_id = _row2[0] if _row2 else None
+    except Exception as _e1:
+        _err1 = _e1
+        print(f'[EXTRA CMT engine] {_e1}\n{_tb.format_exc()}')
+
+    # ── СПОСОБ 2: ORM в свежей сессии ─────────────────────────────────────────
+    if comment_id is None:
         try:
-            parent_row = db.session.execute(
+            db.session.remove()
+            from models import ExtraPageComment as _EPC
+            _c = _EPC(content=content, page_id=page_id,
+                      author_id=current_user.id, parent_id=parent_id)
+            db.session.add(_c)
+            db.session.commit()
+            comment_id = _c.id
+        except Exception as _e2:
+            try: db.session.rollback()
+            except Exception: pass
+            print(f'[EXTRA CMT orm] {_e2}\n{_tb.format_exc()}')
+            if _is_xhr:
+                # Возвращаем реальную ошибку чтобы увидеть причину
+                _msg = f'engine: {str(_err1)[:80]} | orm: {str(_e2)[:80]}'
+                return jsonify(ok=False, error=_msg), 500
+            return redirect(url_for('extra_page', page_id=page_id))
+
+    if comment_id is None:
+        if _is_xhr:
+            return jsonify(ok=False, error=f'Не удалось получить ID: {str(_err1)[:100]}'), 500
+        return redirect(url_for('extra_page', page_id=page_id))
+
+    # ── Уведомление при ответе ─────────────────────────────────────────────────
+    if parent_id:
+        try:
+            _pr = db.session.execute(
                 db.text("SELECT author_id FROM extra_page_comments WHERE id=:id"),
                 {'id': parent_id}
             ).fetchone()
-            if parent_row and parent_row[0] != current_user.id:
+            if _pr and _pr[0] != current_user.id:
                 _create_notification(
-                    user_id=parent_row[0],
-                    actor_id=current_user.id,
-                    notif_type='reply_extra',
-                    extra_page_id=page_id,
-                    comment_id=comment_id,
-                    preview=content[:120]
+                    user_id=_pr[0], actor_id=current_user.id,
+                    notif_type='reply_extra', extra_page_id=page_id,
+                    comment_id=comment_id, preview=content[:120]
                 )
         except Exception:
             pass
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if _is_xhr:
         return jsonify(ok=True, id=comment_id,
                        username=current_user.username,
                        avatar=current_user.avatar or '',
@@ -2259,14 +2686,14 @@ def _save_article_form(article=None):
     image_file = None
     file = request.files.get('image_file')
     if file and file.filename and allowed_file(file.filename):
-        filename   = secure_filename(f"{secrets.token_hex(8)}_{file.filename}")
+        filename   = f"{secrets.token_hex(8)}_{safe_filename(file.filename)}"
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         image_file = filename
     # Загрузка видео-файла
     video_file = None
     vfile = request.files.get('video_file_upload')
     if vfile and vfile.filename and allowed_video_file(vfile.filename):
-        vfilename = secure_filename(f"{secrets.token_hex(8)}_{vfile.filename}")
+        vfilename = f"{secrets.token_hex(8)}_{safe_filename(vfile.filename)}"
         vfile.save(os.path.join(app.config['UPLOAD_FOLDER'], vfilename))
         video_file = vfilename
     if article is None:
@@ -2294,6 +2721,11 @@ def admin_article_create():
         art = _save_article_form()
         if art:
             flash('Статья создана!', 'success')
+            # Рассылаем push всем подписчикам форума
+            try:
+                _push_new_forum_article(art)
+            except Exception:
+                pass
             return redirect(url_for('admin_articles'))
     games = Game.query.order_by(Game.name).all()
     default_category = request.args.get('category', 'article')
@@ -2313,6 +2745,11 @@ def admin_article_edit(article_id):
     if request.method == 'POST':
         if _save_article_form(art):
             flash('Статья обновлена!', 'success')
+            # Рассылаем push подписчикам статьи об обновлении
+            try:
+                _push_article_update(art, event_type='update')
+            except Exception:
+                pass
             return redirect(url_for('admin_articles'))
     games = Game.query.order_by(Game.name).all()
     return render_template('admin/article_edit.html', article=art, games=games)
@@ -2336,7 +2773,34 @@ def admin_article_delete(article_id):
     if art.image_file:
         try: os.remove(os.path.join(app.config['UPLOAD_FOLDER'], art.image_file))
         except OSError: pass
-    db.session.delete(art); db.session.commit()
+    # Удаляем все зависимости вручную через raw SQL в правильном порядке
+    # чтобы не получить FK violation (notifications_comment_id_fkey и др.)
+    _aid = article_id
+    def _s(sql, **kw):
+        try:
+            db.session.execute(db.text(sql), kw)
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
+    # 1. Уведомления, ссылающиеся на комментарии этой статьи
+    _s("DELETE FROM notifications WHERE comment_id IN (SELECT id FROM comments WHERE article_id=:aid)", aid=_aid)
+    # 2. Уведомления, ссылающиеся на саму статью
+    _s("DELETE FROM notifications WHERE article_id=:aid", aid=_aid)
+    # 2b. Подписки на статью
+    _s("DELETE FROM article_subscriptions WHERE article_id=:aid", aid=_aid)
+    # 3. Реакции на комментарии этой статьи
+    _s("DELETE FROM comment_reactions WHERE comment_id IN (SELECT id FROM comments WHERE article_id=:aid)", aid=_aid)
+    # 4. Просмотры доп. страниц этой статьи
+    _s("DELETE FROM extra_page_views WHERE page_id IN (SELECT id FROM extra_pages WHERE article_id=:aid)", aid=_aid)
+    # 5. Реакции на комментарии доп. страниц этой статьи
+    _s("DELETE FROM extra_comment_reactions WHERE comment_id IN (SELECT id FROM extra_page_comments WHERE page_id IN (SELECT id FROM extra_pages WHERE article_id=:aid))", aid=_aid)
+    # 6. Комментарии доп. страниц (ответы первыми из-за self-FK)
+    _s("DELETE FROM extra_page_comments WHERE parent_id IN (SELECT id FROM extra_page_comments WHERE page_id IN (SELECT id FROM extra_pages WHERE article_id=:aid))", aid=_aid)
+    _s("DELETE FROM extra_page_comments WHERE page_id IN (SELECT id FROM extra_pages WHERE article_id=:aid)", aid=_aid)
+    db.session.flush()
+    # Теперь безопасно удаляем статью — ORM cascade уберёт comments, votes, extra_pages и т.д.
+    db.session.delete(art)
+    db.session.commit()
     flash('Статья удалена', 'success')
     return redirect(url_for('admin_articles'))
 
@@ -2345,11 +2809,19 @@ def admin_article_delete(article_id):
 @editor_required
 def admin_extra_create():
     if request.method == 'POST':
-        db.session.add(ExtraPage(title=request.form.get('title'),
-                                 content=request.form.get('content'),
-                                 article_id=request.form.get('article_id', type=int),
-                                 author_id=current_user.id))
+        ep = ExtraPage(title=request.form.get('title'),
+                       content=request.form.get('content'),
+                       article_id=request.form.get('article_id', type=int),
+                       author_id=current_user.id)
+        db.session.add(ep)
         db.session.commit()
+        # Рассылаем push подписчикам родительской статьи
+        try:
+            parent_art = Article.query.get(ep.article_id)
+            if parent_art:
+                _push_article_update(parent_art, event_type='extra', extra_title=ep.title)
+        except Exception:
+            pass
         flash('Страница создана', 'success')
         return redirect(url_for('admin_articles'))
     return render_template('admin/extra_edit.html', page=None,
@@ -2485,7 +2957,7 @@ def admin_game_create():
             game = Game(name=name)
             file = request.files.get('image_file')
             if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(f"game_{secrets.token_hex(6)}_{file.filename}")
+                filename = f"game_{secrets.token_hex(6)}_{safe_filename(file.filename)}"
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 game.image = f'/static/uploads/{filename}'
             elif request.form.get('image_url'):
@@ -2504,7 +2976,7 @@ def admin_game_edit(game_id):
         game.name = request.form.get('name', '').strip()
         file = request.files.get('image_file')
         if file and file.filename and allowed_file(file.filename):
-            filename = secure_filename(f"game_{secrets.token_hex(6)}_{file.filename}")
+            filename = f"game_{secrets.token_hex(6)}_{safe_filename(file.filename)}"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             game.image = f'/static/uploads/{filename}'
         elif request.form.get('image_url'):
@@ -2663,11 +3135,13 @@ def admin_home_viewer_add():
         if request.headers.get('X-Requested-With')=='XMLHttpRequest': return jsonify(ok=True)
         return redirect(url_for('admin_home_settings'))
     pos = (db.session.query(func.max(TopViewer.position)).scalar() or 0) + 1
+    xp_val = int(request.form.get('xp', 0) or 0)
     v = TopViewer(
         name=request.form['name'].strip(),
         messages=int(request.form.get('messages', 0) or 0),
         show_messages=bool(request.form.get('show_messages')),
         position=pos,
+        xp=xp_val,
     )
     db.session.add(v)
     db.session.commit()
@@ -2682,6 +3156,20 @@ def admin_home_viewer_delete(vid):
     db.session.delete(TopViewer.query.get_or_404(vid))
     db.session.commit()
     flash('Зритель удалён', 'success')
+    if request.headers.get('X-Requested-With')=='XMLHttpRequest': return jsonify(ok=True)
+    return redirect(url_for('admin_home_settings'))
+
+@app.route('/admin/home/viewer/<int:vid>/edit', methods=['POST'])
+@login_required
+@_home_edit_required
+def admin_home_viewer_edit(vid):
+    v = TopViewer.query.get_or_404(vid)
+    v.name          = request.form.get('name', v.name).strip() or v.name
+    v.messages      = int(request.form.get('messages', v.messages) or 0)
+    v.show_messages = bool(request.form.get('show_messages'))
+    v.xp            = int(request.form.get('xp', 0) or 0)
+    db.session.commit()
+    flash('Зритель обновлён', 'success')
     if request.headers.get('X-Requested-With')=='XMLHttpRequest': return jsonify(ok=True)
     return redirect(url_for('admin_home_settings'))
 
@@ -2764,7 +3252,7 @@ def admin_home_last_stream():
     # Превью: файл приоритетнее URL
     thumb_file = request.files.get('thumbnail_file')
     if thumb_file and thumb_file.filename and allowed_file(thumb_file.filename):
-        filename = secure_filename(f"stream_{secrets.token_hex(6)}_{thumb_file.filename}")
+        filename = f"stream_{secrets.token_hex(6)}_{safe_filename(thumb_file.filename)}"
         thumb_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         ls.thumbnail_url = f'/static/uploads/{filename}'
     else:
@@ -2794,7 +3282,7 @@ def admin_home_next_stream():
         preview_url = request.form.get('preview_url', '').strip()
         preview_file = request.files.get('preview_file')
         if preview_file and preview_file.filename and allowed_file(preview_file.filename):
-            filename = secure_filename(f"nsw_{secrets.token_hex(6)}_{preview_file.filename}")
+            filename = f"nsw_{secrets.token_hex(6)}_{safe_filename(preview_file.filename)}"
             preview_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             preview_url = f'/static/uploads/{filename}'
         ns.preview_url = preview_url
@@ -2813,7 +3301,7 @@ def admin_home_moment_add():
     thumb_url = request.form.get('thumbnail_url', '').strip()
     thumb_file = request.files.get('thumbnail_file')
     if thumb_file and thumb_file.filename and allowed_file(thumb_file.filename):
-        filename = secure_filename(f"moment_{secrets.token_hex(6)}_{thumb_file.filename}")
+        filename = f"moment_{secrets.token_hex(6)}_{safe_filename(thumb_file.filename)}"
         thumb_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         thumb_url = f'/static/uploads/{filename}'
     m = StreamMoment(
@@ -2844,7 +3332,7 @@ def admin_home_moment_bulk():
     # Загрузка файлов
     for i, f in enumerate(files):
         if f and f.filename and allowed_file(f.filename):
-            filename = secure_filename(f"moment_{secrets.token_hex(6)}_{f.filename}")
+            filename = f"moment_{secrets.token_hex(6)}_{safe_filename(f.filename)}"
             f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             thumb_url = f'/static/uploads/{filename}'
             title = f.filename.rsplit('.', 1)[0]
@@ -2870,7 +3358,7 @@ def admin_home_moment_edit(mid):
     m.game  = request.form.get('game', '').strip()
     thumb_file = request.files.get('thumbnail_file')
     if thumb_file and thumb_file.filename and allowed_file(thumb_file.filename):
-        filename = secure_filename(f"moment_{secrets.token_hex(6)}_{thumb_file.filename}")
+        filename = f"moment_{secrets.token_hex(6)}_{safe_filename(thumb_file.filename)}"
         thumb_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         m.thumbnail_url = f'/static/uploads/{filename}'
     else:
@@ -2924,7 +3412,7 @@ def admin_home_poll_game_add():
     image_url = request.form.get('game_image', '').strip()
     img_file = request.files.get('game_image_file')
     if img_file and img_file.filename and allowed_file(img_file.filename):
-        filename = secure_filename(f"poll_{secrets.token_hex(6)}_{img_file.filename}")
+        filename = f"poll_{secrets.token_hex(6)}_{safe_filename(img_file.filename)}"
         img_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         image_url = f'/static/uploads/{filename}'
     g = PollGame(
@@ -3054,6 +3542,9 @@ def _run_migration():
         ("reports",          "evidence_url",     "VARCHAR(500)"),
         ("user_permissions", "can_view_reports", "BOOLEAN DEFAULT FALSE"),
         ("reports",          "rejected",         "BOOLEAN DEFAULT FALSE"),
+        ("reports",          "comment_article_id", "INTEGER"),
+        ("reports",          "reporter_id",      "INTEGER"),
+        ("reports",          "extra_page_id",    "INTEGER"),
         ("users",    "terms_agreed",   "BOOLEAN DEFAULT FALSE"),
         ("users",    "privacy_agreed", "BOOLEAN DEFAULT FALSE"),
         ("user_permissions", "can_voice_reply",  "BOOLEAN DEFAULT FALSE"),
@@ -3064,6 +3555,8 @@ def _run_migration():
         ("battle_invites", "to_character",   "VARCHAR(50) DEFAULT ''"),
         # Новая колонка для уведомлений (extra page)
         ("notifications", "extra_page_id", "INTEGER"),
+        # XP для топ зрителей
+        ("top_viewers", "xp", "INTEGER DEFAULT 0"),
     ]
     _is_sq = not _is_pg
     _idc   = 'INTEGER PRIMARY KEY' if _is_sq else 'SERIAL PRIMARY KEY'
@@ -3077,10 +3570,13 @@ def _run_migration():
         f"""CREATE TABLE IF NOT EXISTS extra_page_views (id {_idc}, page_id INTEGER NOT NULL, user_id INTEGER, ip_address VARCHAR(45), viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
         f"""CREATE TABLE IF NOT EXISTS mini_game_config (id INTEGER PRIMARY KEY, name VARCHAR(200) DEFAULT 'ШЕФ-БОЕЦ', avatar_url VARCHAR(500) DEFAULT '')""",
         f"""CREATE TABLE IF NOT EXISTS battle_invites (id {_idc}, from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, room_id VARCHAR(32) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, accepted BOOLEAN DEFAULT FALSE, from_card VARCHAR(50) DEFAULT '', from_character VARCHAR(50) DEFAULT '', to_character VARCHAR(50) DEFAULT '')""",
- 
+
         f"""CREATE TABLE IF NOT EXISTS battle_results (id {_idc}, winner_id INTEGER NOT NULL, loser_id INTEGER NOT NULL, room_id VARCHAR(32) NOT NULL, played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
         f"""CREATE TABLE IF NOT EXISTS game_state (room_id VARCHAR(32) PRIMARY KEY, p1_state TEXT DEFAULT '{{}}', p2_state TEXT DEFAULT '{{}}', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""",
-        f"""CREATE TABLE IF NOT EXISTS online_bans (user_id INTEGER PRIMARY KEY, ban_until TIMESTAMP NOT NULL)""",   ]
+        f"""CREATE TABLE IF NOT EXISTS online_bans (user_id INTEGER PRIMARY KEY, ban_until TIMESTAMP NOT NULL)""",
+        f"""CREATE TABLE IF NOT EXISTS extra_page_comments (id {_idc}, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, page_id INTEGER NOT NULL, author_id INTEGER NOT NULL, parent_id INTEGER, likes INTEGER DEFAULT 0, dislikes INTEGER DEFAULT 0)""",
+        f"""CREATE TABLE IF NOT EXISTS extra_comment_reactions (id {_idc}, comment_id INTEGER NOT NULL, user_id INTEGER NOT NULL, value INTEGER NOT NULL)""",
+    ]
     try:
         with db.engine.connect() as conn:
             for table, col, typ in _alters:
@@ -3147,7 +3643,7 @@ def api_mini_game_config_update():
     avatar_url = ''
     file = request.files.get('avatar_file')
     if file and file.filename and allowed_file(file.filename):
-        filename = secure_filename(f"minigame_avatar_{secrets.token_hex(6)}_{file.filename}")
+        filename = f"minigame_avatar_{secrets.token_hex(6)}_{safe_filename(file.filename)}"
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         avatar_url = f'/static/uploads/{filename}'
     else:
@@ -3430,6 +3926,1371 @@ def api_game_check_ban():
     except Exception:
         return jsonify(banned=False)
 
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  МЕССЕНДЖЕР — маршруты
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/messenger')
+@app.route('/messenger/<int:chat_id>')
+@login_required
+def messenger(chat_id=None):
+    """Главная страница мессенджера."""
+    memberships = ChatMember.query.filter_by(user_id=current_user.id).all()
+    chat_ids = [m.chat_id for m in memberships]
+    chats = MessengerChat.query.filter(MessengerChat.id.in_(chat_ids)).all() if chat_ids else []
+    chats.sort(
+        key=lambda c: c.last_message.created_at if c.last_message else c.created_at,
+        reverse=True
+    )
+    active_chat = None
+    messages = []
+    if chat_id:
+        active_chat = MessengerChat.query.get_or_404(chat_id)
+        if not active_chat.is_member(current_user):
+            abort(403)
+        messages = ChatMessage.query.filter_by(chat_id=chat_id).order_by(ChatMessage.id.asc()).all()
+        member = ChatMember.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+        if member:
+            member.last_read_at = datetime.utcnow()
+            # Отмечаем чужие сообщения как прочитанные
+            ChatMessage.query.filter(
+                ChatMessage.chat_id == chat_id,
+                ChatMessage.author_id != current_user.id,
+                ChatMessage.is_read == False
+            ).update({'is_read': True})
+            db.session.commit()
+    resp = make_response(render_template('messenger.html',
+                           chats=chats,
+                           active_chat=active_chat,
+                           messages=messages,
+                           now=datetime.utcnow()))
+    # Сбрасываем cookie редиректа чтобы следующий переход на / шёл на главную
+    resp.set_cookie('_rp', '', expires=0, path='/')
+    return resp
+
+
+@app.route('/api/messenger/send', methods=['POST'])
+@login_required
+def api_messenger_send():
+    data = request.get_json(silent=True) or {}
+    chat_id     = data.get('chat_id')
+    text        = (data.get('text') or '').strip()
+    reply_to_id = data.get('reply_to_id')
+    if not chat_id or not text:
+        return jsonify(ok=False, error='Пустое сообщение'), 400
+    chat = MessengerChat.query.get_or_404(chat_id)
+    if not chat.is_member(current_user):
+        return jsonify(ok=False, error='Нет доступа'), 403
+    if len(text) > 4000:
+        return jsonify(ok=False, error='Слишком длинное сообщение'), 400
+    msg = ChatMessage(
+        chat_id=chat_id,
+        author_id=current_user.id,
+        text=text,
+        reply_to_id=reply_to_id if reply_to_id else None
+    )
+    db.session.add(msg)
+    # Сбрасываем статус "печатает"
+    TypingStatus.query.filter_by(chat_id=chat_id, user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/messenger/edit', methods=['POST'])
+@login_required
+def api_messenger_edit():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    text   = (data.get('text') or '').strip()
+    if not msg_id or not text:
+        return jsonify(ok=False), 400
+    msg = ChatMessage.query.get_or_404(msg_id)
+    if msg.author_id != current_user.id:
+        return jsonify(ok=False, error='Нет доступа'), 403
+    msg.text   = text
+    msg.edited = True
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/messenger/delete', methods=['POST'])
+@login_required
+def api_messenger_delete():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    if not msg_id:
+        return jsonify(ok=False), 400
+    msg = ChatMessage.query.get_or_404(msg_id)
+    if msg.author_id != current_user.id and current_user.role < 2:
+        return jsonify(ok=False, error='Нет доступа'), 403
+    db.session.delete(msg)
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/messenger/upload', methods=['POST'])
+@login_required
+def api_messenger_upload():
+    chat_id     = request.form.get('chat_id', type=int)
+    ftype       = request.form.get('type', 'file')
+    reply_to_id = request.form.get('reply_to_id', type=int)
+    if not chat_id:
+        return jsonify(ok=False, error='Нет chat_id'), 400
+    chat = MessengerChat.query.get_or_404(chat_id)
+    if not chat.is_member(current_user):
+        return jsonify(ok=False, error='Нет доступа'), 403
+    f = request.files.get('file')
+    if not f:
+        return jsonify(ok=False, error='Нет файла'), 400
+    filename    = safe_filename(f.filename)
+    folder      = os.path.join(app.config['UPLOAD_FOLDER'], 'messenger')
+    os.makedirs(folder, exist_ok=True)
+    unique_name = f'{secrets.token_hex(8)}_{filename}'
+    path        = os.path.join(folder, unique_name)
+    f.save(path)
+    rel = f'messenger/{unique_name}'
+    msg = ChatMessage(
+        chat_id=chat_id,
+        author_id=current_user.id,
+        reply_to_id=reply_to_id
+    )
+    if ftype == 'image':
+        msg.image_url = rel
+    else:
+        msg.file_url  = rel
+        msg.file_name = f.filename
+        msg.file_size = os.path.getsize(path)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/messenger/poll')
+@login_required
+def api_messenger_poll():
+    chat_id = request.args.get('chat_id', type=int)
+    after   = request.args.get('after',   type=int, default=0)
+    if not chat_id:
+        return jsonify(messages=[], typing=[])
+    chat = MessengerChat.query.get(chat_id)
+    if not chat or not chat.is_member(current_user):
+        return jsonify(messages=[], typing=[])
+    new_msgs = ChatMessage.query.filter(
+        ChatMessage.chat_id == chat_id,
+        ChatMessage.id > after
+    ).order_by(ChatMessage.id.asc()).limit(50).all()
+    if new_msgs:
+        member = ChatMember.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+        if member:
+            member.last_read_at = datetime.utcnow()
+        ChatMessage.query.filter(
+            ChatMessage.chat_id == chat_id,
+            ChatMessage.author_id != current_user.id,
+            ChatMessage.is_read == False
+        ).update({'is_read': True})
+        db.session.commit()
+    threshold = datetime.utcnow() - timedelta(seconds=5)
+    typing_rows = TypingStatus.query.filter(
+        TypingStatus.chat_id == chat_id,
+        TypingStatus.user_id != current_user.id,
+        TypingStatus.ts > threshold
+    ).all()
+    typing_names = []
+    for t in typing_rows:
+        u = User.query.get(t.user_id)
+        if u:
+            typing_names.append(u.username)
+    return jsonify(
+        messages=[m.to_dict() for m in new_msgs],
+        typing=typing_names
+    )
+
+
+@app.route('/api/messenger/read', methods=['POST'])
+@login_required
+def api_messenger_read():
+    data    = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id') or request.args.get('chat_id', type=int)
+    if not chat_id:
+        return jsonify(ok=False), 400
+    member = ChatMember.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+    if member:
+        member.last_read_at = datetime.utcnow()
+        ChatMessage.query.filter(
+            ChatMessage.chat_id == chat_id,
+            ChatMessage.author_id != current_user.id,
+            ChatMessage.is_read == False
+        ).update({'is_read': True})
+        db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/messenger/typing', methods=['POST'])
+@login_required
+def api_messenger_typing():
+    data    = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id') or request.args.get('chat_id', type=int)
+    if not chat_id:
+        return jsonify(ok=False), 400
+    ts = TypingStatus.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+    if ts:
+        ts.ts = datetime.utcnow()
+    else:
+        ts = TypingStatus(chat_id=chat_id, user_id=current_user.id)
+        db.session.add(ts)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return jsonify(ok=True)
+
+
+@app.route('/api/messenger/react', methods=['POST'])
+@login_required
+def api_messenger_react():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    emoji  = data.get('emoji', '')
+    if not msg_id or not emoji:
+        return jsonify(ok=False), 400
+    msg  = ChatMessage.query.get_or_404(msg_id)
+    chat = MessengerChat.query.get(msg.chat_id)
+    if not chat or not chat.is_member(current_user):
+        return jsonify(ok=False, error='Нет доступа'), 403
+    existing = MsgReaction.query.filter_by(
+        msg_id=msg_id, user_id=current_user.id, emoji=emoji
+    ).first()
+    if existing:
+        db.session.delete(existing)
+    else:
+        db.session.add(MsgReaction(msg_id=msg_id, user_id=current_user.id, emoji=emoji))
+    db.session.commit()
+    return jsonify(ok=True, reactions=msg.reactions_grouped())
+
+
+@app.route('/api/messenger/pin', methods=['POST'])
+@login_required
+def api_messenger_pin():
+    data    = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id')
+    msg_id  = data.get('msg_id')
+    if not chat_id or not msg_id:
+        return jsonify(ok=False), 400
+    chat = MessengerChat.query.get_or_404(chat_id)
+    if not chat.is_member(current_user):
+        return jsonify(ok=False, error='Нет доступа'), 403
+    chat.pinned_msg_id = msg_id
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/messenger/pinned')
+@login_required
+def api_messenger_pinned():
+    chat_id = request.args.get('chat_id', type=int)
+    if not chat_id:
+        return jsonify(text=None)
+    chat = MessengerChat.query.get(chat_id)
+    if not chat or not chat.pinned_msg_id:
+        return jsonify(text=None)
+    msg = ChatMessage.query.get(chat.pinned_msg_id)
+    if not msg:
+        return jsonify(text=None)
+    return jsonify(text=msg.text or '[медиафайл]', msg_id=msg.id)
+
+
+@app.route('/api/messenger/new-chat', methods=['POST'])
+@login_required
+def api_messenger_new_chat():
+    data       = request.get_json(silent=True) or {}
+    user_id    = data.get('user_id')
+    is_group   = data.get('is_group', False)
+    group_name = (data.get('group_name') or '').strip()
+    if not user_id:
+        return jsonify(ok=False, error='Не указан пользователь'), 400
+    target = User.query.get(user_id)
+    if not target:
+        return jsonify(ok=False, error='Пользователь не найден'), 404
+    if target.id == current_user.id and not is_group:
+        return jsonify(ok=False, error='Нельзя создать личный чат с собой'), 400
+    if not is_group:
+        # Ищем существующий личный чат
+        my_chat_ids = [m.chat_id for m in
+                       ChatMember.query.filter_by(user_id=current_user.id).all()]
+        their_chat_ids = [m.chat_id for m in
+                          ChatMember.query.filter_by(user_id=target.id).all()]
+        common = set(my_chat_ids) & set(their_chat_ids)
+        for cid in common:
+            c = MessengerChat.query.get(cid)
+            if c and not c.is_group:
+                return jsonify(ok=True, chat_id=cid)
+    chat = MessengerChat(
+        is_group=is_group,
+        name=group_name if is_group else None
+    )
+    db.session.add(chat)
+    db.session.flush()
+    # Add creator as admin
+    db.session.add(ChatMember(chat_id=chat.id, user_id=current_user.id, is_admin=True))
+    # For groups: add target only if different from creator
+    if not is_group or target.id != current_user.id:
+        # Check not already added
+        existing_m = ChatMember.query.filter_by(chat_id=chat.id, user_id=target.id).first()
+        if not existing_m:
+            db.session.add(ChatMember(chat_id=chat.id, user_id=target.id))
+    # Add extra member_ids if provided (group creation with multiple members)
+    member_ids = data.get('member_ids', [])
+    for mid in member_ids:
+        if mid and mid != current_user.id:
+            existing_m = ChatMember.query.filter_by(chat_id=chat.id, user_id=mid).first()
+            if not existing_m:
+                u_extra = User.query.get(mid)
+                if u_extra:
+                    db.session.add(ChatMember(chat_id=chat.id, user_id=mid))
+    db.session.commit()
+    return jsonify(ok=True, chat_id=chat.id)
+
+
+@app.route('/api/messenger/search-users')
+@login_required
+def api_messenger_search_users():
+    q = request.args.get('q', '').strip()
+    if len(q) < 1:
+        return jsonify(users=[])
+    users = User.query.filter(
+        User.username.ilike(f'%{q}%'),
+        User.id != current_user.id
+    ).limit(10).all()
+    return jsonify(users=[{
+        'id':       u.id,
+        'username': u.username,
+        'avatar':   u.avatar
+    } for u in users])
+
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  КОМНАТЫ И КАНАЛЫ
+# ═══════════════════════════════════════════════════════════════════
+
+ROOM_CATEGORIES = [
+    ('games',    '🎮', 'Игры'),
+    ('music',    '🎵', 'Музыка'),
+    ('sports',   '⚽', 'Спорт'),
+    ('anime',    '🌸', 'Аниме'),
+    ('art',      '🎨', 'Арт'),
+    ('tech',     '💻', 'Технологии'),
+    ('cinema',   '🎬', 'Кино'),
+    ('general',  '💬', 'Общение'),
+    ('humor',    '😂', 'Юмор'),
+    ('news',     '📰', 'Новости'),
+]
+
+
+def _cat_label(key):
+    for k, icon, label in ROOM_CATEGORIES:
+        if k == key:
+            return f'{icon} {label}'
+    return key
+
+
+@app.route('/chat')
+@app.route('/chat/<path:subpath>')
+def chat_index(subpath=''):
+    """Единый SPA чат — каталог + комнаты + заявки + админка."""
+    rooms = Room.query.filter_by(is_active=True, room_type='room').order_by(Room.id.desc()).all()
+    channels = Room.query.filter_by(is_active=True, room_type='channel').order_by(Room.id.desc()).all()
+    featured_rooms = Room.query.filter_by(is_active=True, is_featured=True).order_by(Room.id.desc()).all()
+    my_rooms, my_apps, pending_apps, all_rooms_admin, join_reqs = [], [], [], [], []
+    active_room, active_member, room_messages = None, None, []
+
+    if current_user.is_authenticated:
+        my_ids   = [m.room_id for m in current_user.room_memberships.all()]
+        my_rooms = Room.query.filter(Room.id.in_(my_ids), Room.is_active == True).order_by(Room.id.desc()).all() if my_ids else []
+        my_apps  = current_user.room_applications.order_by(RoomApplication.created_at.desc()).limit(10).all()
+
+        # If subpath is a room slug
+        if subpath and not subpath.startswith('admin') and not subpath.startswith('apply') and not subpath.startswith('my') and not subpath.startswith('rooms') and not subpath.startswith('channels'):
+            slug = subpath.split('?')[0].strip('/')
+            active_room = Room.query.filter_by(slug=slug, is_active=True).first()
+            if active_room:
+                active_member = active_room.get_member(current_user)
+                if not active_member:
+                    active_member = RoomMember(room_id=active_room.id, user_id=current_user.id, role='member')
+                    db.session.add(active_member)
+                    db.session.add(RoomMessage(room_id=active_room.id, author_id=None,
+                        text=f'{current_user.username} вступил в комнату', msg_type='system'))
+                    db.session.commit()
+                elif active_member.is_banned:
+                    active_room = None; active_member = None
+                if active_room and active_member:
+                    room_messages = RoomMessage.query.filter_by(room_id=active_room.id, deleted=False)                                               .order_by(RoomMessage.id.asc()).limit(120).all()
+                    active_member.last_read_at = datetime.utcnow()
+                    db.session.commit()
+
+        if current_user.role >= 3:
+            pending_apps   = RoomApplication.query.filter_by(status='pending').order_by(RoomApplication.created_at.asc()).all()
+            all_rooms_admin= Room.query.order_by(Room.created_at.desc()).all()
+
+    return render_template('chat.html',
+        subpath=subpath,
+        rooms=rooms, channels=channels,
+        featured_rooms=featured_rooms,
+        my_rooms=my_rooms, my_apps=my_apps,
+        active_room=active_room, active_member=active_member,
+        room_messages=room_messages,
+        pending_apps=pending_apps, all_rooms_admin=all_rooms_admin,
+        categories=ROOM_CATEGORIES, cat_label=_cat_label,
+        now=datetime.utcnow())
+
+
+@app.route('/chat/room/<slug>')
+@login_required
+def chat_room(slug):
+    return redirect(url_for('chat_index', subpath=slug))
+
+@app.route('/chat/_room/<slug>')
+@login_required
+def chat_room_legacy(slug):
+    """Страница конкретной комнаты."""
+    room = Room.query.filter_by(slug=slug, is_active=True).first_or_404()
+    # Автовход при первом посещении
+    member = room.get_member(current_user)
+    if not member:
+        member = RoomMember(room_id=room.id, user_id=current_user.id, role='member')
+        db.session.add(member)
+        # Системное сообщение
+        sys_msg = RoomMessage(
+            room_id=room.id, author_id=None,
+            text=f'{current_user.username} вступил в комнату',
+            msg_type='system'
+        )
+        db.session.add(sys_msg)
+        db.session.commit()
+    elif member.is_banned:
+        return render_template('error.html', error='Вы заблокированы в этой комнате.'), 403
+
+    messages = RoomMessage.query.filter_by(room_id=room.id, deleted=False)                                .order_by(RoomMessage.id.asc()).limit(100).all()
+    # Отмечаем как прочитанное
+    member.last_read_at = datetime.utcnow()
+    db.session.commit()
+
+    return render_template('chat_room.html',
+                           room=room,
+                           member=member,
+                           messages=messages,
+                           categories=ROOM_CATEGORIES,
+                           cat_label=_cat_label,
+                           now=datetime.utcnow())
+
+
+# ── Заявка на создание комнаты ───────────────────────────────────
+
+@app.route('/chat/apply', methods=['GET', 'POST'])
+@login_required
+def chat_apply():
+    if request.method == 'POST':
+        name      = (request.form.get('name') or '').strip()
+        desc      = (request.form.get('description') or '').strip()
+        category  = request.form.get('category', 'general')
+        room_type = request.form.get('room_type', 'room')
+        reason    = (request.form.get('reason') or '').strip()
+        quiz_q1   = (request.form.get('quiz_q1') or '').strip()
+        quiz_q2   = (request.form.get('quiz_q2') or '').strip()
+        quiz_q3   = (request.form.get('quiz_q3') or '').strip()
+        if not name or len(name) < 3:
+            flash('Название слишком короткое', 'error')
+            return redirect(url_for('chat_index', subpath='apply'))
+        if not reason or len(reason) < 40:
+            flash('Опишите цель подробнее (минимум 40 символов)', 'error')
+            return redirect(url_for('chat_index', subpath='apply'))
+        pending = RoomApplication.query.filter_by(
+            applicant_id=current_user.id, status='pending'
+        ).count()
+        if pending >= 3:
+            flash('У вас уже есть 3 ожидающих заявки', 'error')
+            return redirect(url_for('chat_index', subpath='apply'))
+        app_obj = RoomApplication(
+            applicant_id=current_user.id,
+            name=name, description=desc,
+            category=category, room_type=room_type,
+            reason=reason,
+            quiz_q1=quiz_q1, quiz_q2=quiz_q2, quiz_q3=quiz_q3
+        )
+        db.session.add(app_obj)
+        db.session.commit()
+        flash('Заявка отправлена! Рассмотрим в ближайшее время 👍', 'success')
+        return redirect(url_for('chat_index'))
+    return redirect(url_for('chat_index', subpath='apply'))
+
+
+# ── Админская панель заявок ──────────────────────────────────────
+
+@app.route('/chat/admin')
+@login_required
+def chat_admin():
+    if current_user.role < 3:
+        abort(403)
+    pending   = RoomApplication.query.filter_by(status='pending')                               .order_by(RoomApplication.created_at.asc()).all()
+    approved  = RoomApplication.query.filter_by(status='approved')                               .order_by(RoomApplication.reviewed_at.desc()).limit(20).all()
+    rejected  = RoomApplication.query.filter_by(status='rejected')                               .order_by(RoomApplication.reviewed_at.desc()).limit(20).all()
+    all_rooms = Room.query.order_by(Room.created_at.desc()).all()
+    return redirect(url_for('chat_index', subpath='admin'))
+
+
+@app.route('/chat/admin/review/<int:app_id>', methods=['POST'])
+@login_required
+def chat_admin_review(app_id):
+    if current_user.role < 3:
+        abort(403)
+    app_obj = RoomApplication.query.get_or_404(app_id)
+    action  = request.form.get('action')  # 'approve' | 'reject'
+    note    = (request.form.get('note') or '').strip()
+
+    if action == 'approve':
+        # Генерируем slug
+        import re, unicodedata
+        base = app_obj.name.lower().strip()
+        base = unicodedata.normalize('NFKD', base).encode('ascii', 'ignore').decode()
+        base = re.sub(r'[^a-z0-9]+', '-', base).strip('-') or 'room'
+        slug = base
+        counter = 1
+        while Room.query.filter_by(slug=slug).first():
+            slug = f'{base}-{counter}'; counter += 1
+
+        # Создаём комнату
+        room = Room(
+            name=app_obj.name,
+            slug=slug,
+            description=app_obj.description,
+            category=app_obj.category,
+            room_type=app_obj.room_type,
+            owner_id=app_obj.applicant_id,
+            is_active=True,
+            rules='''Уважай других участников.
+Не публикуй незаконный контент.
+Соблюдай правила сайта.'''
+        )
+        db.session.add(room)
+        db.session.flush()
+
+        # Добавляем создателя как owner
+        owner_member = RoomMember(
+            room_id=room.id,
+            user_id=app_obj.applicant_id,
+            role='owner'
+        )
+        db.session.add(owner_member)
+
+        # Приветственное системное сообщение
+        welcome = RoomMessage(
+            room_id=room.id,
+            author_id=None,
+            msg_type='system',
+                    text = (
+            f"📢 Комната «{room.name}» открыта!\n\n"
+            f"👋 Добро пожаловать, {app_obj.applicant.username}! Ты создатель и администратор этой комнаты.\n\n"
+            f"📋 Правила:\n"
+            f"• Уважай всех участников\n"
+            f"• Не публикуй незаконный контент\n"
+            f"• Следи за порядком в комнате\n"
+            f"• При нарушениях – блокируй участника и сообщай админам сайта\n\n"
+            f"Удачи! 🚀"
+            )
+        )
+        db.session.add(welcome)
+
+        app_obj.status       = 'approved'
+        app_obj.reviewed_by_id = current_user.id
+        app_obj.reviewed_at  = datetime.utcnow()
+        app_obj.admin_note   = note
+        app_obj.room_id      = room.id
+        db.session.commit()
+        flash(f'Заявка одобрена. Комната «{room.name}» создана по адресу /chat/room/{slug}', 'success')
+    elif action == 'reject':
+        app_obj.status       = 'rejected'
+        app_obj.reviewed_by_id = current_user.id
+        app_obj.reviewed_at  = datetime.utcnow()
+        app_obj.admin_note   = note
+        db.session.commit()
+        flash('Заявка отклонена.', 'success')
+
+    return redirect(url_for('chat_index', subpath='admin'))
+
+
+@app.route('/chat/admin/room/<int:room_id>/delete', methods=['POST'])
+@login_required
+def chat_admin_delete_room(room_id):
+    if current_user.role < 3:
+        abort(403)
+    room = Room.query.get_or_404(room_id)
+    room.is_active = False
+    db.session.commit()
+    flash(f'Комната «{room.name}» деактивирована.', 'success')
+    return redirect(url_for('chat_index', subpath='admin'))
+
+
+@app.route('/chat/admin/room/<int:room_id>/restore', methods=['POST'])
+@login_required
+def chat_admin_restore_room(room_id):
+    if current_user.role < 3:
+        abort(403)
+    room = Room.query.get_or_404(room_id)
+    room.is_active = True
+    db.session.commit()
+    flash(f'Комната «{room.name}» восстановлена.', 'success')
+    return redirect(url_for('chat_index', subpath='admin'))
+
+
+# ── API комнаты ──────────────────────────────────────────────────
+
+@app.route('/api/room/send', methods=['POST'])
+@login_required
+def api_room_send():
+    data = request.get_json(silent=True) or {}
+    room_id     = data.get('room_id')
+    text        = (data.get('text') or '').strip()
+    reply_to_id = data.get('reply_to_id')
+    if not room_id or not text:
+        return jsonify(ok=False, error='Пустое сообщение'), 400
+    room = Room.query.get_or_404(room_id)
+    if not room.is_active:
+        return jsonify(ok=False, error='Комната неактивна'), 403
+    member = room.get_member(current_user)
+    if not member:
+        return jsonify(ok=False, error='Вы не участник'), 403
+    if member.is_banned:
+        return jsonify(ok=False, error='Вы заблокированы'), 403
+    if member.is_muted:
+        return jsonify(ok=False, error='Вы в муте'), 403
+    if len(text) > 4000:
+        return jsonify(ok=False, error='Слишком длинное'), 400
+    msg = RoomMessage(
+        room_id=room_id,
+        author_id=current_user.id,
+        text=text,
+        reply_to_id=reply_to_id
+    )
+    db.session.add(msg)
+    RoomTypingStatus.query.filter_by(room_id=room_id, user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/room/upload', methods=['POST'])
+@login_required
+def api_room_upload():
+    room_id = request.form.get('room_id', type=int)
+    ftype   = request.form.get('type', 'file')
+    if not room_id:
+        return jsonify(ok=False, error='Нет room_id'), 400
+    room = Room.query.get_or_404(room_id)
+    member = room.get_member(current_user)
+    if not member or member.is_banned:
+        return jsonify(ok=False, error='Нет доступа'), 403
+    f = request.files.get('file')
+    if not f:
+        return jsonify(ok=False, error='Нет файла'), 400
+    filename    = safe_filename(f.filename)
+    folder      = os.path.join(app.config['UPLOAD_FOLDER'], 'rooms')
+    os.makedirs(folder, exist_ok=True)
+    unique_name = f'{secrets.token_hex(8)}_{filename}'
+    path        = os.path.join(folder, unique_name)
+    f.save(path)
+    rel = f'rooms/{unique_name}'
+    msg = RoomMessage(room_id=room_id, author_id=current_user.id)
+    if ftype == 'image':
+        msg.image_url = rel
+    else:
+        msg.file_url = rel; msg.file_name = f.filename
+        msg.file_size = os.path.getsize(path)
+    db.session.add(msg)
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/room/poll')
+@login_required
+def api_room_poll():
+    room_id = request.args.get('room_id', type=int)
+    after   = request.args.get('after',   type=int, default=0)
+    if not room_id:
+        return jsonify(messages=[], typing=[])
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify(messages=[], typing=[])
+    member = room.get_member(current_user)
+    if not member:
+        return jsonify(messages=[], typing=[])
+
+    new_msgs = RoomMessage.query.filter(
+        RoomMessage.room_id == room_id,
+        RoomMessage.id > after,
+        RoomMessage.deleted == False
+    ).order_by(RoomMessage.id.asc()).limit(50).all()
+
+    if new_msgs:
+        member.last_read_at = datetime.utcnow()
+        db.session.commit()
+
+    threshold = datetime.utcnow() - timedelta(seconds=5)
+    typing_rows = RoomTypingStatus.query.filter(
+        RoomTypingStatus.room_id == room_id,
+        RoomTypingStatus.user_id != current_user.id,
+        RoomTypingStatus.ts > threshold
+    ).all()
+    typing_names = [User.query.get(t.user_id).username for t in typing_rows
+                    if User.query.get(t.user_id)]
+
+    return jsonify(
+        messages=[m.to_dict() for m in new_msgs],
+        typing=typing_names,
+        member_count=room.member_count
+    )
+
+
+@app.route('/api/room/typing', methods=['POST'])
+@login_required
+def api_room_typing():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    if not room_id:
+        return jsonify(ok=False), 400
+    ts = RoomTypingStatus.query.filter_by(room_id=room_id, user_id=current_user.id).first()
+    if ts:
+        ts.ts = datetime.utcnow()
+    else:
+        ts = RoomTypingStatus(room_id=room_id, user_id=current_user.id)
+        db.session.add(ts)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/react', methods=['POST'])
+@login_required
+def api_room_react():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    emoji  = data.get('emoji', '')
+    if not msg_id or not emoji:
+        return jsonify(ok=False), 400
+    msg = RoomMessage.query.get_or_404(msg_id)
+    existing = RoomReaction.query.filter_by(
+        msg_id=msg_id, user_id=current_user.id, emoji=emoji
+    ).first()
+    if existing:
+        db.session.delete(existing)
+    else:
+        db.session.add(RoomReaction(msg_id=msg_id, user_id=current_user.id, emoji=emoji))
+    db.session.commit()
+    return jsonify(ok=True, reactions=msg.reactions_grouped())
+
+
+@app.route('/api/room/delete-msg', methods=['POST'])
+@login_required
+def api_room_delete_msg():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    if not msg_id:
+        return jsonify(ok=False), 400
+    msg = RoomMessage.query.get_or_404(msg_id)
+    room = Room.query.get(msg.room_id)
+    member = room.get_member(current_user) if room else None
+    # Может удалить: автор, модератор комнаты, глобальный модератор
+    can_delete = (
+        msg.author_id == current_user.id or
+        (member and member.role in ('moderator', 'admin', 'owner')) or
+        current_user.role >= 2
+    )
+    if not can_delete:
+        return jsonify(ok=False, error='Нет прав'), 403
+    msg.deleted = True
+    msg.text    = 'Сообщение удалено'
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/pin', methods=['POST'])
+@login_required
+def api_room_pin():
+    data   = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    msg_id  = data.get('msg_id')
+    room    = Room.query.get_or_404(room_id)
+    member  = room.get_member(current_user)
+    if not member or member.role not in ('moderator','admin','owner') and current_user.role < 2:
+        return jsonify(ok=False, error='Нет прав'), 403
+    room.pinned_msg_id = msg_id
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/ban', methods=['POST'])
+@login_required
+def api_room_ban():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    action  = data.get('action', 'ban')  # 'ban'|'unban'|'mute'|'unmute'
+    room    = Room.query.get_or_404(room_id)
+    me      = room.get_member(current_user)
+    if not me or me.role not in ('moderator','admin','owner') and current_user.role < 2:
+        return jsonify(ok=False, error='Нет прав'), 403
+    target = RoomMember.query.filter_by(room_id=room_id, user_id=user_id).first()
+    if not target:
+        return jsonify(ok=False, error='Участник не найден'), 404
+    if action == 'ban':
+        target.is_banned = True
+    elif action == 'unban':
+        target.is_banned = False
+    elif action == 'mute':
+        target.is_muted = True
+    elif action == 'unmute':
+        target.is_muted = False
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/edit-settings', methods=['POST'])
+@login_required
+def api_room_edit_settings_extended():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    room    = Room.query.get_or_404(room_id)
+    me      = room.get_member(current_user)
+    if not me or me.role not in ('admin','owner') and current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    if data.get('name'):
+        room.name = data['name'][:100]
+    if data.get('description') is not None:
+        room.description = data['description'][:500]
+    if data.get('rules') is not None:
+        room.rules = data['rules'][:2000]
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/leave', methods=['POST'])
+@login_required
+def api_room_leave():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    room    = Room.query.get_or_404(room_id)
+    member  = room.get_member(current_user)
+    if member:
+        db.session.delete(member)
+        # Системное сообщение
+        sys_msg = RoomMessage(
+            room_id=room_id, author_id=None,
+            text=f'{current_user.username} покинул комнату',
+            msg_type='system'
+        )
+        db.session.add(sys_msg)
+        db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/upload-banner', methods=['POST'])
+@login_required
+def api_room_upload_banner():
+    room_id = request.form.get('room_id') or (request.get_json() or {}).get('room_id')
+    room = Room.query.get(int(room_id)) if room_id else None
+    if not room: return jsonify(ok=False), 404
+    member = room.get_member(current_user)
+    if not member or member.role not in ('owner','admin'): return jsonify(ok=False, error='Нет доступа'), 403
+    if request.json and request.json.get('remove'):
+        room.banner = None
+        db.session.commit()
+        return jsonify(ok=True)
+    file = request.files.get('banner')
+    if not file: return jsonify(ok=False), 400
+    import os, uuid
+    ext = os.path.splitext(file.filename)[1].lower()
+    fname = f'banner_{room.id}_{uuid.uuid4().hex[:8]}{ext}'
+    upload_dir = os.path.join(app.static_folder, 'uploads')
+    file.save(os.path.join(upload_dir, fname))
+    room.banner = fname
+    db.session.commit()
+    return jsonify(ok=True, url=f'/static/uploads/{fname}')
+
+@app.route('/api/room/join', methods=['POST'])
+@login_required
+def api_room_join():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    room    = Room.query.get_or_404(room_id)
+    if not room.is_active:
+        return jsonify(ok=False, error='Комната неактивна'), 403
+    if room.get_member(current_user):
+        return jsonify(ok=True)  # уже участник
+    member = RoomMember(room_id=room_id, user_id=current_user.id, role='member')
+    db.session.add(member)
+    sys_msg = RoomMessage(
+        room_id=room_id, author_id=None,
+        text=f'{current_user.username} вступил в комнату',
+        msg_type='system'
+    )
+    db.session.add(sys_msg)
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/room/search-members')
+@login_required
+def api_room_search_members():
+    room_id = request.args.get('room_id', type=int)
+    q       = request.args.get('q', '').strip()
+    if not room_id or not q:
+        return jsonify(members=[])
+    room    = Room.query.get_or_404(room_id)
+    members = room.members.join(User).filter(
+        User.username.ilike(f'%{q}%')
+    ).limit(10).all()
+    return jsonify(members=[{
+        'user_id': m.user_id,
+        'username': m.user.username,
+        'role': m.role,
+        'avatar': m.user.avatar,
+        'is_banned': m.is_banned,
+        'is_muted': m.is_muted,
+    } for m in members])
+
+
+
+@app.route('/api/room/list')
+@login_required
+def api_room_list():
+    """Список комнат и каналов для сайдбара."""
+    my_ids = [m.room_id for m in current_user.room_memberships.all()]
+    rooms = Room.query.filter(Room.id.in_(my_ids), Room.room_type=='room', Room.is_active==True).all() if my_ids else []
+    channels = Room.query.filter(Room.id.in_(my_ids), Room.room_type=='channel', Room.is_active==True).all() if my_ids else []
+    def room_dict(r):
+        uc = r.unread_count(current_user)
+        return {
+            'id': r.id, 'name': r.name, 'slug': r.slug,
+            'avatar': r.avatar, 'member_count': r.member_count,
+            'unread': uc,
+        }
+    return jsonify(rooms=[room_dict(r) for r in rooms], channels=[room_dict(r) for r in channels])
+
+
+@app.route('/api/room/read', methods=['POST'])
+@login_required
+def api_room_read():
+    data = request.get_json()
+    room_id = data.get('room_id')
+    msg_id  = data.get('msg_id')
+    if not room_id or not msg_id: return jsonify(ok=False), 400
+    from models import RoomMessageRead
+    existing = RoomMessageRead.query.filter_by(msg_id=msg_id, user_id=current_user.id).first()
+    if not existing:
+        db.session.add(RoomMessageRead(msg_id=msg_id, user_id=current_user.id))
+        db.session.commit()
+    return jsonify(ok=True)
+
+@app.route('/api/room/msg-reads')
+@login_required
+def api_room_msg_reads():
+    msg_id  = request.args.get('msg_id', type=int)
+    room_id = request.args.get('room_id', type=int)
+    if not msg_id or not room_id: return jsonify(ok=False), 400
+    room = Room.query.get(room_id)
+    if not room: return jsonify(ok=False), 404
+    member = room.get_member(current_user)
+    if not member: return jsonify(ok=False, error='Нет доступа'), 403
+    from models import RoomMessageRead
+    reads = RoomMessageRead.query.filter_by(msg_id=msg_id).all()
+    return jsonify(ok=True, reads=[{
+        'username': r.user.username,
+        'avatar': r.user.avatar or ''
+    } for r in reads if r.user_id != current_user.id])
+
+@app.route('/api/room/pinned')
+@login_required
+def api_room_pinned():
+    room_id = request.args.get('room_id', type=int)
+    if not room_id:
+        return jsonify(text=None)
+    room = Room.query.get(room_id)
+    if not room or not room.pinned_msg_id:
+        return jsonify(text=None)
+    msg = RoomMessage.query.get(room.pinned_msg_id)
+    if not msg:
+        return jsonify(text=None)
+    return jsonify(text=msg.text or '[медиафайл]', msg_id=msg.id)
+
+
+
+# ── Invite link join ─────────────────────────────────────────────
+
+@app.route('/chat/invite/<token>')
+@login_required
+def chat_invite(token):
+    room = Room.query.filter_by(invite_token=token, is_active=True).first_or_404()
+    member = room.get_member(current_user)
+    if not member:
+        member = RoomMember(room_id=room.id, user_id=current_user.id, role='member')
+        db.session.add(member)
+        sys_msg = RoomMessage(room_id=room.id, author_id=None,
+            text=f'{current_user.username} вступил по приглашению', msg_type='system')
+        db.session.add(sys_msg)
+        db.session.commit()
+        flash(f'Вы вступили в «{room.name}»!', 'success')
+    elif member.is_banned:
+        flash('Вы заблокированы в этой комнате.', 'error')
+        return redirect(url_for('chat_index'))
+    return redirect(url_for('chat_room', slug=room.slug))
+
+
+# ── Join request (for private rooms without link) ────────────────
+
+@app.route('/api/room/request-join', methods=['POST'])
+@login_required
+def api_room_request_join():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    message = (data.get('message') or '').strip()[:300]
+    room    = Room.query.get_or_404(room_id)
+    if not room.is_private:
+        # Public room — just join
+        return api_room_join()
+    existing = RoomJoinRequest.query.filter_by(
+        room_id=room_id, user_id=current_user.id
+    ).first()
+    if existing:
+        return jsonify(ok=False, error='Заявка уже отправлена', status=existing.status)
+    req = RoomJoinRequest(room_id=room_id, user_id=current_user.id, message=message)
+    db.session.add(req)
+    db.session.commit()
+    return jsonify(ok=True, message='Заявка отправлена')
+
+
+@app.route('/api/room/review-join', methods=['POST'])
+@login_required
+def api_room_review_join():
+    data   = request.get_json(silent=True) or {}
+    req_id = data.get('req_id')
+    action = data.get('action')  # 'approve' | 'reject'
+    req    = RoomJoinRequest.query.get_or_404(req_id)
+    room   = Room.query.get(req.room_id)
+    me     = room.get_member(current_user) if room else None
+    if not me or me.role not in ('owner','admin','moderator') and current_user.role < 2:
+        return jsonify(ok=False, error='Нет прав'), 403
+    if action == 'approve':
+        existing = RoomMember.query.filter_by(room_id=req.room_id, user_id=req.user_id).first()
+        if not existing:
+            db.session.add(RoomMember(room_id=req.room_id, user_id=req.user_id, role='member'))
+        req.status = 'approved'
+        req.reviewed_at = datetime.utcnow()
+    elif action == 'reject':
+        req.status = 'rejected'
+        req.reviewed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+# ── Admin: create room directly ──────────────────────────────────
+
+@app.route('/api/room/admin-create', methods=['POST'])
+@login_required
+def api_room_admin_create():
+    if current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    data      = request.get_json(silent=True) or {}
+    name      = (data.get('name') or '').strip()
+    room_type = data.get('room_type', 'room')
+    category  = data.get('category', 'general')
+    desc      = (data.get('description') or '').strip()
+    is_private= data.get('is_private', False)
+    owner_id  = data.get('owner_id', current_user.id)
+
+    if not name:
+        return jsonify(ok=False, error='Нет названия'), 400
+
+    import re, unicodedata
+    base = name.lower()
+    base = unicodedata.normalize('NFKD', base).encode('ascii', 'ignore').decode()
+    base = re.sub(r'[^a-z0-9]+', '-', base).strip('-') or 'room'
+    slug = base; counter = 1
+    while Room.query.filter_by(slug=slug).first():
+        slug = f'{base}-{counter}'; counter += 1
+
+    room = Room(
+        name=name, slug=slug, description=desc,
+        category=category, room_type=room_type,
+        owner_id=owner_id, is_active=True,
+        is_private=is_private,
+        invite_token=secrets.token_hex(16),
+        rules='Соблюдай правила сайта.',
+        verified=True
+    )
+    db.session.add(room)
+    db.session.flush()
+    db.session.add(RoomMember(room_id=room.id, user_id=owner_id, role='owner'))
+    db.session.commit()
+    return jsonify(ok=True, slug=room.slug, room_id=room.id)
+
+
+# ── Transfer ownership ────────────────────────────────────────────
+
+@app.route('/api/room/transfer-owner', methods=['POST'])
+@login_required
+def api_room_transfer_owner():
+    data       = request.get_json(silent=True) or {}
+    room_id    = data.get('room_id')
+    new_owner  = data.get('user_id')
+    room       = Room.query.get_or_404(room_id)
+    me         = room.get_member(current_user)
+    if (not me or me.role != 'owner') and current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    target = RoomMember.query.filter_by(room_id=room_id, user_id=new_owner).first()
+    if not target:
+        return jsonify(ok=False, error='Пользователь не в комнате'), 404
+    # Downgrade current owner
+    if me:
+        me.role = 'admin'
+    target.role = 'owner'
+    room.owner_id = new_owner
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+# ── Generate new invite link ──────────────────────────────────────
+
+@app.route('/api/room/gen-invite', methods=['POST'])
+@login_required
+def api_room_gen_invite():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    room    = Room.query.get_or_404(room_id)
+    me      = room.get_member(current_user)
+    if (not me or me.role not in ('owner','admin')) and current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    room.invite_token = secrets.token_hex(16)
+    db.session.commit()
+    return jsonify(ok=True, token=room.invite_token,
+                   link=f'/chat/invite/{room.invite_token}')
+
+
+# ── Promote/demote member ─────────────────────────────────────────
+
+@app.route('/api/room/set-role', methods=['POST'])
+@login_required
+def api_room_set_role():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    user_id = data.get('user_id')
+    new_role= data.get('role')  # 'member'|'moderator'|'admin'
+    if new_role not in ('member','moderator','admin'):
+        return jsonify(ok=False, error='Неверная роль'), 400
+    room   = Room.query.get_or_404(room_id)
+    me     = room.get_member(current_user)
+    if (not me or me.role not in ('owner','admin')) and current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    target = RoomMember.query.filter_by(room_id=room_id, user_id=user_id).first()
+    if not target:
+        return jsonify(ok=False, error='Не найден'), 404
+    target.role = new_role
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+# ── Edit room settings (extended) ────────────────────────────────
+
+@app.route('/api/room/edit-settings', methods=['POST'])
+@login_required
+def api_room_edit_settings():
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    room    = Room.query.get_or_404(room_id)
+    me      = room.get_member(current_user)
+    if (not me or me.role not in ('admin','owner')) and current_user.role < 3:
+        return jsonify(ok=False, error='Нет прав'), 403
+    if data.get('name'):
+        room.name = data['name'][:100]
+    if 'description' in data:
+        room.description = (data['description'] or '')[:500]
+    if 'rules' in data:
+        room.rules = (data['rules'] or '')[:2000]
+    if 'is_private' in data:
+        room.is_private = bool(data['is_private'])
+    if 'category' in data and data['category']:
+        room.category = data['category']
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+# ── Get join requests for room ────────────────────────────────────
+
+@app.route('/api/room/feature', methods=['POST'])
+@login_required
+def api_room_feature():
+    if current_user.role < 4:
+        return jsonify(ok=False, error='Нет доступа'), 403
+    data = request.get_json()
+    room = Room.query.get(data.get('room_id'))
+    if not room: return jsonify(ok=False), 404
+    room.is_featured = bool(data.get('featured', False))
+    db.session.commit()
+    return jsonify(ok=True)
+
+@app.route('/api/room/join-requests')
+@login_required
+def api_room_join_requests():
+    room_id = request.args.get('room_id', type=int)
+    room    = Room.query.get_or_404(room_id)
+    me      = room.get_member(current_user)
+    if (not me or me.role not in ('owner','admin','moderator')) and current_user.role < 2:
+        return jsonify(ok=False, error='Нет прав'), 403
+    pending = RoomJoinRequest.query.filter_by(room_id=room_id, status='pending').all()
+    return jsonify(requests=[{
+        'id': r.id,
+        'user_id': r.user_id,
+        'username': r.user.username,
+        'avatar': r.user.avatar,
+        'message': r.message,
+        'created_at': r.created_at.strftime('%d.%m.%Y %H:%M'),
+    } for r in pending])
+
+
+
+@app.route('/api/room/edit-msg', methods=['POST'])
+@login_required
+def api_room_edit_msg():
+    data   = request.get_json(silent=True) or {}
+    msg_id = data.get('msg_id')
+    text   = (data.get('text') or '').strip()
+    if not msg_id or not text:
+        return jsonify(ok=False), 400
+    msg  = RoomMessage.query.get_or_404(msg_id)
+    room = Room.query.get(msg.room_id)
+    me   = room.get_member(current_user) if room else None
+    can  = msg.author_id == current_user.id or (me and me.role in ('moderator','admin','owner')) or current_user.role >= 2
+    if not can:
+        return jsonify(ok=False, error='Нет прав'), 403
+    msg.text   = text[:4000]
+    msg.edited = True
+    db.session.commit()
+    return jsonify(ok=True, message=msg.to_dict())
+
+
+@app.route('/api/room/verify', methods=['POST'])
+@login_required
+def api_room_verify():
+    if current_user.role < 4:
+        return jsonify(ok=False, error='Нет прав'), 403
+    data    = request.get_json(silent=True) or {}
+    room_id = data.get('room_id')
+    val     = bool(data.get('verified', True))
+    room    = Room.query.get_or_404(room_id)
+    room.verified = val
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+# ═══════════════════════════════════════════════
+#  WEB PUSH — подписка/отписка
+# ═══════════════════════════════════════════════
+
+@app.route('/api/push/subscribe', methods=['POST'])
+@login_required
+def api_push_subscribe():
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get('endpoint', '').strip()
+    p256dh   = data.get('p256dh', '').strip()
+    auth     = data.get('auth', '').strip()
+    if not endpoint or not p256dh or not auth:
+        return jsonify(ok=False, error='Неполные данные'), 400
+    sub = PushSubscription.query.filter_by(user_id=current_user.id, endpoint=endpoint).first()
+    if not sub:
+        sub = PushSubscription(user_id=current_user.id, endpoint=endpoint, p256dh=p256dh, auth=auth)
+        db.session.add(sub)
+    else:
+        sub.p256dh = p256dh
+        sub.auth   = auth
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+@login_required
+def api_push_unsubscribe():
+    data     = request.get_json(silent=True) or {}
+    endpoint = data.get('endpoint', '').strip()
+    if endpoint:
+        PushSubscription.query.filter_by(user_id=current_user.id, endpoint=endpoint).delete()
+        db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/push/vapid-public-key')
+def api_push_vapid_key():
+    key = os.environ.get('VAPID_PUBLIC_KEY', '')
+    return jsonify(key=key)
+
+
+# ═══════════════════════════════════════════════
+#  ПОДПИСКА НА СТАТЬЮ
+# ═══════════════════════════════════════════════
+
+@app.route('/api/article/<int:article_id>/subscribe', methods=['POST'])
+@login_required
+def api_article_subscribe(article_id):
+    Article.query.get_or_404(article_id)
+    existing = ArticleSubscription.query.filter_by(user_id=current_user.id, article_id=article_id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify(ok=True, subscribed=False)
+    db.session.add(ArticleSubscription(user_id=current_user.id, article_id=article_id))
+    db.session.commit()
+    return jsonify(ok=True, subscribed=True)
+
+
+@app.route('/api/article/<int:article_id>/subscribe/status')
+@login_required
+def api_article_subscribe_status(article_id):
+    existing = ArticleSubscription.query.filter_by(user_id=current_user.id, article_id=article_id).first()
+    return jsonify(subscribed=bool(existing))
+
+
+# ═══════════════════════════════════════════════
+#  SERVICE WORKER
+# ═══════════════════════════════════════════════
+
+@app.route('/sw.js')
+def service_worker():
+    sw_path = os.path.join(app.static_folder, 'sw.js')
+    if os.path.exists(sw_path):
+        resp = make_response(send_from_directory(app.static_folder, 'sw.js'))
+    else:
+        sw_code = """
+self.addEventListener('push', function(e) {
+    var data = {};
+    try { data = e.data.json(); } catch(err) { data = {title:'Comilank', body: e.data ? e.data.text() : ''}; }
+    var opts = {body: data.body||'', icon:'/static/favicon.ico', badge:'/static/favicon.ico', data:{url:data.url||'/'}};
+    e.waitUntil(self.registration.showNotification(data.title||'Comilank', opts));
+});
+self.addEventListener('notificationclick', function(e) {
+    e.notification.close();
+    var url = (e.notification.data && e.notification.data.url) ? e.notification.data.url : '/';
+    e.waitUntil(clients.matchAll({type:'window'}).then(function(cs){
+        for(var i=0;i<cs.length;i++){ if(cs[i].url===url && 'focus' in cs[i]) return cs[i].focus(); }
+        if(clients.openWindow) return clients.openWindow(url);
+    }));
+});
+"""
+        resp = make_response(sw_code, 200)
+    resp.headers['Content-Type'] = 'application/javascript'
+    resp.headers['Service-Worker-Allowed'] = '/'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -3442,4 +5303,4 @@ if __name__ == '__main__':
             db.session.add(admin); db.session.commit()
             print('Создан пользователь: admin / admin (роль 3 - старший модератор)')
             print('Для получения роли 4 используйте секретный маршрут.')
-    app.run(debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')
+    app.run(debug=True, host='0.0.0.0', port=5000)

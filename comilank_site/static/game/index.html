@@ -433,7 +433,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
           <div class="hpTextCol">
             <span class="pname" id="p1name">ШЕФ</span>
             <div class="hpOuter"><div class="hpInner" id="hp1" style="width:100%"></div></div>
-            <div class="knifeBar"><span class="knifeLbl">🗡</span><div class="knifeOuter"><div class="knifeInner" id="throwInner2"></div></div></div>
+            <div class="knifeBar"><span class="knifeLbl">🗡</span><div class="knifeOuter"><div class ="knifeInner" id="throwInner2"></div></div></div>
           </div>
         </div>
       </div>
@@ -724,6 +724,40 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{K[e.code]=false;});
 const K={};
 
+// ═══ СООБЩАЕМ РОДИТЕЛЮ О СОСТОЯНИИ (для мобильных кнопок) ═══
+(function(){
+  var _last=null;
+  setInterval(function(){
+    if(typeof gs==='undefined') return;
+    var story=document.getElementById('storyScreen');
+    var storyOn=story&&story.style.display!=='none';
+    var state=storyOn?'story':(gs==='fighting'||gs==='kneel'||gs==='countdown')?'battle':'other';
+    if(state===_last) return;
+    _last=state;
+    try{window.parent.postMessage({type:'game_state',state:state},'*');}catch(e){}
+  },150);
+})();
+
+// ═══ МОБИЛЬНЫЕ КОМАНДЫ ОТ РОДИТЕЛЯ ═══
+window.addEventListener('message',function(e){
+  if(!e.data||!e.data.type) return;
+  function gc(k){return typeof BINDS!=='undefined'?BINDS[k]:null;}
+  if(e.data.type==='mobile_keydown'){
+    var c=gc(e.data.key);
+    if(c){K[c]=true;
+      if(e.data.key==='jump'&&typeof player!=='undefined'&&player&&player.onGnd){
+        player.vy=typeof JF!=='undefined'?JF:-18;player.onGnd=false;}}
+  }
+  if(e.data.type==='mobile_keyup'){var c=gc(e.data.key);if(c)K[c]=false;}
+  if(e.data.type==='mobile_action'){
+    if(typeof player==='undefined'||!player)return;
+    if(typeof gs==='undefined'||(gs!=='fighting'&&gs!=='kneel'))return;
+    if(e.data.action==='punch')player.punch();
+    else if(e.data.action==='kick')player.kick();
+    else if(e.data.action==='throw')player.doThrow();
+  }
+});
+
 function showSettings(){
   buildBindTable();
   // Инициализируем UI звука
@@ -834,6 +868,8 @@ window._sendChallengeById = function(userId, username){
           window._onlineP1Name=myName; window._onlineP2Name=username;
           _setLobbyMsg('✅ '+username+' принял! Запускаем...');
           closeOnline();
+          // Передаём карту P2 через глобальную переменную
+          window._mySelectedMap = myMap;
           setTimeout(function(){startGame();},600);
         }
       }).catch(function(){});
@@ -907,6 +943,7 @@ window._inviteFromLobby = function(userId, usernameOrBtn){
             window._onlineP1Name=myName; window._onlineP2Name=username;
             if(msg) msg.textContent='✅ '+username+' принял! Запускаем...';
             closeOnline();
+            window._mySelectedMap = myMap;
             setTimeout(function(){startGame();},600);
           }
         }).catch(function(){});
@@ -996,7 +1033,12 @@ function drawMapPreviews(){
 }
 function startOnlineFight(){
   closeOnline();
-  currentMap=selectedMap;
+  // P2 использует карту от P1, P1 использует свой выбор
+  if(window._battleRole === 'p2' && window._p1SelectedMap){
+    currentMap = window._p1SelectedMap;
+  } else {
+    currentMap = selectedMap;
+  }
   // If frog selected — swap player/AI roles (player IS the frog, AI is the chef)
   playerIsChef=(selectedChar==='chef');
   round=1;startRound(); // keep round var for AI difficulty scaling
@@ -2028,47 +2070,92 @@ function _pvpPull(){
   .then(function(d){
     if(d.ok && d.state && d.state.ts){
       _remoteState = d.state;
+
+      // P2: если P1 прислал gameOver — применяем авторитетный результат
+      if(window._battleRole === 'p2' && d.state.gameOver && d.state.winner && gs !== 'roundEnd'){
+        var _winner = d.state.winner; // 'p1' или 'p2'
+        var _iWon   = (_winner === 'p2');
+        var _p1name = window._onlineP1Name || 'Игрок 1';
+        var _p2name = window._onlineP2Name || 'Игрок 2';
+        var _winnerName = (_winner==='p1') ? _p1name : _p2name;
+        var _loserName  = (_winner==='p1') ? _p2name : _p1name;
+        clearInterval(tiv); gs='roundEnd'; _stopPVPSync();
+        setTimeout(function(){ _showOnlineResult(_iWon, _winnerName, _loserName); }, 400);
+      }
     }
   }).catch(function(){});
 }
 
 function _startPVPSync(){
   if(_pvpSyncInterval) clearInterval(_pvpSyncInterval);
-  // Используем 50ms — работает даже когда вкладка скрыта
-  _pvpSyncInterval = setInterval(function(){
-    _pvpPush();
-    _pvpPull();
-    // В фоне — применяем удалённое состояние и считаем урон
-    if(document.hidden && player && frog && gs==='fighting'){
-      // Применяем позицию/анимацию противника из сервера
-      if(_remoteState) _applyRemoteState(frog);
-      // Если противник атакует — наносим урон по нам (приближённый расчёт)
-      if(_remoteState && _remoteState.an){
-        var atkAnims=['punch','kick','throw','atk_range','hit1'];
-        if(atkAnims.indexOf(_remoteState.an) !== -1){
-          var dist=Math.abs(player.x - frog.x);
-          var inRange = (_remoteState.an==='atk_range') ? dist<280 : dist<140;
-          if(inRange && !player.blocking){
-            // Раз в 400мс чтобы не делать слишком часто
-            var now=Date.now();
-            if(!_lastHiddenHit || now-_lastHiddenHit > 400){
-              _lastHiddenHit = now;
-              var dmg = (_remoteState.an==='atk_range') ? 5 : 3;
-              player.hit(dmg, false);
+
+  // Используем Web Worker для предотвращения throttling браузером в фоновой вкладке
+  var _pvpWorker = null;
+  try {
+    var workerCode = 'var iv=null; self.onmessage=function(e){ if(e.data==="start"){ iv=setInterval(function(){ self.postMessage("tick"); },50); } else if(e.data==="stop"){ clearInterval(iv); } };';
+    var blob = new Blob([workerCode], {type:'text/javascript'});
+    _pvpWorker = new Worker(URL.createObjectURL(blob));
+    _pvpWorker.onmessage = function(){
+      _pvpPush();
+      _pvpPull();
+      if(document.hidden && player && frog && gs==='fighting'){
+        if(_remoteState) _applyRemoteState(frog);
+        if(_remoteState && _remoteState.an){
+          var atkAnims=['punch','kick','throw','atk_range','hit1'];
+          if(atkAnims.indexOf(_remoteState.an) !== -1){
+            var dist=Math.abs(player.x - frog.x);
+            var inRange = (_remoteState.an==='atk_range') ? dist<280 : dist<140;
+            if(inRange && !player.blocking){
+              var now=Date.now();
+              if(!_lastHiddenHit || now-_lastHiddenHit > 400){
+                _lastHiddenHit = now;
+                var dmg = (_remoteState.an==='atk_range') ? 5 : 3;
+                player.hit(dmg, false);
+              }
             }
           }
         }
+        if(player.hp<=0) endRound('frog_win');
+        if(frog.hp<=0 && !frog.dead) endRound('player_win');
+        updHP(player,frog);
       }
-      if(player.hp<=0) endRound('frog_win');
-      if(frog.hp<=0 && !frog.dead) endRound('player_win');
-      updHP(player,frog);
-    }
-  }, 50);
+    };
+    _pvpWorker.postMessage('start');
+    window._pvpWorkerRef = _pvpWorker;
+  } catch(e) {
+    // Fallback — обычный setInterval если Worker не поддерживается
+    _pvpSyncInterval = setInterval(function(){
+      _pvpPush();
+      _pvpPull();
+      if(document.hidden && player && frog && gs==='fighting'){
+        if(_remoteState) _applyRemoteState(frog);
+        if(_remoteState && _remoteState.an){
+          var atkAnims=['punch','kick','throw','atk_range','hit1'];
+          if(atkAnims.indexOf(_remoteState.an) !== -1){
+            var dist=Math.abs(player.x - frog.x);
+            var inRange = (_remoteState.an==='atk_range') ? dist<280 : dist<140;
+            if(inRange && !player.blocking){
+              var now2=Date.now();
+              if(!_lastHiddenHit || now2-_lastHiddenHit > 400){
+                _lastHiddenHit = now2;
+                var dmg2 = (_remoteState.an==='atk_range') ? 5 : 3;
+                player.hit(dmg2, false);
+              }
+            }
+          }
+        }
+        if(player.hp<=0) endRound('frog_win');
+        if(frog.hp<=0 && !frog.dead) endRound('player_win');
+        updHP(player,frog);
+      }
+    }, 50);
+  }
 }
 var _lastHiddenHit=0;
 
 function _stopPVPSync(){
   if(_pvpSyncInterval){ clearInterval(_pvpSyncInterval); _pvpSyncInterval=null; }
+  if(window._pvpWorkerRef){ window._pvpWorkerRef.postMessage('stop'); window._pvpWorkerRef.terminate(); window._pvpWorkerRef=null; }
 }
 
 // нарисовал удалённого игрока с его реальным персонажем
@@ -2099,11 +2186,12 @@ function drawRemotePlayer(f){
 function _applyRemoteState(f){
   if(!_remoteState) return;
   var s = _remoteState;
-  if(Date.now() - s.ts > 1500) return;
+  // Увеличиваем допустимую задержку до 3 сек (учитываем HTTP polling)
+  if(Date.now() - s.ts > 3000) return;
   // Плавная интерполяция позиции (lerp) — убирает телепортацию
-  var lerpSpeed = 0.35;
+  var lerpSpeed = 0.3;
   var dx = s.x - f.x, dy = s.y - f.y;
-  if(Math.abs(dx)>200 || Math.abs(dy)>200){
+  if(Math.abs(dx)>300 || Math.abs(dy)>200){
     // Слишком далеко — телепортируем сразу
     f.x = s.x; f.y = s.y;
   } else {
@@ -2115,9 +2203,8 @@ function _applyRemoteState(f){
   f.hp = Math.max(0, s.hp);
   f.maxHp = s.maxHp || 100;
   f._an = s.an || 'idle';
-  f.fr = s.fr || 0;   // синхронизирую кадр анимации для плавности
+  f.fr = s.fr || 0;
   f.blocking = !!s.blocking;
-  // Персонаж противника
   if(s.char) window._remoteChar = s.char;
   if(s.dead && !f.dead){ f.dead=true; f.deathTimer=1; }
 }
@@ -2125,6 +2212,14 @@ function _applyRemoteState(f){
 function startGame(){
   document.getElementById('mainMenu').style.display='none';
   document.getElementById('storyScreen').style.display='none';
+  // P1 применяет свою карту, P2 — карту P1
+  if(window._battleRole === 'p1' && window._mySelectedMap){
+    currentMap = window._mySelectedMap;
+    selectedMap = window._mySelectedMap;
+  } else if(window._battleRole === 'p2' && window._p1SelectedMap){
+    currentMap = window._p1SelectedMap;
+    selectedMap = window._p1SelectedMap;
+  }
   startRound();
 }
 
@@ -2191,15 +2286,15 @@ function startRound(){
 }
 function endRound(r){
   clearInterval(tiv);gs='roundEnd';
-  _stopPVPSync(); // Останавливаем PVP синхронизацию
+  _stopPVPSync();
 
-  // В онлайн-режиме — показываем оверлей победы/поражения, без сюжета
   var _isOnline = !!(window._battleRoom && window._battleRole);
   if(_isOnline){
     var _myRole   = window._battleRole || 'p1';
     var _p1name   = window._onlineP1Name || 'Игрок 1';
     var _p2name   = window._onlineP2Name || 'Игрок 2';
     var _onlineWinner = null;
+
     if(r==='player_win'){
       _onlineWinner = (_myRole==='p1') ? 'p1' : 'p2';
     } else if(r==='frog_win'){
@@ -2208,16 +2303,45 @@ function endRound(r){
       var ph=player&&player.hp||0, fh=frog&&frog.hp||0;
       _onlineWinner = (ph>=fh) ? ((_myRole==='p1')?'p1':'p2') : ((_myRole==='p2')?'p2':'p1');
     }
+
     var _iWon = (_onlineWinner === _myRole);
     var _winnerName = (_onlineWinner==='p1') ? _p1name : _p2name;
     var _loserName  = (_onlineWinner==='p1') ? _p2name : _p1name;
+
+    // P1 — авторитет: шлёт результат на сервер через state/push с флагом gameOver
+    // P2 — ждёт 1.5 сек и показывает свой результат (если P1 тоже завершил — результаты совпадут)
+    if(_myRole === 'p1'){
+      // Пушим финальное состояние с флагом победителя
+      fetch('/api/game/state/push',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          room_id: window._battleRoom,
+          role: 'p1',
+          state: {
+            x: player.x, y: player.y,
+            hp: player.hp, maxHp: player.maxHp,
+            vx: 0, vy: 0,
+            facing: player.facing,
+            an: player._an, fr: player.fr,
+            blocking: false,
+            dead: player.hp<=0,
+            char: window._myChar||'chef',
+            ts: Date.now(),
+            gameOver: true,
+            winner: _onlineWinner  // авторитетный результат от P1
+          }
+        })
+      }).catch(function(){});
+    }
+
     try{
       window.parent.postMessage({
         type:'game_result', winner:_onlineWinner, myRole:_myRole,
         p1name:_p1name, p2name:_p2name
       },'*');
     }catch(e){}
-    setTimeout(function(){ _showOnlineResult(_iWon, _winnerName, _loserName); }, 600);
+
+    setTimeout(function(){ _showOnlineResult(_iWon, _winnerName, _loserName); }, 800);
     return;
   }
 
@@ -2235,13 +2359,10 @@ function endRound(r){
     }
   }
   else if(r==='frog_win'){
-    // В оффлайне — показываем анимацию падения шефа на колени перед сценой
     if(player){
-      player._an=''; player.sa('idle'); // стоп-кадр
-      // Меняем спрайт на chef_kneel если он есть
+      player._an=''; player.sa('idle');
       var _defeatEl=document.getElementById('_chefDefeatOverlay');
       if(_defeatEl) _defeatEl.remove();
-      // Кратковременная вспышка на поражение
       ann('ПОРАЖЕНИЕ...','#cc2222',1800);
     }
     showDefeatScene();
@@ -2814,6 +2935,9 @@ scale();makeRain(0);startMenuAnim();
   if(p2n) window._onlineP2Name=decodeURIComponent(p2n);
   var myChar=params.get('character');
   if(myChar) window._myChar=decodeURIComponent(myChar);
+  // Получаем карту из URL (P1 передаёт её P2)
+  var mapParam=params.get('map');
+  if(mapParam){ selectedMap=decodeURIComponent(mapParam); window._p1SelectedMap=decodeURIComponent(mapParam); }
   var t=setInterval(function(){
     var menu=document.getElementById('mainMenu');
     if(!menu||menu.style.display==='none')return;
@@ -2874,6 +2998,8 @@ function _showP2CharSelect(){
   };
   window._p2StartBattle=function(){
     window._myChar=selChar;
+    // Применяем карту P1 (полученную при принятии вызова)
+    if(window._p1SelectedMap){ selectedMap=window._p1SelectedMap; }
     var el=document.getElementById('_p2CharSelOv');
     if(el) el.remove();
     startGame();
@@ -3002,7 +3128,7 @@ function _showP2CharSelect(){
         '<div style="font-size:12px;color:#f2f0ea;margin-bottom:12px;font-family:\'IM Fell English\',serif;">'+
         'Игрок <strong style="color:#e8c060">'+d.from_user+'</strong> вызывает вас!</div>'+
         '<div style="display:flex;gap:8px;justify-content:center;">'+
-        '<button onclick="_acceptBattle('+d.invite_id+',\''+d.room_id+'\')" '+
+        '<button onclick="_acceptBattle('+d.invite_id+',\''+d.room_id+'\',\''+d.from_card+'\',\''+d.from_user+'\')" '+
         'style="background:linear-gradient(180deg,#7c4c1c,#4c2712);border:none;border-bottom:2px solid #0a0400;'+
         'color:#daa847;font-size:8px;letter-spacing:3px;padding:7px 14px;cursor:pointer;font-family:\'Cinzel\',monospace;font-weight:700;">⚔ ПРИНЯТЬ</button>'+
         '<button onclick="_declineBattle('+d.invite_id+')" '+
@@ -3014,13 +3140,16 @@ function _showP2CharSelect(){
   }
   setInterval(check,5000);
 
-  window._acceptBattle=function(inviteId,roomId){
+  window._acceptBattle=function(inviteId,roomId,fromCard,fromUser){
     fetch('/api/game/battle-respond',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite_id:inviteId,accept:true})})
     .then(function(r){return r.json();})
     .then(function(d){
       var n=document.getElementById('_battleNotif');if(n)n.remove();
       if(d.ok){
         window._battleRoom=roomId;window._battleRole='p2';
+        // P2 получает карту от P1
+        if(fromCard) { selectedMap=fromCard; window._p1SelectedMap=fromCard; }
+        if(fromUser) { window._onlineP1Name=fromUser; }
         ['onlineModal','settingsScreen','storyScreen'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
         // Показываем выбор персонажа P2
         setTimeout(function(){ _showP2CharSelect(); },300);

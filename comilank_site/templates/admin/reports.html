@@ -241,7 +241,13 @@
                                 <span style="color:#1e2028;">Пользователь #{{ r.target_id }}</span>
                                 {% endif %}
                             {% else %}
-                            Комментарий #{{ r.target_id }}
+                            <span>Комментарий #{{ r.target_id }}</span>
+                            {% if r.comment_article_id %}
+                            <a href="{{ url_for('article', article_id=r.comment_article_id) }}#comment-{{ r.target_id }}"
+                               class="btn btn-view" style="margin-left:6px;padding:2px 9px;font-size:0.72rem;">
+                                <i class="fas fa-arrow-right" style="font-size:.6rem;"></i> Перейти
+                            </a>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>

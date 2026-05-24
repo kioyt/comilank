@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, timedelta
@@ -90,6 +91,7 @@ class Article(db.Model):
 
     id          = db.Column(db.Integer, primary_key=True)
     title       = db.Column(db.String(300), nullable=False)
+    slug        = db.Column(db.String(350), nullable=True, unique=True)  # красивый URL для TG-превью
     preview     = db.Column(db.Text, nullable=True)       # краткое описание
     content     = db.Column(db.Text, nullable=False)
     image       = db.Column(db.String(500), nullable=True)  # URL изображения (старый способ)
@@ -249,6 +251,31 @@ class ExtraPageView(db.Model):
     )
 
 
+# ========== КОММЕНТАРИЙ К ДОП. СТРАНИЦЕ ==========
+class ExtraPageComment(db.Model):
+    """Комментарий к дополнительной странице."""
+    __tablename__ = 'extra_page_comments'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    content    = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    page_id   = db.Column(db.Integer, db.ForeignKey('extra_pages.id'),          nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'),                 nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('extra_page_comments.id'),   nullable=True)
+    likes     = db.Column(db.Integer, default=0)
+    dislikes  = db.Column(db.Integer, default=0)
+
+    author  = db.relationship('User', foreign_keys=[author_id])
+    replies = db.relationship(
+        'ExtraPageComment',
+        backref=db.backref('parent', remote_side='ExtraPageComment.id'),
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        primaryjoin='ExtraPageComment.parent_id == ExtraPageComment.id',
+    )
+
+
 # ========== ВЫПАДАЮЩИЙ ПУНКТ ==========
 class DropdownItem(db.Model):
     __tablename__ = 'dropdown_items'
@@ -390,6 +417,7 @@ class TopViewer(db.Model):
     messages      = db.Column(db.Integer, default=0)
     show_messages = db.Column(db.Boolean, default=True)
     position      = db.Column(db.Integer, default=0)
+    xp            = db.Column(db.Integer, default=0)
 
 
 class TopDonator(db.Model):
@@ -493,6 +521,8 @@ class Report(db.Model):
     resolved_by_id = db.Column(db.Integer,   db.ForeignKey('users.id'), nullable=True)
     resolved_at    = db.Column(db.DateTime,  nullable=True)
     rejected       = db.Column(db.Boolean,   default=False)   # ложный репорт
+    comment_article_id = db.Column(db.Integer, nullable=True)  # статья где находится коммент
+    extra_page_id  = db.Column(db.Integer, nullable=True)      # доп. страница
 
     reporter    = db.relationship('User', foreign_keys=[reporter_id])
     resolved_by = db.relationship('User', foreign_keys=[resolved_by_id])
@@ -591,3 +621,424 @@ class Notification(db.Model):
     actor  = db.relationship('User', foreign_keys=[actor_id])
     comment= db.relationship('Comment', foreign_keys=[comment_id])
     article= db.relationship('Article', foreign_keys=[article_id])
+
+
+# ═══════════════════════════════════════════════
+#  МЕССЕНДЖЕР
+# ═══════════════════════════════════════════════
+
+class MessengerChat(db.Model):
+    """Чат — личный (DM) или групповой."""
+    __tablename__ = 'messenger_chats'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    is_group      = db.Column(db.Boolean, default=False)
+    name          = db.Column(db.String(100), nullable=True)   # только для групп
+    avatar        = db.Column(db.String(300), nullable=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    pinned_msg_id = db.Column(db.Integer, nullable=True)
+
+    members  = db.relationship('ChatMember',  backref='chat', lazy='dynamic',
+                                cascade='all,delete-orphan')
+    messages = db.relationship('ChatMessage', backref='chat', lazy='dynamic',
+                                primaryjoin='MessengerChat.id == ChatMessage.chat_id',
+                                cascade='all,delete-orphan')
+
+    @property
+    def last_message(self):
+        return self.messages.order_by(ChatMessage.id.desc()).first()
+
+    def display_name(self, user):
+        if self.is_group:
+            return self.name or 'Группа'
+        other = self.other_user(user)
+        return other.username if other else 'Удалён'
+
+    def other_user(self, user):
+        m = self.members.filter(ChatMember.user_id != user.id).first()
+        return m.user if m else None
+
+    def unread_count(self, user):
+        member = self.members.filter_by(user_id=user.id).first()
+        if not member or not member.last_read_at:
+            return self.messages.filter(ChatMessage.author_id != user.id).count()
+        return self.messages.filter(
+            ChatMessage.created_at > member.last_read_at,
+            ChatMessage.author_id != user.id
+        ).count()
+
+    def is_member(self, user):
+        return self.members.filter_by(user_id=user.id).first() is not None
+
+
+class ChatMember(db.Model):
+    """Участник чата."""
+    __tablename__ = 'chat_members'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    chat_id      = db.Column(db.Integer, db.ForeignKey('messenger_chats.id'), nullable=False)
+    user_id      = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_admin     = db.Column(db.Boolean, default=False)
+    joined_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    last_read_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('chat_memberships', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('chat_id', 'user_id', name='uq_chat_member'),)
+
+
+class ChatMessage(db.Model):
+    """Сообщение в чате."""
+    __tablename__ = 'chat_messages'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    chat_id     = db.Column(db.Integer, db.ForeignKey('messenger_chats.id'), nullable=False)
+    author_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    text        = db.Column(db.Text, nullable=True)
+    image_url   = db.Column(db.String(300), nullable=True)
+    file_url    = db.Column(db.String(300), nullable=True)
+    file_name   = db.Column(db.String(200), nullable=True)
+    file_size   = db.Column(db.Integer, nullable=True)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('chat_messages.id'), nullable=True)
+    edited      = db.Column(db.Boolean, default=False)
+    is_read     = db.Column(db.Boolean, default=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author   = db.relationship('User', foreign_keys=[author_id],
+                               backref=db.backref('chat_messages', lazy='dynamic'))
+    reply_to = db.relationship('ChatMessage', foreign_keys=[reply_to_id],
+                               remote_side='ChatMessage.id')
+    reactions = db.relationship('MsgReaction', backref='message', lazy='dynamic',
+                                cascade='all,delete-orphan')
+
+    def reactions_grouped(self):
+        result = {}
+        for r in self.reactions:
+            result.setdefault(r.emoji, []).append(r.user_id)
+        return result
+
+    def file_size_str(self):
+        if not self.file_size:
+            return ''
+        if self.file_size < 1024:
+            return f'{self.file_size} Б'
+        if self.file_size < 1048576:
+            return f'{self.file_size // 1024} КБ'
+        return f'{self.file_size // 1048576} МБ'
+
+    def to_dict(self):
+        return {
+            'id':           self.id,
+            'chat_id':      self.chat_id,
+            'author_id':    self.author_id,
+            'author_name':  self.author.username if self.author else '?',
+            'author_avatar': self.author.avatar if self.author else None,
+            'text':         self.text,
+            'image_url':    self.image_url,
+            'file_url':     self.file_url,
+            'file_name':    self.file_name,
+            'reply_to_id':  self.reply_to_id,
+            'edited':       self.edited,
+            'is_read':      self.is_read,
+            'time':         self.created_at.strftime('%H:%M'),
+            'ts':           self.created_at.isoformat(),
+        }
+
+
+class MsgReaction(db.Model):
+    """Реакция (эмодзи) на сообщение."""
+    __tablename__ = 'msg_reactions'
+
+    id      = db.Column(db.Integer, primary_key=True)
+    msg_id  = db.Column(db.Integer, db.ForeignKey('chat_messages.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    emoji   = db.Column(db.String(10), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('msg_id', 'user_id', 'emoji', name='uq_msg_reaction'),)
+
+
+class TypingStatus(db.Model):
+    """Статус «печатает» — обновляется каждые ~3 сек."""
+    __tablename__ = 'typing_status'
+
+    id      = db.Column(db.Integer, primary_key=True)
+    chat_id = db.Column(db.Integer, db.ForeignKey('messenger_chats.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    ts      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('chat_id', 'user_id', name='uq_typing'),)
+
+# ═══════════════════════════════════════════════
+#  КОМНАТЫ И КАНАЛЫ (публичные чаты)
+# ═══════════════════════════════════════════════
+
+class Room(db.Model):
+    """Публичная комната или канал."""
+    __tablename__ = 'rooms'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(100), nullable=False)
+    slug        = db.Column(db.String(100), unique=True, nullable=False)  # URL-friendly id
+    description = db.Column(db.String(500), default='')
+    category    = db.Column(db.String(50), default='general')  # games, music, sports, etc.
+    room_type   = db.Column(db.String(10), default='room')     # 'room' | 'channel'
+    avatar      = db.Column(db.String(300), nullable=True)
+    banner      = db.Column(db.String(300), nullable=True)
+    is_active    = db.Column(db.Boolean, default=True)
+    is_private   = db.Column(db.Boolean, default=False)   # приватная — только по ссылке/запросу
+    is_nsfw      = db.Column(db.Boolean, default=False)
+    invite_token = db.Column(db.String(32), unique=True, nullable=True)  # токен приглашения
+    pinned_msg_id= db.Column(db.Integer, nullable=True)
+    rules        = db.Column(db.Text, default='')
+    verified     = db.Column(db.Boolean, default=False)   # верифицированный (галочка)
+    is_featured  = db.Column(db.Boolean, default=False)   # закреплён в боковом меню
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    owner_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    owner    = db.relationship('User', foreign_keys=[owner_id],
+                               backref=db.backref('owned_rooms', lazy='dynamic'))
+    members  = db.relationship('RoomMember', backref='room', lazy='dynamic',
+                               cascade='all,delete-orphan')
+    messages = db.relationship('RoomMessage', backref='room', lazy='dynamic',
+                               cascade='all,delete-orphan')
+
+    @property
+    def member_count(self):
+        return self.members.count()
+
+    @property
+    def last_message(self):
+        return self.messages.order_by(RoomMessage.id.desc()).first()
+
+    def is_member(self, user):
+        return self.members.filter_by(user_id=user.id).first() is not None
+
+    def get_member(self, user):
+        return self.members.filter_by(user_id=user.id).first()
+
+    def unread_count(self, user):
+        m = self.members.filter_by(user_id=user.id).first()
+        if not m or not m.last_read_at:
+            return 0
+        return self.messages.filter(
+            RoomMessage.created_at > m.last_read_at,
+            RoomMessage.author_id != user.id
+        ).count()
+
+    def __repr__(self):
+        return f'<Room {self.slug}>'
+
+
+
+
+class RoomMessageRead(db.Model):
+    __tablename__ = 'room_message_reads'
+    id      = db.Column(db.Integer, primary_key=True)
+    msg_id  = db.Column(db.Integer, db.ForeignKey('room_messages.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('msg_id','user_id'),)
+    user = db.relationship('User', foreign_keys=[user_id])
+
+class RoomMember(db.Model):
+    """Участник публичной комнаты."""
+    __tablename__ = 'room_members'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    room_id      = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    user_id      = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    role         = db.Column(db.String(20), default='member')
+    # role: 'member' | 'moderator' | 'admin' | 'owner'
+    joined_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    last_read_at = db.Column(db.DateTime, nullable=True)
+    is_banned    = db.Column(db.Boolean, default=False)
+    is_muted     = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('room_memberships', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('room_id', 'user_id', name='uq_room_member'),)
+
+
+class RoomMessage(db.Model):
+    """Сообщение в публичной комнате."""
+    __tablename__ = 'room_messages'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    room_id     = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    author_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    text        = db.Column(db.Text, nullable=True)
+    image_url   = db.Column(db.String(300), nullable=True)
+    file_url    = db.Column(db.String(300), nullable=True)
+    file_name   = db.Column(db.String(200), nullable=True)
+    file_size   = db.Column(db.Integer, nullable=True)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('room_messages.id'), nullable=True)
+    edited      = db.Column(db.Boolean, default=False)
+    is_pinned   = db.Column(db.Boolean, default=False)
+    deleted     = db.Column(db.Boolean, default=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    msg_type    = db.Column(db.String(20), default='text')  # 'text'|'system'|'post'
+
+    author   = db.relationship('User', foreign_keys=[author_id],
+                               backref=db.backref('room_messages', lazy='dynamic'))
+    reply_to = db.relationship('RoomMessage', foreign_keys=[reply_to_id],
+                               remote_side='RoomMessage.id')
+    reactions = db.relationship('RoomReaction', backref='message', lazy='dynamic',
+                                cascade='all,delete-orphan')
+
+    def reactions_grouped(self):
+        result = {}
+        for r in self.reactions:
+            result.setdefault(r.emoji, []).append(r.user_id)
+        return result
+
+    def file_size_str(self):
+        if not self.file_size:
+            return ''
+        if self.file_size < 1024:
+            return f'{self.file_size} Б'
+        if self.file_size < 1048576:
+            return f'{self.file_size // 1024} КБ'
+        return f'{self.file_size // 1048576} МБ'
+
+    def to_dict(self):
+        return {
+            'id':          self.id,
+            'room_id':     self.room_id,
+            'author_id':   self.author_id,
+            'author_name': self.author.username if self.author else 'Система',
+            'author_avatar': self.author.avatar if self.author else None,
+            'author_role': self.room.get_member(self.author).role if self.author and self.room.get_member(self.author) else 'member',
+            'text':        self.text,
+            'image_url':   self.image_url,
+            'file_url':    self.file_url,
+            'file_name':   self.file_name,
+            'reply_to_id': self.reply_to_id,
+            'edited':      self.edited,
+            'deleted':     self.deleted,
+            'msg_type':    self.msg_type,
+            'time':        self.created_at.strftime('%H:%M'),
+            'ts':          self.created_at.isoformat(),
+        }
+
+
+class RoomReaction(db.Model):
+    """Реакция на сообщение в комнате."""
+    __tablename__ = 'room_reactions'
+
+    id      = db.Column(db.Integer, primary_key=True)
+    msg_id  = db.Column(db.Integer, db.ForeignKey('room_messages.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    emoji   = db.Column(db.String(10), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('msg_id', 'user_id', 'emoji', name='uq_room_reaction'),)
+
+
+class RoomApplication(db.Model):
+    """Заявка на создание комнаты/канала."""
+    __tablename__ = 'room_applications'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    applicant_id= db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name        = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500), default='')
+    category    = db.Column(db.String(50), default='general')
+    room_type   = db.Column(db.String(10), default='room')  # 'room' | 'channel'
+    reason      = db.Column(db.Text, default='')  # зачем нужна комната
+    quiz_q1     = db.Column(db.String(500), default='')   # ответы на вопросы
+    quiz_q2     = db.Column(db.String(500), default='')
+    quiz_q3     = db.Column(db.String(500), default='')
+    status      = db.Column(db.String(20), default='pending')
+    # status: 'pending' | 'approved' | 'rejected'
+    admin_note  = db.Column(db.String(500), nullable=True)  # комментарий админа
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    room_id     = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=True)
+    # room_id заполняется после одобрения
+
+    applicant   = db.relationship('User', foreign_keys=[applicant_id],
+                                  backref=db.backref('room_applications', lazy='dynamic'))
+    reviewed_by = db.relationship('User', foreign_keys=[reviewed_by_id])
+    room        = db.relationship('Room', foreign_keys=[room_id])
+
+    def __repr__(self):
+        return f'<RoomApplication {self.name} [{self.status}]>'
+
+
+class RoomTypingStatus(db.Model):
+    """Кто печатает в комнате."""
+    __tablename__ = 'room_typing_status'
+
+    id      = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    ts      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('room_id', 'user_id', name='uq_room_typing'),)
+
+
+class RoomJoinRequest(db.Model):
+    """Запрос на вступление в приватную комнату."""
+    __tablename__ = 'room_join_requests'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    room_id    = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status     = db.Column(db.String(20), default='pending')
+    # 'pending' | 'approved' | 'rejected'
+    message    = db.Column(db.String(300), default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at= db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('room_join_requests', lazy='dynamic'))
+    room = db.relationship('Room', foreign_keys=[room_id],
+                           backref=db.backref('join_requests', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('room_id', 'user_id', name='uq_join_request'),)
+
+
+# ═══════════════════════════════════════════════
+#  ПОДПИСКИ НА СТАТЬИ (отслеживание)
+# ═══════════════════════════════════════════════
+
+class ArticleSubscription(db.Model):
+    """Пользователь подписан на обновления статьи / новые доп.статьи."""
+    __tablename__ = 'article_subscriptions'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user    = db.relationship('User',    foreign_keys=[user_id],
+                              backref=db.backref('article_subscriptions', lazy='dynamic'))
+    article = db.relationship('Article', foreign_keys=[article_id],
+                              backref=db.backref('subscribers', lazy='dynamic'))
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'article_id', name='uq_article_sub'),)
+
+
+# ═══════════════════════════════════════════════
+#  WEB PUSH ПОДПИСКИ (браузерные push-уведомления)
+# ═══════════════════════════════════════════════
+
+class PushSubscription(db.Model):
+    """Хранит endpoint и ключи Web Push подписки пользователя."""
+    __tablename__ = 'push_subscriptions'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    endpoint   = db.Column(db.Text, nullable=False)
+    p256dh     = db.Column(db.Text, nullable=False)   # ключ шифрования
+    auth       = db.Column(db.Text, nullable=False)   # auth секрет
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', foreign_keys=[user_id],
+                           backref=db.backref('push_subscriptions', lazy='dynamic'))
+
+    # Один endpoint = одна запись
+    __table_args__ = (db.Index('ix_push_endpoint', 'endpoint'),)
+

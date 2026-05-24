@@ -67,8 +67,7 @@
     }
     .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.22s; pointer-events:none; }
     .btn-secondary { background:rgba(255,255,255,0.03); color:#4e5460; border:1px solid rgba(255,255,255,0.07); }
-    .btn-secondary::before { background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); }
-    .btn-secondary:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
+    .btn-secondary::before { background:radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 65%); }    .btn-secondary:hover { background:rgba(255,255,255,0.06); color:#8a909e; border-color:rgba(255,255,255,0.12); }
     .btn-secondary:hover::before { opacity:1; }
     .btn-primary { background:rgba(232,101,10,0.09); color:#c8580a; border:1px solid rgba(232,101,10,0.24); }
     .btn-primary::before { background:radial-gradient(circle at 50% 0%, rgba(232,101,10,0.18) 0%, transparent 65%); }
@@ -245,7 +244,7 @@
                 background:rgba(232,101,10,0.06);border:1px solid rgba(232,101,10,0.18);
                 color:#a05020;font-size:0.82rem;font-weight:600;cursor:pointer;
                 font-family:inherit;transition:all 0.2s;
-            " onmouseover="this.style.background='rgba(232,101,10,0.14)';this.style.color='#e8650a';this.style.borderColor='rgba(232,101,10,0.4)'" 
+            " onmouseover="this.style.background='rgba(232,101,10,0.14)';this.style.color='#e8650a';this.style.borderColor='rgba(232,101,10,0.4)'"
                onmouseout="this.style.background='rgba(232,101,10,0.06)';this.style.color='#a05020';this.style.borderColor='rgba(232,101,10,0.18)'">
                 <svg style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24" id="fsBtnSvg">
                     <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
@@ -279,6 +278,26 @@
     });
     </script>
 
+    <!-- Баннер о новых статьях -->
+    <div id="_forumNewBanner" style="
+        display:none; align-items:center; gap:12px;
+        background:rgba(232,101,10,0.08);
+        border:1px solid rgba(232,101,10,0.28);
+        border-radius:14px; padding:12px 16px;
+        margin-bottom:16px;
+        opacity:0; transform:translateY(-12px);
+        transition:opacity 0.3s ease, transform 0.3s ease;
+    ">
+        <i class="fas fa-fire" style="color:#e8650a;font-size:1.1rem;flex-shrink:0;"></i>
+        <span id="_forumNewBannerText" style="font-size:0.85rem;color:#e8a060;font-weight:600;flex:1;"></span>
+        <button onclick="_forumBannerClose()" style="
+            background:none;border:none;color:#555;cursor:pointer;
+            font-size:1rem;padding:2px 6px;transition:color 0.15s;flex-shrink:0;
+        " onmouseover="this.style.color='#e8650a'" onmouseout="this.style.color='#555'">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
     <div class="forum-tabs">
         <a href="{{ url_for('forum', category='all') }}" class="tab-link {% if category == 'all' %}active{% endif %}">
             <i class="fas fa-border-all"></i> Все
@@ -287,11 +306,9 @@
         <a href="{{ url_for('forum', category='article') }}" class="tab-link {% if category == 'article' %}active{% endif %}">
             <i class="fas fa-gamepad"></i> Статьи об играх
         </a>
-        <a href="{{ url_for('forum', category='news') }}" class="tab-link {% if category == 'news' %}active{% endif %}">
-            <i class="fas fa-newspaper"></i> Новости
+        <a href="{{ url_for('forum', category='news') }}" class="tab-link {% if category == 'news' %}active{% endif %}">            <i class="fas fa-newspaper"></i> Новости
         </a>
-        <a href="{{ url_for('forum', category='film') }}" class="tab-link {% if category == 'film' %}active{% endif %}">
-            <i class="fas fa-film"></i> Фильмы / Сериалы
+        <a href="{{ url_for('forum', category='film') }}" class="tab-link {% if category == 'film' %}active{% endif %}">            <i class="fas fa-film"></i> Фильмы / Сериалы
         </a>
     </div>
 
@@ -299,7 +316,7 @@
         <div class="cards-grid">
             {% if articles %}
                 {% for art in articles %}
-                <div class="article-card">
+                <div class="article-card" data-article-id="{{ art.id }}">
                     <span class="card-badge {{ art.category }}">{% if art.category == 'news' %}Новость{% elif art.category == 'film' %}Фильм/Сериал{% else %}Статья{% endif %}</span>
                     <a href="{{ url_for('article', article_id=art.id) }}" class="card-thumb-link">
                         {% if art.get_image_url() %}
@@ -329,7 +346,7 @@
                             {% endif %}
                         </div>
                         {% if art.preview %}
-                            <p class="card-preview">{{ art.preview }}</p>
+                            <p class="card-preview">{{ art.preview | striptags }}</p>
                         {% elif art.content %}
                             <p class="card-preview">{{ art.content | striptags | truncate(110) }}</p>
                         {% endif %}
@@ -596,8 +613,7 @@
     animation:modalIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards, chaosMPulse 2.2s ease-in-out infinite;
 }
 @keyframes chaosMPulse{
-    0%,100%{box-shadow:0 0 0 1px rgba(160,20,20,0.15),0 0 80px rgba(160,20,20,0.35),inset 0 1px 0 rgba(200,40,40,0.08);}
-    50%{box-shadow:0 0 0 1px rgba(210,40,40,0.22),0 0 120px rgba(190,30,30,0.55),inset 0 1px 0 rgba(220,50,50,0.12);}
+    0%,100%{box-shadow:0 0 0 1px rgba(160,20,20,0.15),0 0 80px rgba(160,20,20,0.35),inset 0 1px 0 rgba(200,40,40,0.08);}    50%{box-shadow:0 0 0 1px rgba(210,40,40,0.22),0 0 120px rgba(190,30,30,0.55),inset 0 1px 0 rgba(220,50,50,0.12);}
 }
 #chaosModal::before{
     content:'';position:absolute;inset:-1px;border-radius:24px;
@@ -836,8 +852,7 @@ function collectForumData() {
             items.push({ label: label, icon: 'fas fa-layer-group', el: b });
     });
     var hdr = document.querySelector('.forum-title');
-    if (hdr) items.push({ label: 'Заголовок: ' + hdr.textContent.trim().slice(0,25), icon: 'fas fa-heading', el: hdr });
-    document.querySelectorAll('.tab-link').forEach(function(t) {
+    if (hdr) items.push({ label: 'Заголовок: ' + hdr.textContent.trim().slice(0,25), icon: 'fas fa-heading', el: hdr });    document.querySelectorAll('.tab-link').forEach(function(t) {
         items.push({ label: 'Вкладка: ' + t.textContent.trim(), icon: 'fas fa-bookmark', el: t });
     });
     return items.filter(function(x){ return x.label && x.label.trim(); }).slice(0, 14);
@@ -1033,16 +1048,18 @@ function buildSlots() {
             item.label.slice(0, 35) + '</span>';
 
         slot.addEventListener('dragover', function(e) {
-            e.preventDefault();
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
             slot.classList.add('ready');
         });
         slot.addEventListener('dragleave', function() {
             slot.classList.remove('ready');
         });
         slot.addEventListener('drop', function(e) {
-            e.preventDefault();
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
             slot.classList.remove('ready');
+            if (!e || !e.dataTransfer) return;
             var dragIdx = e.dataTransfer.getData('text/plain');
+            if (dragIdx === '' || isNaN(parseInt(dragIdx))) return;
             handleDrop(parseInt(dragIdx), idx, slot);
         });
         wrap.appendChild(slot);
@@ -1110,30 +1127,54 @@ function handleDrop(fromIdx, toIdx, slotEl) {
 }
 
 function makeTouchDraggable(el, idx) {
-    var startX, startY, clone;
+    var clone = null, halfW = 0, halfH = 0;
     el.addEventListener('touchstart', function(e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         var t = e.touches[0];
-        startX = t.clientX - el.offsetLeft;
-        startY = t.clientY - el.offsetTop;
+        var rect = el.getBoundingClientRect();
+        halfW = rect.width / 2;
+        halfH = rect.height / 2;
         clone = el.cloneNode(true);
-        clone.style.position = 'fixed';
-        clone.style.zIndex = '99999';
-        clone.style.opacity = '0.8';
-        clone.style.pointerEvents = 'none';
+        clone.style.cssText = [
+            'position:fixed', 'z-index:99999', 'opacity:0.9', 'pointer-events:none',
+            'width:' + rect.width + 'px',
+            'left:' + (t.clientX - halfW) + 'px',
+            'top:' + (t.clientY - halfH) + 'px',
+            'transform:scale(1.05) rotate(2deg)',
+            'box-shadow:0 8px 24px rgba(0,0,0,0.8)',
+            'border-radius:12px'
+        ].join(';');
         document.body.appendChild(clone);
-    }, {passive:true});
+        el.style.opacity = '0.3';
+    }, {passive: false});
     el.addEventListener('touchmove', function(e) {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         var t = e.touches[0];
-        if (clone) { clone.style.left = (t.clientX - startX) + 'px'; clone.style.top = (t.clientY - startY) + 'px'; }
-    }, {passive:false});
+        if (clone) {
+            clone.style.left = (t.clientX - halfW) + 'px';
+            clone.style.top  = (t.clientY - halfH) + 'px';
+        }
+    }, {passive: false});
     el.addEventListener('touchend', function(e) {
+        el.style.opacity = '';
         if (clone) { clone.remove(); clone = null; }
         var t = e.changedTouches[0];
-        var target = document.elementFromPoint(t.clientX, t.clientY);
-        var slot = target && target.closest('.pg-slot');
-        if (slot) handleDrop(idx, parseInt(slot.dataset.idx), slot);
-    });
+        var found = null;
+        try {
+            var pts = document.elementsFromPoint(t.clientX, t.clientY);
+            for (var i = 0; i < pts.length; i++) {
+                var candidate = pts[i];
+                var s = (candidate.classList && candidate.classList.contains('pg-slot'))
+                    ? candidate
+                    : (candidate.closest ? candidate.closest('.pg-slot') : null);
+                if (s) { found = s; break; }
+            }
+        } catch (_) {
+            var tgt = document.elementFromPoint(t.clientX, t.clientY);
+            if (tgt) found = tgt.closest ? tgt.closest('.pg-slot') : null;
+        }
+        if (found) handleDrop(idx, parseInt(found.dataset.idx), found);
+    }, {passive: false});
 }
 
 function updatePgProgress() {
@@ -1943,4 +1984,61 @@ function makeRunner(){
 }
 })();
 </script>
+<script>
+</script>
+
+<!-- ═══ PUSH: уведомления о новых статьях форума ═══ -->
+<script>
+(function(){
+    // Показываем баннер о новых статьях если есть новые с последнего визита
+    var _FORUM_KEY = '_forum_last_seen_article';
+    var _lastSeenId = parseInt(localStorage.getItem(_FORUM_KEY) || '0', 10);
+
+    // Собираем id всех статей на странице
+    var articleIds = [];
+    document.querySelectorAll('.article-card[data-article-id]').forEach(function(el){
+        var id = parseInt(el.getAttribute('data-article-id') || '0', 10);
+        if(id) articleIds.push(id);
+    });
+    if(!articleIds.length) return;
+
+    var maxId = Math.max.apply(null, articleIds);
+
+    if(_lastSeenId === 0){
+        // Первый визит — просто запоминаем
+        localStorage.setItem(_FORUM_KEY, String(maxId));
+        return;
+    }
+
+    // Считаем новые статьи (id > lastSeen)
+    var newCount = articleIds.filter(function(id){ return id > _lastSeenId; }).length;
+
+    if(newCount > 0){
+        // Показываем баннер
+        var banner = document.getElementById('_forumNewBanner');
+        if(banner){
+            var txt = newCount === 1
+                ? '🔥 Появилась 1 новая статья на форуме!'
+                : '🔥 Появилось ' + newCount + ' новых статей на форуме!';
+            document.getElementById('_forumNewBannerText').textContent = txt;
+            banner.style.display = 'flex';
+            setTimeout(function(){ banner.style.opacity = '1'; banner.style.transform = 'translateY(0)'; }, 50);
+        }
+    }
+
+    // Запоминаем при уходе
+    window.addEventListener('beforeunload', function(){
+        localStorage.setItem(_FORUM_KEY, String(maxId));
+    });
+
+    window._forumBannerClose = function(){
+        var banner = document.getElementById('_forumNewBanner');
+        if(!banner) return;
+        banner.style.opacity = '0'; banner.style.transform = 'translateY(-12px)';
+        setTimeout(function(){ banner.style.display = 'none'; }, 300);
+        localStorage.setItem(_FORUM_KEY, String(maxId));
+    };
+})();
+</script>
+
 {% endblock %}

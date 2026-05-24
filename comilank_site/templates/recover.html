@@ -113,4 +113,9 @@
 
 </div>
 </div>
+<script>
+if(window.location.pathname !== '/') {
+    window.addEventListener('pageshow', function(){ history.replaceState(null,'','/'); });
+}
+</script>
 {% endblock %}

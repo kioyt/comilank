@@ -181,52 +181,37 @@
     (function(){
         var key = 'profileBackUrl';
         var host = window.location.hostname;
-        var currentUrl = window.location.href.split('?')[0];
-
-        // Пути которые НЕ должны быть источником для кнопки "Назад" из профиля
-        var excludedPaths = ['/admin', '/profile'];
-
-        function isExcluded(url){
-            if(!url) return true;
-            try {
-                var pathname = new URL(url).pathname;
-                for(var i=0;i<excludedPaths.length;i++){
-                    if(pathname.indexOf(excludedPaths[i]) === 0) return true;
-                }
-            } catch(e){ return true; }
-            return false;
-        }
 
         // Параметр ?from= имеет наивысший приоритет
         var params = new URLSearchParams(window.location.search);
         var fromParam = params.get('from');
         if(fromParam){
             var decoded = decodeURIComponent(fromParam);
-            if(!isExcluded(decoded)){
+            if(decoded && decoded.indexOf('/profile') !== 0 && decoded.indexOf('/admin') !== 0){
                 sessionStorage.setItem(key, decoded);
-            }
-        } else {
-            // Иначе — referrer, если подходит
-            var ref = document.referrer;
-            if(ref && ref.indexOf(host) !== -1 && !isExcluded(ref) && ref.split('?')[0] !== currentUrl){
-                sessionStorage.setItem(key, ref);
             }
         }
 
         window._profileGoBack = function(){
-            var backUrl = sessionStorage.getItem(key);
-            if(backUrl && backUrl.indexOf(host) !== -1 && !isExcluded(backUrl)){
+            // Приоритет 1: URL сохранённый в sessionStorage (из base.html или ?from=)
+            var saved = sessionStorage.getItem(key);
+            if(saved && saved.indexOf(host) !== -1){
                 sessionStorage.removeItem(key);
-                window.location.href = backUrl;
+                window.location.href = saved;
+                return;
+            }
+            // Приоритет 2: referrer если он с нашего сайта и не профиль/админ
+            var ref = document.referrer;
+            if(ref && ref.indexOf(host) !== -1 &&
+               ref.indexOf('/profile') === -1 && ref.indexOf('/admin') === -1){
+                window.location.href = ref;
+                return;
+            }
+            // Приоритет 3: history.back()
+            if(window.history.length > 1){
+                history.back();
             } else {
-                // Идём назад через history, пропуская admin-страницы
-                var steps = window.history.length;
-                if(steps > 1){
-                    // Пробуем history.back() — браузер сам восстановит предыдущую страницу
-                    history.back();
-                } else {
-                    window.location.href = '{{ url_for("index") }}';
-                }
+                window.location.href = '{{ url_for("index") }}';
             }
         };
     })();
@@ -290,7 +275,7 @@
                     width:340px;max-width:92vw;
                     background:#161618;border:1px solid rgba(232,101,10,0.18);
                     border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.7);
-                    z-index:9999;flex-direction:column;overflow:hidden;max-height:80vh;">
+                    z-index:9999;flex-direction:column;overflow:visible;max-height:80vh;">
                     <div style="display:flex;align-items:center;justify-content:space-between;
                         padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,0.05);">
                         <div style="font-size:0.75rem;font-weight:800;color:#e8650a;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:7px;">
@@ -304,7 +289,7 @@
                             <i class="fas fa-check-double" style="font-size:0.6rem;margin-right:3px;"></i>Все прочитано
                         </button>
                     </div>
-                <div id="profileBellList" style="max-height:50vh;overflow-y:auto;overflow-x:hidden;padding:5px 5px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin;scrollbar-color:rgba(232,101,10,0.3) transparent;-webkit-overflow-scrolling:touch;">
+                <div id="profileBellList" style="max-height:50vh;overflow-y:auto;overflow-x:hidden;padding:5px 5px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin;scrollbar-color:rgba(232,101,10,0.3) transparent;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;flex:1;min-height:0;border-radius:0 0 18px 18px;background:#161618;">
                         <div style="text-align:center;padding:18px;color:#444;font-size:0.8rem;">
                             <i class="fas fa-spinner fa-spin" style="color:#e8650a;display:block;margin-bottom:6px;font-size:1.2rem;"></i>Загрузка...
                         </div>
@@ -315,6 +300,21 @@
                             <i class="fas fa-chevron-down" style="font-size:0.6rem;margin-right:5px;"></i>Загрузить ещё
                         </button>
                     </div>
+                    <script>
+                    // Автоподгрузка при скролле вниз в списке уведомлений
+                    (function(){
+                        var list = document.getElementById('profileBellList');
+                        if(!list) return;
+                        list.addEventListener('scroll', function(){
+                            if(this.scrollTop + this.clientHeight >= this.scrollHeight - 20){
+                                var lm = document.getElementById('profileBellLoadMore');
+                                if(lm && lm.style.display !== 'none'){
+                                    window.loadMoreNotifs && window.loadMoreNotifs();
+                                }
+                            }
+                        });
+                    })();
+                    </script>
                 </div>
             </div>
             {% endif %}

@@ -15,3 +15,4 @@ click==8.3.1
 blinker==1.9.0
 cryptography==46.0.5
 pillow==12.1.1
+pywebpush==2.0.0

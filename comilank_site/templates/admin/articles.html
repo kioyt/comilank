@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Управление статьями | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .art-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; align-items:flex-start; justify-content:center;
+        padding:44px 20px 72px; box-sizing:border-box;
+    }
+    .art-card {
+        width:100%; max-width:1100px; background:#141416;
+        border-radius:28px; border:1px solid rgba(255,255,255,0.06);
+        padding:32px 36px 40px; box-sizing:border-box; position:relative;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.05),0 40px 80px rgba(0,0,0,0.6);
+    }
+    .art-card::after {
+        content:''; position:absolute; bottom:-18px; left:10%;
+        width:80%; height:30px;
+        background:radial-gradient(ellipse,rgba(232,101,10,0.32) 0%,transparent 70%);
+        filter:blur(12px); pointer-events:none; border-radius:50%;
+    }
+    .art-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
+    .art-title { font-size:1.5rem; font-weight:700; color:#e8650a; letter-spacing:-0.3px; display:flex; align-items:center; gap:10px; margin:0; }
+    .art-title i { opacity:0.8; font-size:1.2rem; }
+
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:22px; font-size:0.84rem; font-weight:600; text-decoration:none; transition:all 0.2s; cursor:pointer; border:none; position:relative; overflow:hidden; }
+    .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.25s; pointer-events:none; }
+    .btn-primary { background:rgba(232,101,10,0.1); color:#d0600c; border:1px solid rgba(232,101,10,0.25); }
+    .btn-primary::before { background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.18) 0%,transparent 70%); }
+    .btn-primary:hover { color:#e8650a; border-color:rgba(232,101,10,0.5); background:rgba(232,101,10,0.14); }
+    .btn-primary:hover::before { opacity:1; }
+    .btn-secondary { background:rgba(255,255,255,0.035); color:#4e5460; border:1px solid rgba(255,255,255,0.065); }
+    .btn-secondary::before { background:radial-gradient(circle at 50% 0%,rgba(255,255,255,0.06) 0%,transparent 70%); }
+    .btn-secondary:hover { background:rgba(255,255,255,0.065); color:#7a8090; }
+    .btn-secondary:hover::before { opacity:1; }
+
+    .quick-links { display:flex; gap:7px; margin-bottom:20px; flex-wrap:wrap; }
+    .quick-link { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:#3d4350; text-decoration:none; font-size:0.8rem; transition:all 0.18s; position:relative; overflow:hidden; }
+    .quick-link::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.1) 0%,transparent 65%); opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .quick-link:hover { border-color:rgba(232,101,10,0.22); color:#c8580a; }
+    .quick-link:hover::before { opacity:1; }
+    .quick-link i { color:#c8580a; opacity:0.55; font-size:0.75rem; }
+
+    .filter-bar { display:flex; gap:9px; margin-bottom:18px; flex-wrap:wrap; }
+    .filter-bar select,.filter-bar input { background:#0f0f12; border:1px solid rgba(255,255,255,0.06); color:#8a909e; padding:8px 14px; border-radius:12px; font-size:0.83rem; outline:none; transition:border-color 0.2s; font-family:inherit; }
+    .filter-bar select:focus,.filter-bar input:focus { border-color:rgba(232,101,10,0.3); }
+    .filter-bar select option { background:#141416; }
+
+    .articles-wrap { background:#0f0f12; border-radius:18px; border:1px solid rgba(255,255,255,0.05); overflow:hidden; }
+    .articles-table { width:100%; border-collapse:collapse; }
+    .articles-table thead tr { background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.05); }
+    .articles-table th { padding:12px 16px; text-align:left; color:#e8650a; font-size:0.72rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; opacity:0.7; }
+    .articles-table td { padding:13px 16px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; color:#8a909e; font-size:0.88rem; }
+    .articles-table tr:last-child td { border-bottom:none; }
+    .articles-table tr:hover td { background:rgba(232,101,10,0.025); }
+
+    .article-thumb-sm { width:60px; height:40px; object-fit:cover; border-radius:8px; display:block; filter:brightness(0.82) saturate(0.8); }
+    .article-thumb-ph { width:60px; height:40px; background:#131316; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#1e1e24; }
+    .article-title-link { color:#a05030; text-decoration:none; font-weight:600; font-size:0.9rem; line-height:1.35; display:block; transition:color 0.15s; }
+    .article-title-link:hover { color:#e8650a; }
+    .article-sub { color:#2e3340; font-size:0.76rem; margin-top:3px; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .article-sub i { color:#c8580a; opacity:0.45; font-size:0.7rem; }
+
+    .badge { padding:3px 9px; border-radius:20px; font-size:0.7rem; font-weight:700; letter-spacing:0.3px; }
+    .badge.article { background:rgba(232,101,10,0.1); color:#c8580a; border:1px solid rgba(232,101,10,0.2); }
+    .badge.news { background:rgba(50,100,200,0.1); color:#4466cc; border:1px solid rgba(50,100,200,0.2); }
+
+    .stat-row { display:flex; gap:12px; font-size:0.8rem; color:#2e3340; }
+    .stat-row span { display:flex; align-items:center; gap:4px; }
+    .stat-row i { color:#c8580a; opacity:0.5; font-size:0.7rem; }
+
+    .actions-cell { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+    .action-sm { display:inline-flex; align-items:center; gap:4px; padding:5px 11px; border-radius:20px; font-size:0.76rem; font-weight:600; text-decoration:none; transition:all 0.18s; cursor:pointer; position:relative; overflow:hidden; }
+    .action-sm::before { content:''; position:absolute; inset:0; border-radius:inherit; opacity:0; transition:opacity 0.2s; pointer-events:none; }
+    .action-sm.edit { background:rgba(200,88,10,0.06); border:1px solid rgba(200,88,10,0.16); color:#a04808; }
+    .action-sm.edit::before { background:radial-gradient(circle at 50% 0%,rgba(200,88,10,0.15) 0%,transparent 70%); }
+    .action-sm.edit:hover { background:rgba(200,88,10,0.14); border-color:rgba(200,88,10,0.35); color:#e8650a; }
+    .action-sm.edit:hover::before { opacity:1; }
+    .action-sm.view,.action-sm.drops { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:#3d4350; }
+    .action-sm.view:hover { color:#8a909e; }
+    .action-sm.drops:hover { color:#c8580a; border-color:rgba(200,88,10,0.2); }
+    .action-sm.delete { background:rgba(140,25,25,0.06); border:1px solid rgba(140,25,25,0.14); color:#5a2525; }
+    .action-sm.delete::before { background:radial-gradient(circle at 50% 0%,rgba(185,40,40,0.12) 0%,transparent 70%); }
+    .action-sm.delete:hover { background:rgba(150,30,30,0.14); border-color:rgba(185,40,40,0.32); color:#c04040; }
+    .action-sm.delete:hover::before { opacity:1; }
+
+    .empty-table { text-align:center; padding:60px 20px; color:#1e2028; }
+    .empty-table i { font-size:2.6rem; display:block; margin-bottom:11px; opacity:0.1; }
+</style>
+
+<div class="art-outer">
+<div class="art-card">
+    <div class="art-header">
+        <h1 class="art-title"><i class="fas fa-newspaper"></i> Управление статьями</h1>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+            <a href="{{ url_for('admin_article_create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Создать статью</a>
+            <a href="{{ url_for('forum') }}" class="btn btn-secondary"><i class="fas fa-comments"></i> На форум</a>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Панель</a>
+        </div>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('forum') }}" class="quick-link" target="_blank"><i class="fas fa-eye"></i> Просмотр форума</a>
+        <a href="{{ url_for('admin_games') }}" class="quick-link"><i class="fas fa-gamepad"></i> Управление играми</a>
+        <a href="{{ url_for('admin_extra_create') }}" class="quick-link"><i class="fas fa-file-plus"></i> Новая доп. страница</a>
+    </div>
+    <div class="filter-bar">
+        <select id="catFilter" onchange="filterTable()">
+            <option value="">Все категории</option>
+            <option value="article">Статьи об играх</option>
+            <option value="news">Новости</option>
+        </select>
+        <div style="position:relative;min-width:220px;display:inline-flex;align-items:center;">
+            <i class="fas fa-search" style="position:absolute;left:12px;color:rgba(232,101,10,0.4);font-size:0.78rem;pointer-events:none;"></i>
+            <input type="text" id="searchInput" placeholder="Поиск по заголовку..." oninput="filterTable()"
+                   style="padding-left:32px;min-width:220px;width:100%;">
+        </div>
+    </div>
+    <div class="articles-wrap">
+        {% if articles %}
+        <table class="articles-table" id="articlesTable">
+            <thead>
+                <tr>
+                    <th style="width:66px;">Фото</th>
+                    <th>Заголовок</th>
+                    <th style="width:95px;">Категория</th>
+                    <th style="width:120px;">Статистика</th>
+                    <th style="width:85px;">Дата</th>
+                    <th style="width:195px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for art in articles %}
+                <tr data-category="{{ art.category }}" data-title="{{ art.title | lower }}">
+                    <td>{% if art.get_image_url() %}<img src="{{ art.get_image_url() }}" alt="" class="article-thumb-sm">{% else %}<div class="article-thumb-ph"><i class="fas fa-image"></i></div>{% endif %}</td>
+                    <td>
+                        <a href="{{ url_for('article', article_id=art.id) }}" class="article-title-link" target="_blank">{{ art.title }}</a>
+                        <div class="article-sub"><span><i class="fas fa-user"></i> {{ art.author.username }}</span>{% if art.game %}<span><i class="fas fa-gamepad"></i> {{ art.game.name }}</span>{% endif %}</div>
+                    </td>
+                    <td><span class="badge {{ art.category }}">{{ 'Новость' if art.category == 'news' else 'Статья' }}</span></td>
+                    <td>
+                        <div class="stat-row"><span><i class="fas fa-thumbs-up"></i> {{ art.likes }}</span><span><i class="fas fa-comment"></i> {{ art.comments.count() }}</span></div>
+                        <div class="stat-row" style="margin-top:4px;"><span><i class="fas fa-eye"></i> {{ art.views }}</span><span><i class="fas fa-file"></i> {{ art.extra_pages.count() }}</span></div>
+                    </td>
+                    <td style="color:#2e3340;font-size:0.8rem;white-space:nowrap;">{{ art.created_at.strftime('%d.%m.%Y') }}</td>
+                    <td>
+                        <div class="actions-cell">
+                            <a href="{{ url_for('admin_article_edit', article_id=art.id) }}" class="action-sm edit"><i class="fas fa-edit"></i> Ред.</a>
+                            <a href="{{ url_for('article', article_id=art.id) }}" class="action-sm view" target="_blank"><i class="fas fa-eye"></i></a>
+                            <a href="{{ url_for('admin_dropdown_list', article_id=art.id) }}" class="action-sm drops"><i class="fas fa-list"></i></a>
+                            <form method="POST" action="{{ url_for('admin_article_delete', article_id=art.id) }}" onsubmit="return confirm('Удалить?');" style="display:inline;">
+                                <button type="submit" class="action-sm delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-table"><i class="fas fa-newspaper"></i><p>Статей пока нет</p></div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<script>
+function filterTable() {
+    var cat = document.getElementById('catFilter').value.toLowerCase();
+    var search = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#articlesTable tbody tr').forEach(function(row) {
+        var catOk = !cat || row.getAttribute('data-category') === cat;
+        var searchOk = !search || (row.getAttribute('data-title') || '').includes(search);
+        row.style.display = (catOk && searchOk) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

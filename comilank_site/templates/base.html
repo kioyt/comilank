@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comilank - {% block title %}{% endblock %}</title>
+
+    <!-- SEO: Google, Яндекс, Bing/Edge -->
+    <meta name="description" content="{% block meta_description %}Comilank (Комиланк) — сайт стримера. Статьи об играх, форум, онлайн-игры и стримы.{% endblock %}">
+    <meta name="keywords" content="Comilank, Комиланк, комиланк, стример, геймер, игры, форум, стримы">
+    <meta name="author" content="Comilank">
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    <meta name="yandex" content="index, follow">
+    <meta name="bingbot" content="index, follow">
+    <link rel="canonical" href="https://comilank.net{{ request.path }}">
+
+    <!-- Open Graph (Facebook, VK, Telegram предпросмотр) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Comilank">
+    <meta property="og:title" content="{% block og_title %}Comilank — стример и геймер{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Comilank (Комиланк) — стримы, статьи об играх, форум и онлайн-игры.{% endblock %}">
+    <meta property="og:url" content="https://comilank.net{{ request.path }}">
+    <meta property="og:image" content="{% block og_image %}https://comilank.net/static/comilank.jpg{% endblock %}">
+    <meta property="og:locale" content="ru_RU">
+
+    <!-- Twitter / X Card — тоже через блоки чтобы статьи переопределяли -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block tw_title %}Comilank — стример{% endblock %}">
+    <meta name="twitter:description" content="{% block tw_description %}Comilank (Комиланк) — стримы, игры, форум.{% endblock %}">
+    <meta name="twitter:image" content="{% block tw_image %}https://comilank.net/static/comilank.jpg{% endblock %}">
+
+    <!-- Яндекс Вебмастер — подтверждение (замени на свой код после регистрации) -->
+    <!-- <meta name="yandex-verification" content="ВАШ_КОД_ЯНДЕКС"> -->
+    <!-- Bing Webmaster Tools (замени на свой код) -->
+    <!-- <meta name="msvalidate.01" content="ВАШ_КОД_BING"> -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0a0a0b; color:#f0f0f0; font-family:'Inter',sans-serif; min-height:100vh; display:flex; justify-content:center; align-items:center; padding:20px; }
+        .container { max-width:800px; width:100%; background:#141416; border-radius:48px; padding:48px; box-shadow:0 0 0 1px rgba(232,101,10,0.06), 0 25px 50px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.06); }
+
+        /* Flash-сообщения */
+        .flash-container { margin-bottom:20px; }
+        .flash { padding:15px 20px; border-radius:30px; margin-bottom:10px; font-weight:500; display:flex; align-items:center; gap:10px; }
+        .flash.success { background:rgba(255,102,0,0.2); border:1px solid #ff6600; color:#ffaa33; }
+        .flash.error { background:rgba(255,0,0,0.2); border:1px solid #ff4444; color:#ff8888; }
+        .flash i { font-size:1.5rem; }
+
+        h1, h2 { color:#ff6600; margin-bottom:20px; }
+        .form-group { margin-bottom:20px; }
+        label { display:block; margin-bottom:5px; color:#aaa; }
+        input[type="text"], input[type="email"], input[type="password"], select { width:100%; padding:12px; background:#0f0f11; border:1px solid rgba(255,255,255,0.07); border-radius:30px; color:#fff; font-size:1rem; }
+        input:focus { outline:none; border-color:#e8650a; }
+        .btn { background:#e8650a; color:#0a0a0b; border:none; padding:12px 24px; border-radius:60px; cursor:pointer; font-weight:600; transition:0.2s; }
+        .btn:hover { background:#ff7820; transform:scale(1.05); box-shadow:0 0 15px rgba(232,101,10,0.5); }
+        .btn-secondary { background:rgba(255,255,255,0.04); color:#c9cdd6; border:1px solid rgba(232,101,10,0.25); }
+        .btn-secondary:hover { background:rgba(232,101,10,0.1); color:#e8650a; }
+        .link { color:#e8650a; text-decoration:none; }
+        .link:hover { text-decoration:underline; }
+        .user-info { display:flex; gap:20px; align-items:center; margin-bottom:20px; }
+        .avatar { width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid #e8650a; }
+        hr { border:1px solid rgba(255,255,255,0.05); margin:20px 0; }
+        .text-center { text-align:center; }
+
+        /* Таблица пользователей (для админки) */
+        table { width:100%; border-collapse:collapse; margin-top:20px; }
+        th { background:#0f0f11; color:#c8580a; padding:10px; text-align:left; }
+        td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        select { background:#0f0f11; color:#c9cdd6; padding:5px; border-radius:20px; }
+        /* Кнопка полного экрана — фиксированная, на всех страницах */
+        #_fs_btn {
+            position: fixed;
+            top: 16px; right: 16px;
+            z-index: 9000;
+            width: 34px; height: 34px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(232,101,10,0.28);
+            border-radius: 9px;
+            color: #e8650a;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.18s ease;
+            backdrop-filter: blur(6px);
+        }
+        #_fs_btn:hover {
+            background: rgba(232,101,10,0.12);
+            border-color: rgba(232,101,10,0.6);
+            box-shadow: 0 0 12px rgba(232,101,10,0.2);
+            transform: scale(1.08);
+        }
+        #_fs_btn svg {
+            width: 15px; height: 15px;
+            stroke: currentColor; fill: none;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        /* Скрываем глобальную кнопку на страницах где есть своя */
+        body.has-own-fs #_fs_btn { display: none !important; }
+        /* Мобилка — кнопка FS чуть меньше и не перекрывает контент */
+        @media (max-width: 600px) {
+            #_fs_btn { top: 10px; right: 10px; width: 30px; height: 30px; }
+            #_fs_btn svg { width: 13px; height: 13px; }
+        }
+        /* Глобальный фикс белого фона от браузерного автозаполнения */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px #0f0f12 inset !important;
+            -webkit-text-fill-color: #c9cdd6 !important;
+            caret-color: #c9cdd6 !important;
+            transition: background-color 99999s ease-in-out 0s;
+        }
+    </style>
+<script>
+(function() {
+    // НЕ маскируем URL на страницах где это мешает (формы, статьи, форум)
+    var noMask = ['/login', '/register', '/verify', '/recover', '/forgot-password',
+                  '/reset-password', '/delete-account', '/report', '/admin', '/profile',
+                  '/extra', '/forum', '/article'];
+    var real = window.location.pathname + window.location.search;
+    var skip = noMask.some(function(p){ return real.indexOf(p) === 0; });
+    if (!skip && real && real !== '/' && real !== '') {
+        document.cookie = '_rp=' + real + ';path=/;max-age=300;SameSite=Lax';
+        history.replaceState(null, '', '/');
+    }
+    // Сохраняем текущий реальный URL для кнопки «Назад» в профиле
+    // Когда пользователь кликает на ссылку профиля — запоминаем откуда он пришёл
+    document.addEventListener('click', function(e) {
+        var a = e.target.closest('a');
+        if (!a) return;
+        var href = a.getAttribute('href') || '';
+        // Сброс cookie для главной
+        if (href === '/' || a.href === window.location.origin + '/') {
+            document.cookie = '_rp=;path=/;max-age=0';
+        }
+        // Если переходим на профиль — сохраняем текущий реальный URL
+        if (href && href.indexOf('/profile/') === 0) {
+            var fromUrl = real || window.location.pathname + window.location.search;
+            if (fromUrl && fromUrl !== '/' && fromUrl.indexOf('/profile') !== 0) {
+                sessionStorage.setItem('profileBackUrl', fromUrl);
+            }
+        }
+    });
+})();
+</script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<!-- Кнопка полного экрана (на всех страницах) -->
+<button id="_fs_btn" title="Полный экран" onclick="_fsToggle()">
+    <svg id="_fs_icon" viewBox="0 0 24 24">
+        <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+        <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+    </svg>
+</button>
+<script>
+var _fsExpand   = '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
+var _fsCompress = '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>';
+function _fsToggle(){
+    var el = document.documentElement;
+    var ic = document.getElementById('_fs_icon');
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    var ex = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        fn && fn.call(el);
+        if (ic) ic.innerHTML = _fsCompress;
+    } else {
+        ex && ex.call(document);
+        if (ic) ic.innerHTML = _fsExpand;
+    }
+}
+document.addEventListener('fullscreenchange', function(){
+    var ic = document.getElementById('_fs_icon');
+    if (ic) ic.innerHTML = (document.fullscreenElement||document.webkitFullscreenElement) ? _fsCompress : _fsExpand;
+});
+document.addEventListener('webkitfullscreenchange', function(){
+    var ic = document.getElementById('_fs_icon');
+    if (ic) ic.innerHTML = (document.fullscreenElement||document.webkitFullscreenElement) ? _fsCompress : _fsExpand;
+});
+// Обработчик запроса полного экрана от iframe игры
+window.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'game_fullscreen_toggle') _fsToggle();
+});
+</script>
+<script>
+(function() {
+    function checkVPN() {
+        checkViaAPI();
+    }
+    function checkViaAPI() {
+        fetch('/api/check-vpn')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.vpn === true) {
+                showVPNNotice();
+            }
+        })
+        .catch(function() {});
+    }
+    function showVPNNotice() {
+        if (sessionStorage.getItem('vpn_notice_shown')) return;
+        sessionStorage.setItem('vpn_notice_shown', '1');
+        var notice = document.getElementById('vpn-notice');
+        if (notice) {
+            notice.style.display = 'flex';
+            setTimeout(function() {
+                notice.classList.add('vpn-notice-visible');
+            }, 100);
+        }
+    }
+    window.closeVPNNotice = function() {
+        var notice = document.getElementById('vpn-notice');
+        if (notice) {
+            notice.classList.remove('vpn-notice-visible');
+            setTimeout(function() { notice.style.display = 'none'; }, 400);
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkVPN);
+    } else {
+        setTimeout(checkVPN, 1000);
+    }
+})();
+</script>
+<style>
+    #vpn-notice {
+        display: none; position: fixed; bottom: 22px; right: 22px; z-index: 2147483647;
+        max-width: 300px; width: calc(100vw - 44px);
+        opacity: 0; transform: translateY(20px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+        pointer-events: none;
+    }
+    #vpn-notice.vpn-notice-visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+    #vpn-notice-inner {
+        background: rgba(16,16,18,0.97); border: 1px solid rgba(232,101,10,.22);
+        border-radius: 14px; padding: 14px 16px;
+        display: flex; align-items: flex-start;
+        box-shadow: 0 4px 8px rgba(0,0,0,.4), 0 16px 48px rgba(0,0,0,.7);
+        font-family: Inter,-apple-system,sans-serif;
+    }
+</style>
+<div id="vpn-notice">
+    <div id="vpn-notice-inner">
+        <div style="width:3px;flex-shrink:0;border-radius:3px;background:linear-gradient(180deg,#e8650a,#c8450a);align-self:stretch"></div>
+        <div style="flex:1;padding-left:12px">
+            <div style="color:#e8650a;font-size:0.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:5px">
+                <span>⚠</span><span>Обнаружен VPN</span>
+            </div>
+            <div style="color:#8a909e;font-size:0.79rem;line-height:1.6">
+                Мы обнаружили, что вы используете <strong style="color:#c9cdd6">VPN</strong>. Просим отключить его — иначе сайт может работать некорректно.
+            </div>
+            <button onclick="closeVPNNotice()" style="margin-top:10px;padding:5px 16px;border-radius:8px;background:rgba(232,101,10,.12);border:1px solid rgba(232,101,10,.4);color:#e8650a;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;">✓ Понятно</button>
+        </div>
+        <button onclick="closeVPNNotice()" style="flex-shrink:0;margin-left:8px;background:none;border:none;color:#454a56;font-size:1.15rem;cursor:pointer;padding:2px 4px;">&times;</button>
+    </div>
+</div>
+    <div class="container">
+        <!-- Flash-сообщения -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif category == 'error' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+<!-- ═══ МОДАЛКА РЕПОРТА ═══ -->
+<div id="report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:9000;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;">
+<div style="width:100%;max-width:460px;background:#141416;border-radius:24px;border:1px solid rgba(255,255,255,.07);padding:28px 32px 32px;box-shadow:0 0 0 1px rgba(232,101,10,.05),0 40px 80px rgba(0,0,0,.7);position:relative;">
+    <div style="position:absolute;bottom:-14px;left:10%;width:80%;height:22px;background:radial-gradient(ellipse,rgba(232,101,10,.22) 0%,transparent 70%);filter:blur(10px);pointer-events:none;border-radius:50%;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;">
+        <div style="width:42px;height:42px;border-radius:50%;background:rgba(232,101,10,.1);border:1px solid rgba(232,101,10,.22);display:flex;align-items:center;justify-content:center;color:#c8580a;font-size:1rem;flex-shrink:0;"><i class="fas fa-flag"></i></div>
+        <div>
+            <div style="font-size:1.05rem;font-weight:800;color:#e8650a;">Отправить репорт</div>
+            <div style="font-size:.76rem;color:#3d4350;margin-top:2px;" id="report-modal-sub">Опишите нарушение</div>
+        </div>
+        <button onclick="closeReport()" style="margin-left:auto;background:none;border:none;color:#3d4350;font-size:1.2rem;cursor:pointer;transition:color .15s;padding:4px;" onmouseover="this.style.color='#c8580a'" onmouseout="this.style.color='#3d4350'"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="report-form">
+        <input type="hidden" id="r-target-type">
+        <input type="hidden" id="r-target-id">
+        <div style="margin-bottom:14px;">
+            <label style="display:block;margin-bottom:6px;color:#3d4350;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;"><i class="fas fa-align-left" style="margin-right:4px;opacity:.6;"></i>Причина</label>
+            <select id="r-reason-preset" style="width:100%;background:#0f0f12;border:1px solid rgba(255,255,255,.07);border-radius:11px;color:#c9cdd6;font-size:.86rem;padding:9px 13px;font-family:inherit;outline:none;margin-bottom:8px;transition:border-color .2s;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(232,101,10,.4)'" onblur="this.style.borderColor='rgba(255,255,255,.07)'" onchange="syncReason(this)">
+                <option value="">-- Выберите причину --</option>
+                <option value="Оскорбления и угрозы">Оскорбления и угрозы</option>
+                <option value="Спам или реклама">Спам или реклама</option>
+                <option value="Неприемлемый контент">Неприемлемый контент</option>
+                <option value="Выдача себя за другого">Выдача себя за другого</option>
+                <option value="Мошенничество">Мошенничество</option>
+                <option value="Другое">Другое</option>
+            </select>
+            <textarea id="r-reason" rows="3" maxlength="500" placeholder="Подробно опишите нарушение..." style="width:100%;background:#0f0f12;border:1px solid rgba(255,255,255,.07);border-radius:11px;color:#c9cdd6;font-size:.86rem;padding:9px 13px;font-family:inherit;resize:vertical;outline:none;transition:border-color .2s;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(232,101,10,.4)'" onblur="this.style.borderColor='rgba(255,255,255,.07)'"></textarea>
+        </div>
+        <div style="margin-bottom:18px;">
+            <label style="display:block;margin-bottom:6px;color:#3d4350;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;"><i class="fas fa-paperclip" style="margin-right:4px;opacity:.6;"></i>Доказательство <span style="color:#2a2d35;font-weight:500;text-transform:none;font-size:.7rem;">(фото/видео или ссылка)</span></label>
+            <div id="r-drop-zone" style="border:1.5px dashed rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:8px;" onclick="document.getElementById('r-file').click()" ondragover="event.preventDefault();this.style.borderColor='rgba(232,101,10,.4)';this.style.background='rgba(232,101,10,.04)'" ondragleave="this.style.borderColor='rgba(255,255,255,.08)';this.style.background='none'" ondrop="handleDrop(event)">
+                <input type="file" id="r-file" name="evidence_file" accept="image/*,video/*" style="display:none;" onchange="previewFile(this)">
+                <div id="r-drop-text"><i class="fas fa-cloud-upload-alt" style="font-size:1.4rem;color:#2e3340;display:block;margin-bottom:6px;"></i><span style="font-size:.78rem;color:#2e3340;">Нажмите или перетащите файл</span><br><span style="font-size:.7rem;color:#252830;">PNG, JPG, GIF, MP4 - до 10MB</span></div>
+                <div id="r-preview" style="display:none;"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div><span style="font-size:.7rem;color:#2a2d35;">или ссылка</span><div style="flex:1;height:1px;background:rgba(255,255,255,.05);"></div></div>
+            <input type="text" id="r-url" placeholder="https://..." style="width:100%;background:#0f0f12;border:1px solid rgba(255,255,255,.07);border-radius:11px;color:#c9cdd6;font-size:.84rem;padding:9px 13px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .2s;" onfocus="this.style.borderColor='rgba(232,101,10,.4)'" onblur="this.style.borderColor='rgba(255,255,255,.07)'">
+        </div>
+        <div id="r-error" style="display:none;padding:9px 13px;border-radius:10px;background:rgba(232,101,10,.08);border:1px solid rgba(232,101,10,.22);color:#c8580a;font-size:.8rem;margin-bottom:12px;"></div>
+        <div id="r-success" style="display:none;padding:9px 13px;border-radius:10px;background:rgba(232,101,10,.08);border:1px solid rgba(232,101,10,.22);color:#c8580a;font-size:.8rem;margin-bottom:12px;"></div>
+        <button type="button" onclick="submitReport()" style="width:100%;padding:11px;border-radius:18px;background:rgba(232,101,10,.12);color:#d0600c;border:1px solid rgba(232,101,10,.28);font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;" onmouseover="this.style.background='rgba(232,101,10,.2)';this.style.color='#e8650a';this.style.borderColor='rgba(232,101,10,.5)'" onmouseout="this.style.background='rgba(232,101,10,.12)';this.style.color='#d0600c';this.style.borderColor='rgba(232,101,10,.28)'"><i class="fas fa-flag"></i> Отправить репорт</button>
+    </form>
+</div>
+</div>
+<script>
+function openReport(type, id, label) {
+    document.getElementById('r-target-type').value = type;
+    document.getElementById('r-target-id').value = id;
+    var sub = type === 'user'
+        ? 'Репорт на пользователя ' + (label ? label : '#' + id)
+        : 'Репорт на комментарий #' + id;
+    document.getElementById('report-modal-sub').textContent = sub;
+    document.getElementById('r-error').style.display = 'none';
+    document.getElementById('r-success').style.display = 'none';
+    document.getElementById('r-reason').value = '';
+    document.getElementById('r-url').value = '';
+    document.getElementById('r-reason-preset').value = '';
+    document.getElementById('r-preview').style.display = 'none';
+    document.getElementById('r-drop-text').style.display = 'block';
+    document.getElementById('report-modal').style.display = 'flex';
+}
+function closeReport() { document.getElementById('report-modal').style.display = 'none'; }
+function syncReason(sel) { if (sel.value) document.getElementById('r-reason').value = sel.value; }
+function previewFile(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('r-drop-text').style.display = 'none';
+        var prev = document.getElementById('r-preview');
+        prev.style.display = 'block';
+        prev.innerHTML = file.type.startsWith('image/')
+            ? '<img src="' + e.target.result + '" style="max-height:80px;border-radius:8px;margin:0 auto;display:block;border:1px solid rgba(232,101,10,.2);"><div style="font-size:.72rem;color:#4e5460;margin-top:6px;">' + file.name + '</div>'
+            : '<i class="fas fa-video" style="font-size:1.4rem;color:#c8580a;display:block;margin-bottom:6px;"></i><div style="font-size:.72rem;color:#4e5460;">' + file.name + '</div>';
+    };
+    reader.readAsDataURL(file);
+}
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('r-drop-zone').style.borderColor = 'rgba(255,255,255,.08)';
+    document.getElementById('r-drop-zone').style.background = 'none';
+    var file = e.dataTransfer.files[0];
+    if (file) { var dt = new DataTransfer(); dt.items.add(file); document.getElementById('r-file').files = dt.files; previewFile(document.getElementById('r-file')); }
+}
+async function submitReport() {
+    var reason = document.getElementById('r-reason').value.trim();
+    var urlInp = document.getElementById('r-url').value.trim();
+    var errEl = document.getElementById('r-error');
+    var sucEl = document.getElementById('r-success');
+    errEl.style.display = 'none'; sucEl.style.display = 'none';
+    if (!reason) { errEl.textContent = 'Укажите причину репорта'; errEl.style.display = 'block'; return; }
+    var fd = new FormData();
+    fd.append('target_type', document.getElementById('r-target-type').value);
+    fd.append('target_id', document.getElementById('r-target-id').value);
+    fd.append('reason', reason);
+    if (urlInp) fd.append('evidence_url_input', urlInp);
+    var fileInp = document.getElementById('r-file');
+    if (fileInp.files && fileInp.files[0]) fd.append('evidence_file', fileInp.files[0]);
+    try {
+        var resp = await fetch('/report', { method:'POST', body: fd });
+        var data = await resp.json();
+        if (data.ok) { sucEl.textContent = 'Репорт отправлен. Спасибо!'; sucEl.style.display = 'block'; setTimeout(closeReport, 1800); }
+        else { errEl.textContent = data.error || 'Ошибка отправки'; errEl.style.display = 'block'; }
+    } catch(e) { errEl.textContent = 'Ошибка соединения'; errEl.style.display = 'block'; }
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeReport(); });
+</script>
+
+<!-- ═══ ГЛОБАЛЬНЫЙ TOAST УВЕДОМЛЕНИЙ ═══ -->
+{% if current_user.is_authenticated %}
+<div id="_notiToast" style="
+    display:none;position:fixed;bottom:24px;right:24px;z-index:99999;
+    background:#161618;border:1px solid rgba(232,101,10,0.28);
+    border-radius:16px;padding:14px 18px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.7),0 0 0 1px rgba(232,101,10,0.08);
+    max-width:300px;min-width:240px;
+    animation:_toastIn .35s cubic-bezier(.34,1.56,.64,1) both;
+    cursor:pointer;
+    " onclick="window.location.href='/profile/{{ current_user.username }}'">
+    <style>
+    @keyframes _toastIn{from{opacity:0;transform:translateY(24px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes _toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(12px) scale(.96)}}
+    #_notiToast:hover{border-color:rgba(232,101,10,0.5);background:#1a1a1d;}
+    </style>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(232,101,10,0.12);
+            border:1px solid rgba(232,101,10,0.22);display:flex;align-items:center;
+            justify-content:center;color:#e8650a;font-size:1rem;flex-shrink:0;">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div>
+            <div style="font-size:0.82rem;font-weight:700;color:#e8650a;margin-bottom:2px;" id="_notiToastTitle">Новые уведомления</div>
+            <div style="font-size:0.75rem;color:#555;line-height:1.4;" id="_notiToastMsg">Перейдите в профиль, чтобы посмотреть</div>
+        </div>
+        <button onclick="event.stopPropagation();_closeNotiToast()" style="margin-left:auto;background:none;border:none;color:#333;cursor:pointer;font-size:0.95rem;padding:2px;flex-shrink:0;transition:color .15s;"
+            onmouseover="this.style.color='#888'" onmouseout="this.style.color='#333'">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div style="margin-top:8px;font-size:0.72rem;color:#3d4350;display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-arrow-right" style="font-size:0.65rem;color:#e8650a;opacity:0.7;"></i>
+        Открыть профиль
+    </div>
+</div>
+<script>
+(function(){
+    if(!{{ 'true' if current_user.is_authenticated else 'false' }}) return;
+    var _TOAST_KEY = '_noti_last_seen_{{ current_user.id }}';
+    var _toastShown = false;
+    var _lastKnown = parseInt(localStorage.getItem(_TOAST_KEY) || '0', 10);
+
+    window._closeNotiToast = function(){
+        var t = document.getElementById('_notiToast');
+        if(!t) return;
+        t.style.animation = '_toastOut .25s ease both';
+        setTimeout(function(){ t.style.display='none'; t.style.animation=''; }, 250);
+    };
+    // обратная совместимость
+    function _closeNotiToast(){ window._closeNotiToast(); }
+
+    function _checkNotis(){
+        fetch('/api/notifications?limit=15&offset=0')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            var unreadCount = d.unread || 0;
+            if(unreadCount <= 0) return;
+            var notifs = d.notifications || [];
+            var unread = notifs.filter(function(n){ return !n.is_read; });
+            if(!unread.length) return;
+            var newestId = unread[0].id;
+            if(newestId <= _lastKnown) return;
+            if(_toastShown) return;
+            _toastShown = true;
+            localStorage.setItem(_TOAST_KEY, String(newestId));
+            var t = document.getElementById('_notiToast');
+            var msg = document.getElementById('_notiToastMsg');
+            var ttl = document.getElementById('_notiToastTitle');
+            if(ttl) ttl.textContent = unreadCount > 1 ? 'Новые уведомления (' + unreadCount + ')' : 'Новое уведомление';
+            if(msg && unread[0].preview) msg.textContent = unread[0].preview.slice(0, 60);
+            else if(msg) msg.textContent = 'Перейдите в профиль, чтобы посмотреть';
+            if(t){ t.style.animation='_toastIn .35s cubic-bezier(.34,1.56,.64,1) both'; t.style.display='block'; }
+            setTimeout(function(){ window._closeNotiToast(); }, 7000);
+        }).catch(function(){});
+    }
+
+    setTimeout(_checkNotis, 3000);
+    setInterval(_checkNotis, 60000);
+})();
+</script>
+{% endif %}
+
+<!-- ═══ ПЛАВАЮЩИЙ ЧАТ-ПУЗЫРЬ ═══ -->
+<style>
+#_chatBubble {
+    position: fixed; bottom: 28px; left: 28px; z-index: 88888;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #ff6600; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,102,0,0.55), 0 2px 8px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; outline: none; padding: 0;
+    transition: background 0.25s ease, box-shadow 0.2s ease;
+}
+#_chatBubble:hover { box-shadow: 0 6px 28px rgba(255,102,0,0.7); }
+#_chatBubble._open { background: #313131; box-shadow: 0 4px 20px rgba(0,0,0,0.55); }
+#_chatBubbleIcon {
+    pointer-events: none; font-size: 1.22rem;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+}
+#_chatBadge {
+    position: absolute; top: -3px; right: -3px;
+    background: #ff3b3b; color: #fff; border-radius: 50%;
+    width: 20px; height: 20px; font-size: 0.62rem; font-weight: 800;
+    display: none; align-items: center; justify-content: center;
+    border: 2px solid #0a0a0a; pointer-events: none;
+}
+#_chatWindow {
+    position: fixed; bottom: 96px; left: 28px; z-index: 88887;
+    width: 880px; height: 580px;
+    background: #0a0a0a;
+    border: 1px solid rgba(255,102,0,0.28); border-radius: 18px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,102,0,0.06);
+    display: none; flex-direction: column; overflow: hidden;
+}
+#_chatWindow._visible { display: flex; animation: _cIn 0.28s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes _cIn  { from{opacity:0;transform:translateY(18px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes _cOut { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(12px) scale(.97)} }
+#_chatMiniHead {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; background: #111111;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0; min-height: 46px;
+}
+.cw-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(255,102,0,0.08); border: 1px solid rgba(255,102,0,0.2);
+    color: #ff6600; border-radius: 9px; padding: 5px 11px;
+    font-size: 0.71rem; font-weight: 700; cursor: pointer;
+    text-decoration: none; transition: background 0.15s;
+    white-space: nowrap; font-family: 'Inter','Segoe UI',sans-serif; flex-shrink: 0;
+}
+.cw-btn:hover { background: rgba(255,102,0,0.18); }
+#_chatIframeLoader {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; background: #0a0a0a;
+    color: #313131; font-size: 0.8rem; font-family: 'Inter','Segoe UI',sans-serif;
+}
+#_chatIframeLoader i { font-size: 1.4rem; color: #282828; }
+#_chatFrame { flex: 1; border: none; width: 100%; display: none; background: #0a0a0a; }
+#_chatFrame.loaded { display: block; }
+@media (max-width: 900px) {
+    #_chatWindow { width: calc(100vw - 16px); left: 8px; bottom: 84px; height: 480px; }
+}
+@media (max-width: 480px) {
+    #_chatWindow { width: calc(100vw - 8px); left: 4px; bottom: 78px; height: 440px; }
+    #_chatBubble { bottom: 16px; left: 16px; width: 50px; height: 50px; font-size: 1.05rem; }
+}
+</style>
+
+<button id="_chatBubble" title="Открыть чат" onclick="_toggleChatBubble()">
+    <span id="_chatBubbleIcon"><i class="fas fa-comments"></i></span>
+    <span id="_chatBadge"></span>
+</button>
+
+<div id="_chatWindow">
+    <div id="_chatMiniHead">
+        <i class="fas fa-comments" style="color:#ff6600;font-size:0.9rem;flex-shrink:0;"></i>
+        <a class="cw-btn" href="/chat" style="margin-left:auto;" title="На весь экран">
+            <i class="fas fa-expand-alt" style="font-size:0.65rem;"></i>На весь экран
+        </a>
+    </div>
+    <div id="_chatIframeLoader">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Загрузка чата…</span>
+    </div>
+    <iframe id="_chatFrame" src="" allow="clipboard-write" title="Чат Comilank"></iframe>
+</div>
+
+<script>
+(function(){
+    var _open = false;
+    var _loaded = false;
+    var _spinTimer = null;
+
+    window._toggleChatBubble = function(){
+        var win    = document.getElementById('_chatWindow');
+        var bubble = document.getElementById('_chatBubble');
+        var badge  = document.getElementById('_chatBadge');
+        var icon   = document.getElementById('_chatBubbleIcon');
+
+        if(icon){
+            icon.style.transition = 'transform 0.55s cubic-bezier(0.4,0,0.2,1)';
+            icon.style.transform  = 'rotate(360deg)';
+        }
+        clearTimeout(_spinTimer);
+        _spinTimer = setTimeout(function(){
+            if(icon){ icon.style.transition='none'; icon.style.transform='rotate(0deg)';
+                setTimeout(function(){ if(icon) icon.style.transition=''; }, 30); }
+        }, 570);
+
+        if(!_open){
+            win.style.animation = '_cIn 0.28s cubic-bezier(.34,1.56,.64,1) both';
+            win.classList.add('_visible');
+            bubble.classList.add('_open');
+            _open = true;
+            if(badge){ badge.style.display='none'; badge.textContent=''; }
+            if(!_loaded){
+                _loaded = true;
+                var frame  = document.getElementById('_chatFrame');
+                var loader = document.getElementById('_chatIframeLoader');
+                frame.src = '/chat';
+                frame.onload = function(){
+                    loader.style.display = 'none';
+                    frame.classList.add('loaded');
+                };
+            }
+        } else {
+            win.style.animation = '_cOut 0.2s ease both';
+            setTimeout(function(){ win.classList.remove('_visible'); win.style.animation=''; }, 190);
+            bubble.classList.remove('_open');
+            _open = false;
+        }
+    };
+})();
+</script>
+
+<!-- ═══ WEB PUSH — инициализация ═══ -->
+{% if current_user.is_authenticated %}
+<script>
+(function(){
+    // Регистрируем Service Worker и Web Push
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+        window._swReg = reg;
+        // Проверяем текущую подписку
+        return reg.pushManager.getSubscription();
+    }).then(function(sub){
+        if(sub){
+            // Уже подписаны — синхронизируем с сервером
+            _syncPushSub(sub);
+        }
+        // Не показываем запрос автоматически — ждём клика на кнопку
+    }).catch(function(){});
+
+    window._requestPushPermission = function(onGranted){
+        if(!window._swReg){ if(onGranted) onGranted(false); return; }
+        window._swReg.pushManager.getSubscription().then(function(existing){
+            if(existing){ if(onGranted) onGranted(true); return; }
+            // Запрашиваем разрешение
+            Notification.requestPermission().then(function(perm){
+                if(perm !== 'granted'){ if(onGranted) onGranted(false); return; }
+                // Получаем VAPID ключ
+                fetch('/api/push/vapid-public-key')
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    if(!d.key){ if(onGranted) onGranted(false); return; }
+                    var appKey = _urlB64ToUint8(d.key);
+                    return window._swReg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: appKey
+                    });
+                }).then(function(sub){
+                    if(!sub){ if(onGranted) onGranted(false); return; }
+                    _syncPushSub(sub);
+                    if(onGranted) onGranted(true);
+                }).catch(function(){ if(onGranted) onGranted(false); });
+            });
+        });
+    };
+
+    function _syncPushSub(sub){
+        var key = sub.getKey ? sub.getKey('p256dh') : null;
+        var auth = sub.getKey ? sub.getKey('auth') : null;
+        if(!key || !auth) return;
+        fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                endpoint: sub.endpoint,
+                p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(key))),
+                auth:   btoa(String.fromCharCode.apply(null, new Uint8Array(auth)))
+            })
+        }).catch(function(){});
+    }
+
+    function _urlB64ToUint8(base64String){
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+        var rawData = window.atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+        for(var i=0;i<rawData.length;++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+    }
+})();
+</script>
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block title %}Репорты | Comilank{% endblock %}
+
+{% block content %}
+<style>
+    body { display:block !important; padding:0 !important; }
+    .container { max-width:100% !important; padding:0 !important; border-radius:0 !important; box-shadow:none !important; border:none !important; background:transparent !important; }
+
+    .rp-outer {
+        min-height:100vh; background:#0a0a0b;
+        display:flex; justify-content:center; align-items:flex-start;
+        padding:36px 20px 60px; box-sizing:border-box;
+    }
+
+    /* Главная карточка — как регистрация но шире */
+    .rp-card {
+        width:100%; max-width:860px;
+        background:#141416;
+        border-radius:28px;
+        border:1px solid rgba(255,255,255,0.06);
+        padding:34px 40px 40px;
+        box-shadow:0 0 0 1px rgba(232,101,10,0.05), 0 40px 80px rgba(0,0,0,0.65);
+        position:relative;
+    }
+    .rp-card::after {
+        content:''; position:absolute; bottom:-16px; left:8%;
+        width:84%; height:28px;
+        background:radial-gradient(ellipse, rgba(232,101,10,0.26) 0%, transparent 70%);
+        filter:blur(12px); pointer-events:none; border-radius:50%;
+    }
+
+    /* Шапка */
+    .rp-header {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:24px; flex-wrap:wrap; gap:12px;
+    }
+    .rp-title {
+        font-size:1.35rem; font-weight:800; color:#e8650a;
+        display:flex; align-items:center; gap:10px; margin:0;
+    }
+    .rp-title-icon {
+        width:40px; height:40px; border-radius:50%;
+        background:rgba(232,101,10,.1); border:1px solid rgba(232,101,10,.22);
+        display:flex; align-items:center; justify-content:center;
+        color:#c8580a; font-size:.95rem; flex-shrink:0;
+    }
+
+    /* Кнопки */
+    .btn {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:7px 16px; border-radius:18px; font-size:0.8rem;
+        font-weight:700; text-decoration:none; transition:all .2s;
+        cursor:pointer; border:1px solid transparent; font-family:inherit;
+    }
+    .btn-back { background:rgba(255,255,255,.03); color:#4e5460; border-color:rgba(255,255,255,.07); }
+    .btn-back:hover { background:rgba(255,255,255,.06); color:#8a909e; }
+    .btn-resolve { background:rgba(232,101,10,.1); color:#d0600c; border:1px solid rgba(232,101,10,.28); }
+    .btn-resolve:hover { background:rgba(232,101,10,.2); color:#e8650a; border-color:rgba(232,101,10,.5); }
+    .btn-reject { background:rgba(255,255,255,.02); color:#3d4350; border-color:rgba(255,255,255,.06); }
+    .btn-reject:hover { background:rgba(255,255,255,.05); color:#8a909e; border-color:rgba(255,255,255,.12); }
+    .btn-view { background:rgba(255,255,255,.02); color:#3d4350; border-color:rgba(255,255,255,.06); }
+    .btn-view:hover { background:rgba(232,101,10,.06); color:#c8580a; border-color:rgba(232,101,10,.2); }
+
+    /* Вкладки */
+    .tabs { display:flex; gap:6px; margin-bottom:22px; }
+    .tab {
+        padding:7px 16px; border-radius:16px; font-size:0.8rem;
+        font-weight:700; cursor:pointer; border:1px solid rgba(255,255,255,.06);
+        background:rgba(255,255,255,.02); color:#3d4350;
+        transition:all .2s; text-decoration:none;
+    }
+    .tab.active, .tab:hover { background:rgba(232,101,10,.1); border-color:rgba(232,101,10,.25); color:#e8650a; }
+
+    /* Разделитель */
+    .divider { border:none; border-top:1px solid rgba(255,255,255,.05); margin:0 0 20px; }
+
+    /* Карточки репортов */
+    .reports-grid { display:flex; flex-direction:column; gap:12px; }
+
+    .report-card {
+        background:#0f0f12;
+        border-radius:18px;
+        border:1px solid rgba(255,255,255,0.05);
+        padding:18px 22px;
+        transition:border-color .2s;
+        position:relative;
+    }
+    .report-card:hover { border-color:rgba(232,101,10,.15); }
+    .report-card.resolved { opacity:.45; }
+
+    .rc-top {
+        display:flex; justify-content:space-between;
+        align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;
+    }
+    .rc-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700; }
+    .badge-open   { background:rgba(232,101,10,.12); color:#d0600c; border:1px solid rgba(232,101,10,.28); }
+    .badge-closed { background:rgba(255,255,255,.04); color:#3d4350; border:1px solid rgba(255,255,255,.08); }
+    .badge-type   { background:rgba(232,101,10,.06); color:#a05028; border:1px solid rgba(232,101,10,.13); }
+    .rc-id   { font-size:.7rem; color:#252830; font-family:monospace; }
+    .rc-time { font-size:.74rem; color:#252830; flex-shrink:0; }
+
+    .rc-body { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+    @media(max-width:560px){ .rc-body { grid-template-columns:1fr; } }
+
+    .rc-label { font-size:.65rem; font-weight:700; color:#e8650a; text-transform:uppercase; letter-spacing:.4px; opacity:.55; margin-bottom:4px; }
+    .rc-value { font-size:.82rem; color:#4e5460; line-height:1.5; }
+    .rc-value a { color:#c8580a; text-decoration:none; }
+    .rc-value a:hover { text-decoration:underline; }
+
+    .reporter-chip {
+        display:inline-flex; align-items:center; gap:4px;
+        padding:2px 8px; border-radius:8px;
+        background:rgba(232,101,10,.06); border:1px solid rgba(232,101,10,.13);
+        color:#c8580a; font-size:.74rem; font-weight:700;
+    }
+
+    /* Доказательства */
+    .evidence-box { margin-bottom:14px; }
+    .evidence-label { font-size:.65rem; font-weight:700; color:#e8650a; text-transform:uppercase; letter-spacing:.4px; opacity:.55; margin-bottom:7px; }
+    .evidence-grid { display:flex; gap:7px; flex-wrap:wrap; }
+    .evidence-item { position:relative; border-radius:9px; overflow:hidden; border:1px solid rgba(232,101,10,.14); }
+    .evidence-item img { width:96px; height:68px; object-fit:cover; display:block; cursor:pointer; transition:opacity .2s; }
+    .evidence-item img:hover { opacity:.8; }
+    .ev-type { position:absolute; bottom:3px; right:3px; background:rgba(0,0,0,.78); border-radius:4px; padding:1px 5px; font-size:.58rem; color:#c8580a; }
+    .evidence-link {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:5px 11px; border-radius:9px;
+        background:rgba(232,101,10,.06); border:1px solid rgba(232,101,10,.14);
+        color:#c8580a; font-size:.76rem; text-decoration:none; font-weight:600; transition:all .15s;
+    }
+    .evidence-link:hover { background:rgba(232,101,10,.13); color:#e8650a; }
+    .no-evidence { font-size:.76rem; color:#1e2028; font-style:italic; }
+
+    /* Действия */
+    .rc-actions {
+        display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+        padding-top:13px; border-top:1px solid rgba(255,255,255,.04);
+    }
+    .resolved-info { font-size:.74rem; color:#252830; margin-left:auto; display:flex; align-items:center; gap:5px; }
+
+    /* Пустое состояние */
+    .empty-state { text-align:center; padding:50px 20px; }
+    .empty-state i { font-size:2.2rem; display:block; margin-bottom:12px; color:#1a1c22; }
+    .empty-state p { font-size:.84rem; color:#1e2028; }
+
+    /* Лайтбокс */
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.93); z-index:9999; align-items:center; justify-content:center; }
+    .lightbox.active { display:flex; }
+    .lightbox img { max-width:90vw; max-height:90vh; border-radius:14px; border:1px solid rgba(232,101,10,.2); }
+    .lightbox-close { position:absolute; top:22px; right:26px; color:#fff; font-size:1.3rem; cursor:pointer; opacity:.5; transition:opacity .15s; background:none; border:none; }
+    .lightbox-close:hover { opacity:1; }
+</style>
+
+<div class="rp-outer">
+<div class="rp-card">
+
+    <!-- Шапка -->
+    <div class="rp-header">
+        <h2 class="rp-title">
+            <div class="rp-title-icon"><i class="fas fa-flag"></i></div>
+            Репорты
+            {% if open_reports %}
+            <span class="badge badge-open" style="font-size:.72rem;">{{ open_reports|length }} открытых</span>
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin_panel') }}" class="btn btn-back">
+            <i class="fas fa-arrow-left" style="font-size:.72rem;"></i> Панель
+        </a>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Вкладки -->
+    <div class="tabs">
+        <a href="?tab=open" class="tab {% if tab != 'resolved' %}active{% endif %}">
+            <i class="fas fa-exclamation-circle" style="font-size:.72rem;"></i> Открытые
+            {% if open_reports %}
+            <span style="margin-left:3px;background:rgba(232,101,10,.18);color:#d0600c;padding:1px 6px;border-radius:7px;font-size:.65rem;">{{ open_reports|length }}</span>
+            {% endif %}
+        </a>
+        <a href="?tab=resolved" class="tab {% if tab == 'resolved' %}active{% endif %}">
+            <i class="fas fa-archive" style="font-size:.72rem;"></i> Закрытые
+        </a>
+    </div>
+
+    <!-- Список -->
+    <div class="reports-grid">
+        {% set show_list = resolved_reports if tab == 'resolved' else open_reports %}
+        {% if show_list %}
+            {% for r in show_list %}
+            <div class="report-card {% if r.resolved %}resolved{% endif %}">
+
+                <div class="rc-top">
+                    <div class="rc-meta">
+                        <span class="rc-id">#{{ r.id }}</span>
+                        {% if r.resolved %}
+                            {% if r.rejected %}
+                            <span class="badge badge-closed"><i class="fas fa-times" style="font-size:.6rem;"></i> Отклонён</span>
+                            {% else %}
+                            <span class="badge badge-closed"><i class="fas fa-archive" style="font-size:.6rem;"></i> Закрыт</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="badge badge-open"><i class="fas fa-circle" style="font-size:.45rem;"></i> Открыт</span>
+                        {% endif %}
+                        {% if r.target_type == 'comment' %}
+                        <span class="badge badge-type"><i class="fas fa-comment" style="font-size:.6rem;"></i> Комментарий</span>
+                        {% else %}
+                        <span class="badge badge-type"><i class="fas fa-user" style="font-size:.6rem;"></i> Пользователь</span>
+                        {% endif %}
+                    </div>
+                    <span class="rc-time">
+                        {% set diff = (now - r.created_at).total_seconds() %}
+                        {% if diff < 60 %}только что
+                        {% elif diff < 3600 %}{{ (diff//60)|int }} мин назад
+                        {% elif diff < 86400 %}{{ (diff//3600)|int }} ч назад
+                        {% else %}{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}
+                    </span>
+                </div>
+
+                <div class="rc-body">
+                    <div>
+                        <div class="rc-label"><i class="fas fa-user" style="margin-right:3px;"></i>Кто пожаловался</div>
+                        <div class="rc-value">
+                            {% if r.reporter %}
+                            <span class="reporter-chip"><i class="fas fa-user" style="font-size:.58rem;"></i> {{ r.reporter.username }}</span>
+                            {% else %}
+                            <span style="color:#1e2028;font-size:.76rem;">Гость</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="rc-label"><i class="fas fa-crosshairs" style="margin-right:3px;"></i>Цель</div>
+                        <div class="rc-value">
+                            {% if r.target_type == 'user' %}
+                                {% set tu = r.get_target_user() %}
+                                {% if tu %}
+                                <a href="{{ url_for('admin_user_profile', user_id=r.target_id) }}">{{ tu.username }}</a>
+                                {% else %}
+                                <span style="color:#1e2028;">Пользователь #{{ r.target_id }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span>Комментарий #{{ r.target_id }}</span>
+                            {% if r.comment_article_id %}
+                            <a href="{{ url_for('article', article_id=r.comment_article_id) }}#comment-{{ r.target_id }}"
+                               class="btn btn-view" style="margin-left:6px;padding:2px 9px;font-size:0.72rem;">
+                                <i class="fas fa-arrow-right" style="font-size:.6rem;"></i> Перейти
+                            </a>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <div class="rc-label"><i class="fas fa-align-left" style="margin-right:3px;"></i>Причина</div>
+                        <div class="rc-value">{{ r.reason or '- не указана -' }}</div>
+                    </div>
+                </div>
+
+                <!-- Доказательства -->
+                <div class="evidence-box">
+                    <div class="evidence-label"><i class="fas fa-paperclip" style="margin-right:3px;"></i>Доказательство</div>
+                    {% if r.evidence_url %}
+                    <div class="evidence-grid">
+                        {% set ext = r.evidence_url.rsplit('.', 1)[-1].lower() if '.' in r.evidence_url else '' %}
+                        {% if ext in ['jpg','jpeg','png','gif','webp'] %}
+                        <div class="evidence-item">
+                            <img src="{{ r.evidence_url }}" alt="Доказательство" onclick="openLightbox('{{ r.evidence_url }}')">
+                            <span class="ev-type">фото</span>
+                        </div>
+                        {% elif ext in ['mp4','webm','mov'] %}
+                        <a href="{{ r.evidence_url }}" target="_blank" class="evidence-link">
+                            <i class="fas fa-video"></i> Видео
+                        </a>
+                        {% else %}
+                        <a href="{{ r.evidence_url }}" target="_blank" class="evidence-link">
+                            <i class="fas fa-link"></i> Ссылка
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="no-evidence">Не прикреплено</span>
+                    {% endif %}
+                </div>
+
+                <!-- Действия -->
+                <div class="rc-actions">
+                    {% if not r.resolved %}
+                    <form method="POST" action="{{ url_for('admin_resolve_report', report_id=r.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-resolve">
+                            <i class="fas fa-check" style="font-size:.7rem;"></i> Принять
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin_reject_report', report_id=r.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-reject">
+                            <i class="fas fa-times" style="font-size:.7rem;"></i> Отклонить (ложный)
+                        </button>
+                    </form>
+                    {% if r.target_type == 'user' %}
+                    <a href="{{ url_for('admin_user_profile', user_id=r.target_id) }}" class="btn btn-view">
+                        <i class="fas fa-user" style="font-size:.7rem;"></i> Профиль нарушителя
+                    </a>
+                    {% endif %}
+                    {% if r.reporter_id %}
+                    <a href="{{ url_for('admin_user_profile', user_id=r.reporter_id) }}" class="btn btn-view">
+                        <i class="fas fa-search" style="font-size:.7rem;"></i> Профиль жалобщика
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <span class="resolved-info">
+                        {% if r.rejected %}
+                        <i class="fas fa-times-circle" style="color:#2e3340;"></i> Отклонён -
+                        {% else %}
+                        <i class="fas fa-archive" style="color:#2e3340;"></i> Принят -
+                        {% endif %}
+                        <strong style="color:#3d4350;">{% if r.resolved_by %}{{ r.resolved_by.username }}{% else %}система{% endif %}</strong>
+                        {% if r.resolved_at %}<span style="margin-left:2px;">{{ r.resolved_at.strftime('%d.%m.%Y %H:%M') }}</span>{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-{% if tab == 'resolved' %}archive{% else %}flag{% endif %}"></i>
+            <p>{% if tab == 'resolved' %}Закрытых репортов нет{% else %}Открытых репортов нет{% endif %}</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+</div>
+
+<!-- Лайтбокс -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()"><i class="fas fa-times"></i></button>
+    <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+function openLightbox(src) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeLightbox(); });
+</script>
+{% endblock %}

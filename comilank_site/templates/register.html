@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comilank — Регистрация</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#0a0a0b; color:#c9cdd6; font-family:'Inter',sans-serif; min-height:100vh; display:flex; justify-content:center; align-items:flex-start; padding:24px 20px; overflow-y:auto; overflow-x:hidden; position:relative; }
+        @media (min-height:820px) { body { align-items:center; } }
+
+        .floating-icons { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+        .icon { position:absolute; font-size:28px; opacity:0.05; color:#e8650a; animation:float 12s infinite alternate ease-in-out; }
+        @keyframes float { 0%{transform:translateY(0px) rotate(0deg);} 100%{transform:translateY(-36px) rotate(10deg);} }
+        .icon1{top:5%;left:2%;animation-duration:11s;} .icon2{top:12%;right:4%;animation-duration:13s;} .icon3{bottom:8%;left:5%;animation-duration:9s;} .icon4{bottom:18%;right:7%;animation-duration:14s;} .icon5{top:25%;left:10%;animation-duration:10s;} .icon6{top:35%;right:11%;animation-duration:12s;} .icon7{bottom:25%;left:13%;animation-duration:8s;} .icon8{bottom:35%;right:14%;animation-duration:15s;} .icon9{top:45%;left:18%;animation-duration:9.5s;} .icon10{top:55%;right:18%;animation-duration:11.5s;}
+
+        .auth-card {
+            max-width:480px; width:100%; position:relative; z-index:10;
+            background:#141416; border-radius:28px;
+            border:1px solid rgba(255,255,255,0.06);
+            padding:38px 44px 44px;
+            box-shadow:0 0 0 1px rgba(232,101,10,0.06),0 40px 80px rgba(0,0,0,0.7);
+        }
+        .auth-card::after {
+            content:''; position:absolute; bottom:-16px; left:10%;
+            width:80%; height:28px;
+            background:radial-gradient(ellipse,rgba(232,101,10,0.35) 0%,transparent 70%);
+            filter:blur(12px); pointer-events:none; border-radius:50%;
+        }
+
+        .auth-logo { text-align:center; margin-bottom:26px; }
+        .auth-logo-icon { width:50px; height:50px; background:linear-gradient(135deg,#c8580a,#7a3008); border-radius:15px; display:inline-flex; align-items:center; justify-content:center; font-size:1.4rem; color:rgba(255,255,255,0.9); margin-bottom:13px; box-shadow:0 0 22px rgba(200,88,10,0.28); }
+        h2 { color:#e8650a; font-size:1.5rem; font-weight:800; text-align:center; letter-spacing:-0.3px; }
+        .auth-sub { color:#3d4350; font-size:0.82rem; text-align:center; margin-top:5px; }
+
+        .form-group { margin-bottom:16px; }
+        label { display:block; margin-bottom:6px; color:#3d4350; font-size:0.76rem; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+        input[type=text],input[type=email],input[type=password] {
+            width:100%; padding:10px 15px;
+            background:#0f0f12; border:1px solid rgba(255,255,255,0.07);
+            border-radius:12px; color:#c9cdd6; font-size:0.88rem; font-family:inherit;
+            transition:border-color 0.2s;
+        }
+        input:focus { outline:none; border-color:rgba(232,101,10,0.4); box-shadow:0 0 0 3px rgba(232,101,10,0.06); }
+
+        .submit-btn {
+            width:100%; padding:11px; border-radius:20px; border:none;
+            background:rgba(232,101,10,0.12); color:#d0600c;
+            border:1px solid rgba(232,101,10,0.28);
+            font-size:0.93rem; font-weight:700; cursor:pointer; font-family:inherit;
+            display:flex; align-items:center; justify-content:center; gap:7px;
+            transition:all 0.2s; position:relative; overflow:hidden;
+        }
+        .submit-btn::before { content:''; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(circle at 50% 0%,rgba(232,101,10,0.22) 0%,transparent 70%); opacity:0; transition:opacity 0.25s; pointer-events:none; }
+        .submit-btn:hover { color:#e8650a; border-color:rgba(232,101,10,0.5); background:rgba(232,101,10,0.18); }
+        .submit-btn:hover::before { opacity:1; }
+
+        .auth-link { color:#4e5460; text-decoration:none; display:block; text-align:center; margin-top:16px; font-size:0.82rem; transition:color 0.15s; }
+        .auth-link span { color:#c8580a; }
+        .auth-link:hover { color:#8a909e; }
+
+        .flash { margin-bottom:16px; padding:10px 14px; border-radius:12px; background:rgba(232,101,10,0.1); border:1px solid rgba(232,101,10,0.22); color:#c8580a; font-size:0.82rem; display:flex; align-items:center; gap:8px; }
+
+        .key-hint { margin-top:8px; padding:10px 13px; background:#0f0f12; border-radius:10px; border:1px solid rgba(255,255,255,0.05); font-size:0.76rem; color:#3d4350; line-height:1.55; }
+        .key-hint i { color:#c8580a; opacity:0.55; margin-right:4px; }
+        .key-hint strong { color:#a05030; }
+
+        .gen-btn { cursor:pointer; color:#c8580a; font-size:0.76rem; font-weight:600; user-select:none; transition:color 0.15s; }
+        .gen-btn:hover { color:#e8650a; }
+
+        .eye-btn { position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:rgba(232,101,10,0.35); font-size:0.88rem; transition:color 0.15s; }
+        .eye-btn:hover { color:#e8650a; }
+
+        .divider { height:1px; background:rgba(255,255,255,0.05); margin:18px 0; }
+
+        .check-row { display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; }
+        .check-row input[type=checkbox] { width:16px; height:16px; margin-top:2px; flex-shrink:0; accent-color:#e8650a; cursor:pointer; }
+        .check-row label { color:#4e5460; font-size:0.8rem; line-height:1.55; cursor:pointer; font-weight:500; text-transform:none; letter-spacing:0; display:block; }
+        .check-row label a { color:#c8580a; text-decoration:none; transition:color .15s; }
+        .check-row label a:hover { color:#e8650a; text-decoration:underline; }
+        .check-row input[type=checkbox]:checked + label { color:#8a909e; }
+    </style>
+</head>
+<body>
+    <div class="floating-icons">
+        <i class="icon icon1 fas fa-gamepad"></i>
+        <i class="icon icon2 fas fa-computer-mouse"></i>
+        <i class="icon icon3 fas fa-keyboard"></i>
+        <i class="icon icon4 fas fa-headphones"></i>
+        <i class="icon icon5 fas fa-display"></i>
+        <i class="icon icon6 fas fa-floppy-disk"></i>
+        <i class="icon icon7 fas fa-compact-disc"></i>
+        <i class="icon icon8 fas fa-microchip"></i>
+        <i class="icon icon9 fas fa-crown"></i>
+        <i class="icon icon10 fas fa-star"></i>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon"><i class="fas fa-gamepad"></i></div>
+            <h2>Comilank</h2>
+            <div class="auth-sub">Создайте аккаунт</div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}
+                <div class="flash"><i class="fas fa-exclamation-circle"></i> {{ message }}</div>
+            {% endfor %}{% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label><i class="fas fa-user" style="margin-right:4px;"></i>Имя пользователя</label>
+                <input type="text" name="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-envelope" style="margin-right:4px;"></i>Email</label>
+                <input type="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock" style="margin-right:4px;"></i>Пароль</label>
+                <div style="position:relative;">
+                    <input type="password" name="password" id="reg_password" required autocomplete="new-password" style="padding-right:42px;">
+                    <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:rgba(232,101,10,0.35);font-size:0.88rem;transition:color 0.15s;" onclick="togglePassVisibility()" onmouseover="this.style.color='#e8650a'" onmouseout="this.style.color='rgba(232,101,10,0.35)'"><i class="fas fa-eye" id="pass_eye_icon"></i></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                    <span><i class="fas fa-key" style="margin-right:4px;"></i>Ключ восстановления</span>
+                    <span class="gen-btn" onclick="generateKey()"><i class="fas fa-magic" style="font-size:.7rem;"></i> Сгенерировать</span>
+                </label>
+                <div style="position:relative;">
+                    <input type="text" id="recovery_key" name="recovery_key" placeholder="Придумайте или сгенерируйте" autocomplete="off" style="padding-right:42px;">
+                    <span class="eye-btn" onclick="toggleKeyVisibility()"><i class="fas fa-eye"></i></span>
+                </div>
+                <div class="key-hint">
+                    <i class="fas fa-info-circle"></i>
+                    Используется для восстановления доступа. <strong>Сохраните его в надёжном месте</strong> — он не восстанавливается.
+                </div>
+            </div>
+
+            <!-- Чекбоксы согласия -->
+            <div style="margin-bottom:16px;">
+                <div class="check-row">
+                    <input type="checkbox" name="terms_agreed" id="cb_terms" required>
+                    <label for="cb_terms">Я принимаю <a href="/terms" target="_blank">Пользовательское соглашение</a></label>
+                </div>
+                <div class="check-row">
+                    <input type="checkbox" name="privacy_agreed" id="cb_privacy" required>
+                    <label for="cb_privacy">Я согласен на обработку персональных данных в соответствии с <a href="/privacy" target="_blank">Политикой конфиденциальности</a></label>
+                </div>
+                <div class="check-row">
+                    <input type="checkbox" name="cookies_agreed" id="cb_cookies" required>
+                    <label for="cb_cookies">Я принимаю использование <a href="/cookies" target="_blank">файлов Cookie</a>, необходимых для работы сайта</label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn"><i class="fas fa-user-plus"></i> Зарегистрироваться</button>
+        </form>
+
+        <div class="divider"></div>
+        <a href="{{ url_for('login') }}" class="auth-link">Уже есть аккаунт? <span>Войдите</span></a>
+        <a href="{{ url_for('forgot_password') }}" class="auth-link" style="margin-top:8px;">Забыли пароль? <span>Сбросить по email</span></a>
+        <a href="{{ url_for('index') }}" class="auth-link" style="margin-top:8px;"><i class="fas fa-home" style="margin-right:5px;font-size:0.8rem;"></i>На главную</a>
+    </div>
+
+    <script>
+    function generateKey() {
+        var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        var key = '';
+        for (var i = 0; i < 16; i++) {
+            if (i > 0 && i % 4 === 0) key += '-';
+            key += chars[Math.floor(Math.random() * chars.length)];
+        }
+        document.getElementById('recovery_key').value = key;
+        document.getElementById('recovery_key').type = 'text';
+    }
+    function togglePassVisibility() {
+        var inp = document.getElementById('reg_password');
+        var icon = document.getElementById('pass_eye_icon');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            inp.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+    function toggleKeyVisibility() {
+        var inp = document.getElementById('recovery_key');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+    </script>
+<script>
+// Убираем путь из адресной строки не ломая форму
+if(window.location.pathname !== '/') {
+    window.addEventListener('pageshow', function(){
+        history.replaceState(null,'','/');
+    });
+}
+</script>
+</body>
+</html>
